@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conteúdo do Módulo - Medcof</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* Proporção 16:9 */
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            background: #000;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        /* Scrollbar customizada */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        /* Estilos para o accordion */
+        .submodule-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="p-4 sm:p-6 lg:p-8">
+        
+        <header class="mb-8 max-w-screen-xl mx-auto">
+            <a href="../medcof.html" class="text-blue-600 hover:text-blue-800 transition-colors duration-200 flex items-center text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-2"><path d="M15 18l-6-6 6-6"/></svg>
+                Voltar para Clínica Médica
+            </a>
+            <h1 id="lesson-title" class="text-3xl md:text-4xl font-bold text-gray-900 mt-2"></h1>
+            <p id="lesson-subtitle" class="text-md text-gray-600 mt-1"></p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-screen-xl mx-auto">
+
+            <main class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md flex flex-col">
+                <div class="video-container rounded-lg mb-6">
+                    <iframe id="video-player" src="" title="Player de vídeo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+                <div id="actions-container" class="border-t pt-4 mt-auto">
+                    <div class="flex justify-between items-center">
+                        <button id="prev-lesson-btn" class="flex items-center text-gray-600 hover:text-gray-900 font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2"><path d="M15 18l-6-6 6-6"/></svg>
+                            Aula Anterior
+                        </button>
+                        <button id="next-lesson-btn" class="flex items-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Próxima Aula
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 ml-2"><path d="M9 18l6-6-6-6"/></svg>
+                        </button>
+                    </div>
+                    <div id="complete-button-container" class="mt-4"></div>
+                </div>
+                 <!-- Container para o Material de Estudo -->
+                <div id="material-container" class="mt-6"></div>
+            </main>
+
+            <aside class="lg:col-span-1">
+                <div class="bg-white p-6 rounded-lg shadow-md sticky top-8">
+                    <div id="module-sidebar" class="max-h-[85vh] overflow-y-auto custom-scrollbar">
+                        <!-- Conteúdo da sidebar gerado pelo JS -->
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        const moduleData = {
+            title: 'Infectologia',
+            submodules: [
+                {
+                    title: 'Sífilis e Uretrites Infecciosas',
+                    lessons: [
+                        { title: 'Cof Xpress: Sífilis e Uretrites Infecciosas', videoUrl: 'https://drive.google.com/file/d/11F6U6EZCj9-LQkNemdZv2BarZMehVePX/preview', status: 'current' },
+                        { title: 'Sífilis e Uretrites Infecciosas', videoUrl: 'https://drive.google.com/file/d/1QEyWxtYhUuCpZNKTcVNIxU3bqppphxlJ/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Sífilis e Uretrites Infecciosas', url: 'https://drive.google.com/file/d/1GrH35DcOwzlnU97fp-ZQGSC6xjpY2Tuc/view?usp=sharing' }
+                },
+                {
+                    title: 'Neurossífilis',
+                    lessons: [
+                        { title: 'Neurossífilis', videoUrl: 'https://drive.google.com/file/d/1LaBzYTFsNxpSx2OxnXCYSJestkKbqQtV/preview', status: 'pending' },
+                        { title: 'Cof Xpress: Neurossífilis', videoUrl: 'https://drive.google.com/file/d/1v_5FK82w-87eiNwXsGfTeUsH1LYEQogL/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Neurossífilis', url: 'https://drive.google.com/file/d/10lTjowG3SXl7VPtM6O2Kn1c_YmvwiViO/view?usp=sharing' }
+                },
+                {
+                    title: 'Arboviroses',
+                    lessons: [
+                        { title: 'Cof Xpress: Arboviroses', videoUrl: 'https://drive.google.com/file/d/1x25CVH3-sIZGI9q6HhexnlmUx1ENEKoE/preview', status: 'pending' },
+                        { title: 'Arboviroses', videoUrl: 'https://drive.google.com/file/d/1yxH70PCq3yUB2J7kQ1NCoQngxQUrcx3A/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Arboviroses', url: 'https://drive.google.com/file/d/1aUyC3I0kOhbVfClb9L8LrE6gUJhM9nm-/view?usp=sharing' }
+                },
+                {
+                    title: 'Icterícias Febris e Febre Maculosa',
+                    lessons: [
+                        { title: 'Icterícias Febris e Febre Maculosa', videoUrl: 'https://drive.google.com/file/d/1BWYyextL9f6N6bbzaaazhGX12GJO5zDe/preview', status: 'pending' },
+                        { title: 'Cof Xpress: Icterícias Febris e Febre Maculosa', videoUrl: 'https://drive.google.com/file/d/1GrrUtMqDUDJ6ThTS1sl0GbyH_MF7CSw5/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Icterícias Febris e Febre Maculosa', url: 'https://drive.google.com/file/d/1cjCYniCl3iLu4ikd-3m4YiEI-9kap-YI/view?usp=sharing' }
+                },
+                {
+                    title: 'Hepatites Virais',
+                    lessons: [
+                        { title: 'Hepatites Virais', videoUrl: 'https://drive.google.com/file/d/1BEkJ_iHPyLr-RZCl5m6aOxHgtb2Xvr27/preview', status: 'pending' },
+                        { title: 'Cof Xpress: Hepatites Virais', videoUrl: 'https://drive.google.com/file/d/1pqk1HgWKnFAgvMS9nJMTusr-ewaBqIbd/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Hepatites Virais', url: 'https://drive.google.com/file/d/1_OfBzDDQc4PFwMuMSxyHuempO24Cp5yw/view?usp=sharing' }
+                },
+                {
+                    title: 'Tuberculose Pulmonar',
+                    lessons: [
+                        { title: 'Cof Xpress: Tuberculose Pulmonar', videoUrl: 'https://drive.google.com/file/d/14kcdSQzMDJPYhq4sKeRJL1NUDINw6vuX/preview', status: 'pending' },
+                        { title: 'Tuberculose Pulmonar', videoUrl: 'https://drive.google.com/file/d/1mUQlCUq0YX6oRmNukOPeixcLvpY24i1Y/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Tuberculose Pulmonar', url: 'https://drive.google.com/file/d/1jJi-Tsuw_Du7LZLu5ARqo3ePOrX_tlXw/view?usp=sharing' }
+                },
+                {
+                    title: 'Tuberculose Extra Pulmonar',
+                    lessons: [
+                        { title: 'Cof Xpress: Tuberculose Extra Pulmonar', videoUrl: 'https://drive.google.com/file/d/1KkoagRImEzTE_8-yBT951NH2iojPjDWj/preview', status: 'pending' },
+                        { title: 'Tuberculose Extra Pulmonar', videoUrl: 'https://drive.google.com/file/d/1cZzjvFpgq70KOxThHbRoizjB3DBx_oql/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Tuberculose Extra Pulmonar', url: 'https://drive.google.com/file/d/1wSwAHIrhxCfhUxKhAZ2JoRBN7d7o_bh8/view?usp=sharing' }
+                },
+                {
+                    title: 'Tratamento de Tuberculose e Efeitos Colaterais do Ripe',
+                    lessons: [
+                        { title: 'Tratamento de Tuberculose e Efeitos Colaterais do Ripe', videoUrl: 'https://drive.google.com/file/d/1eUdsnyJAsWLgmB9lYOavBf5VRddV36Nu/preview', status: 'pending' },
+                        { title: 'Cof Xpress: Tratamento de Tuberculose e Efeitos Colaterais do Ripe', videoUrl: 'https://drive.google.com/file/d/1uji0V1DCW9B6kP76gQL3S2CjnerdrZCe/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Tratamento de Tuberculose e Efeitos Colaterais do Ripe', url: 'https://drive.google.com/file/d/16AjtznpiB_zjTSbyEN-ou0QzK9_UTXbj/view?usp=sharing' }
+                },
+                {
+                    title: 'Antibióticos I',
+                    lessons: [
+                        { title: 'Cof Xpress: Antibióticos I', videoUrl: 'https://drive.google.com/file/d/149O70TyDtClrEhjmxLji-Z7WKnJvFREN/preview', status: 'pending' },
+                        { title: 'Antibióticos I', videoUrl: 'https://drive.google.com/file/d/1wIBtT1ql3wX8YnEUHosAMrE26fofFgKb/preview', status: 'pending' }
+                    ],
+                    material: null
+                },
+                {
+                    title: 'HIV',
+                    lessons: [
+                        { title: 'HIV', videoUrl: 'https://drive.google.com/file/d/1TWA29C1Tytyym9UXLtbmHDvRypK90bW3/preview', status: 'pending' },
+                        { title: 'Cof Xpress: HIV', videoUrl: 'https://drive.google.com/file/d/1llO_KbmyMw0UC4IBdVU1kJJFJUkB8iTj/preview', status: 'pending' }
+                    ],
+                    material: { title: 'HIV', url: 'https://drive.google.com/file/d/1fRHnvH-g1jFkMXlQnMaA17kmY3YbBjA3/view?usp=sharing' }
+                },
+                {
+                    title: 'Doenças Oportunistas: HIV',
+                    lessons: [
+                        { title: 'Cof Xpress: Doenças Oportunistas - HIV', videoUrl: 'https://drive.google.com/file/d/1O3Rg-EfXKv9c86ly4CJlki8qg8SHcWZt/preview', status: 'pending' },
+                        { title: 'Doenças Oportunistas: HIV', videoUrl: 'https://drive.google.com/file/d/1OFLw8Mlsz19ej65GfTKhbtjiDj6pvKVe/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Doenças Oportunistas - HIV', url: 'https://drive.google.com/file/d/1zfJYZhzVfvcyXNNcR1l6f0WzDkNZ4URP/view?usp=sharing' }
+                },
+                {
+                    title: 'Doenças Negligenciadas',
+                    lessons: [
+                        { title: 'Cof Xpress: Doenças Negligenciadas', videoUrl: 'https://drive.google.com/file/d/1a6atZHf3rUAtSgB4gEqCg0JGWkkUvDQV/preview', status: 'pending' },
+                        { title: 'Doenças Negligenciadas', videoUrl: 'https://drive.google.com/file/d/1jcmfklednDMCoUzpcTVARWbj9ZG3QTlw/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Doenças Negligenciadas', url: 'https://drive.google.com/file/d/1ThpCrH6A394O0UGaYn0-kigBTnJN_tsD/view?usp=sharing' }
+                },
+                 {
+                    title: 'Parasitoses Intestinais',
+                    lessons: [
+                        { title: 'Cof Xpress: Parasitoses Intestinais', videoUrl: 'https://drive.google.com/file/d/18E4RviPwqM2EtEEimGY4XXiFZCsur88T/preview', status: 'pending' },
+                        { title: 'Parasitoses Intestinais', videoUrl: 'https://drive.google.com/file/d/1cyk3qwNIsPGcsH9Bl5mwI2FcFFmsOuN4/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Parasitoses Intestinais', url: 'https://drive.google.com/file/d/1-DFAHJbZYHhV_TbdmT7hSXF9hUDnbYcZ/view?usp=sharing' }
+                },
+                {
+                    title: 'Acidentes com Animais Peçonhentos',
+                    lessons: [
+                        { title: 'Cof Xpress: Acidentes com Animais Peçonhentos', videoUrl: 'https://drive.google.com/file/d/1JtuGTjEXtTTH2JO1o1-pBsXYR6iliCqq/preview', status: 'pending' },
+                        { title: 'Acidentes com Animais Peçonhentos', videoUrl: 'https://drive.google.com/file/d/1y-t30gvWYBJHG2GNzCq2cc3YtIyQGd68/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Acidentes com Animais Peçonhentos', url: 'https://drive.google.com/file/d/1n5zegX6w6kMCflmCcmdXmXLNSFS5gAod/view?usp=sharing' }
+                },
+                {
+                    title: 'Doenças Virais e Pandêmicas',
+                    lessons: [
+                        { title: 'Doenças Virais e Pandêmicas: Parte II', videoUrl: 'https://drive.google.com/file/d/13odxfaS8flB8CTkhz5xUI142U8035lip/preview', status: 'pending' },
+                        { title: 'Doenças Virais e Pandêmicas: Parte I', videoUrl: 'https://drive.google.com/file/d/1DvxHlJdIwvUXVmkkSSzn6rwc1xIjDvT_/preview', status: 'pending' },
+                        { title: 'Cof Xpress: Doenças Virais e Pandêmicas - Parte I e II', videoUrl: 'https://drive.google.com/file/d/1Fb52OMnM20W5uqyyrLm-zJHDaAO15QXi/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Doenças Virais e Pandêmicas', url: 'https://drive.google.com/file/d/1a228yNDAXjbod8H7oxFvoFhjk98QPGTP/view?usp=sharing' }
+                },
+                {
+                    title: 'Vacinação',
+                    lessons: [
+                        { title: 'Cof Xpress: Vacinação', videoUrl: 'https://drive.google.com/file/d/1ElABdIZelDdKzBA5kIegs56xLNOIjroo/preview', status: 'pending' },
+                        { title: 'Vacinação', videoUrl: 'https://drive.google.com/file/d/1aT4uqVQ8mjc2gFXKhNFNEyzIRM7Zwn5s/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Vacinação', url: 'https://drive.google.com/file/d/1wjpvD6CLcjaHC4JnDAN4j9zZwdRMSpE2/view?usp=sharing' }
+                },
+                {
+                    title: 'Antibióticos II',
+                    lessons: [
+                        { title: 'Antibióticos II', videoUrl: 'https://drive.google.com/file/d/1cKrDvaoyiGIywuiQxnSnC0MIbkPvaKHQ/preview', status: 'pending' },
+                        { title: 'Cof Xpress: Antibióticos II', videoUrl: 'https://drive.google.com/file/d/1zlAFdZNW_XCl4dYXZbJPnTe0Zgy0CLWQ/preview', status: 'pending' }
+                    ],
+                    material: { title: 'Antibióticos II', url: 'https://drive.google.com/file/d/1G7DrwmXom-KEubGIhI8unz08dq6bqbqe/view?usp=sharing' }
+                }
+            ]
+        };
+
+        const lessonTitleEl = document.getElementById('lesson-title');
+        const lessonSubtitleEl = document.getElementById('lesson-subtitle');
+        const videoPlayerEl = document.getElementById('video-player');
+        const moduleSidebarEl = document.getElementById('module-sidebar');
+        const materialContainerEl = document.getElementById('material-container');
+        const completeButtonContainerEl = document.getElementById('complete-button-container');
+        const prevLessonBtn = document.getElementById('prev-lesson-btn');
+        const nextLessonBtn = document.getElementById('next-lesson-btn');
+
+        let currentSubmoduleIndex = -1;
+        let currentLessonIndex = -1;
+        let allLessonsFlat = [];
+
+        function initializeState() {
+            allLessonsFlat = [];
+            moduleData.submodules.forEach((sm, smIndex) => {
+                sm.lessons.forEach((l, lIndex) => {
+                    allLessonsFlat.push({ ...l, smIndex, lIndex });
+                    if (l.status === 'current') {
+                        currentSubmoduleIndex = smIndex;
+                        currentLessonIndex = lIndex;
+                    }
+                });
+            });
+            if (currentSubmoduleIndex === -1 && moduleData.submodules.length > 0 && moduleData.submodules[0].lessons.length > 0) {
+                currentSubmoduleIndex = 0;
+                currentLessonIndex = 0;
+            }
+        }
+
+        function renderSidebar() {
+            moduleSidebarEl.innerHTML = '';
+            moduleData.submodules.forEach((submodule, smIndex) => {
+                const isCurrentSubmodule = smIndex === currentSubmoduleIndex;
+                const submoduleDiv = document.createElement('div');
+                submoduleDiv.className = 'border-b last:border-b-0';
+                
+                let lessonsHTML = submodule.lessons.map((lesson, lIndex) => {
+                    const isCurrentLesson = isCurrentSubmodule && lIndex === currentLessonIndex;
+                    let statusIcon;
+                    if (lesson.status === 'completed') {
+                        statusIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                    } else if (isCurrentLesson) {
+                        statusIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+                    } else {
+                        statusIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-gray-400"><circle cx="12" cy="12" r="10"/></svg>`;
+                    }
+                    return `
+                        <li>
+                            <a href="#" data-sm-index="${smIndex}" data-l-index="${lIndex}" class="lesson-item flex items-center p-3 rounded-lg ${isCurrentLesson ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100'}">
+                                <div class="mr-4 flex-shrink-0 w-5 h-5 flex items-center justify-center">${statusIcon}</div>
+                                <div class="flex-grow"><p class="font-semibold ${isCurrentLesson ? '' : 'text-gray-800'}">${lesson.title}</p></div>
+                            </a>
+                        </li>`;
+                }).join('');
+
+                submoduleDiv.innerHTML = `
+                    <button class="submodule-toggle w-full flex justify-between items-center p-3 text-left font-bold text-lg">
+                        <span>${submodule.title}</span>
+                        <svg class="w-5 h-5 transition-transform duration-300 ${isCurrentSubmodule ? '' : '-rotate-90'}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <ul class="submodule-content pl-4 space-y-1 py-2">${lessonsHTML}</ul>
+                `;
+                
+                moduleSidebarEl.appendChild(submoduleDiv);
+                
+                const lessonsList = submoduleDiv.querySelector('.submodule-content');
+                if (isCurrentSubmodule) {
+                    lessonsList.style.maxHeight = lessonsList.scrollHeight + "px";
+                }
+            });
+        }
+        
+        function renderMaterial(submodule) {
+            if (submodule.material) {
+                materialContainerEl.innerHTML = `
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Material de Apoio</h3>
+                    <a href="${submodule.material.url}" target="_blank" class="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 mr-4 text-red-500"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
+                        <span class="font-semibold text-gray-700">${submodule.material.title}</span>
+                    </a>`;
+            } else {
+                materialContainerEl.innerHTML = '';
+            }
+        }
+
+        function renderCompleteButton(lesson) {
+            completeButtonContainerEl.innerHTML = '';
+            if (lesson.status !== 'completed') {
+                const button = document.createElement('button');
+                button.id = 'complete-lesson-btn';
+                button.className = 'w-full mt-4 flex items-center justify-center bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors duration-200';
+                button.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Marcar como Concluída
+                `;
+                completeButtonContainerEl.appendChild(button);
+                button.addEventListener('click', handleCompleteLesson);
+            }
+        }
+
+        function loadLesson(smIndex, lIndex) {
+            currentSubmoduleIndex = smIndex;
+            currentLessonIndex = lIndex;
+            
+            const submodule = moduleData.submodules[smIndex];
+            const lesson = submodule.lessons[lIndex];
+            if (lesson.status !== 'completed') {
+                lesson.status = 'current';
+            }
+            
+            lessonTitleEl.textContent = moduleData.title;
+            lessonSubtitleEl.textContent = `${submodule.title} - ${lesson.title}`;
+            videoPlayerEl.src = lesson.videoUrl;
+            
+            const flatIndex = allLessonsFlat.findIndex(l => l.smIndex === smIndex && l.lIndex === lIndex);
+            prevLessonBtn.disabled = flatIndex === 0;
+            nextLessonBtn.disabled = flatIndex === allLessonsFlat.length - 1;
+
+            renderSidebar();
+            renderMaterial(submodule);
+            renderCompleteButton(lesson);
+        }
+
+        function handleCompleteLesson() {
+            const lesson = moduleData.submodules[currentSubmoduleIndex].lessons[currentLessonIndex];
+            lesson.status = 'completed';
+            renderSidebar();
+            renderCompleteButton(lesson);
+
+            // Opcional: avançar para a próxima aula automaticamente
+            const flatIndex = allLessonsFlat.findIndex(l => l.smIndex === currentSubmoduleIndex && l.lIndex === currentLessonIndex);
+            if (flatIndex < allLessonsFlat.length - 1) {
+                navigateLesson(1);
+            }
+        }
+
+        moduleSidebarEl.addEventListener('click', (e) => {
+            const lessonItem = e.target.closest('.lesson-item');
+            if (lessonItem) {
+                e.preventDefault();
+                const smIndex = parseInt(lessonItem.dataset.smIndex, 10);
+                const lIndex = parseInt(lessonItem.dataset.lIndex, 10);
+                loadLesson(smIndex, lIndex);
+                return;
+            }
+
+            const toggleBtn = e.target.closest('.submodule-toggle');
+            if (toggleBtn) {
+                const content = toggleBtn.nextElementSibling;
+                const icon = toggleBtn.querySelector('svg');
+                const isOpening = !content.style.maxHeight || content.style.maxHeight === '0px';
+
+                document.querySelectorAll('.submodule-content').forEach(el => {
+                    el.style.maxHeight = null;
+                    el.previousElementSibling.querySelector('svg').classList.add('-rotate-90');
+                });
+                
+                if (isOpening) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    icon.classList.remove('-rotate-90');
+                }
+            }
+        });
+
+        function navigateLesson(direction) {
+            const flatIndex = allLessonsFlat.findIndex(l => l.smIndex === currentSubmoduleIndex && l.lIndex === currentLessonIndex);
+            const nextFlatIndex = flatIndex + direction;
+            if (nextFlatIndex >= 0 && nextFlatIndex < allLessonsFlat.length) {
+                const nextLesson = allLessonsFlat[nextFlatIndex];
+                loadLesson(nextLesson.smIndex, nextLesson.lIndex);
+            }
+        }
+
+        nextLessonBtn.addEventListener('click', () => navigateLesson(1));
+        prevLessonBtn.addEventListener('click', () => navigateLesson(-1));
+
+        initializeState();
+        loadLesson(currentSubmoduleIndex, currentLessonIndex);
+    </script>
+</body>
+</html>

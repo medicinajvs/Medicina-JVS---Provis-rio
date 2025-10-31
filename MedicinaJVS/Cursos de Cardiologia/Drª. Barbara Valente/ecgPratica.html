@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma ECG na Prática</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Destaque para item selecionado */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hidden { 
+            display: none !important; 
+        }
+        
+        /* Estilos para o menu suspenso (dropdown) */
+        summary {
+            list-style: none; /* Remove a seta padrão */
+        }
+        summary::-webkit-details-marker {
+            display: none;
+        }
+        details[open] summary .chevron {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Cabeçalho da Aplicação -->
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg flex-shrink-0">
+        <div class="flex items-center space-x-4">
+            <button id="backButton" class="hidden bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </button>
+            <h1 id="mainTitle" class="text-xl font-bold text-white">ECG na Prática</h1>
+        </div>
+    </header>
+
+    <!-- Container principal que alterna as "páginas" -->
+    <div id="pageContainer" class="flex-grow">
+        <!-- Página de Seleção de Módulos -->
+        <div id="moduleSelectionPage" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- PÁGINA DE CONTEÚDO (AULAS) -->
+        <main id="contentPage" class="hidden h-full p-4 lg:grid lg:grid-cols-3 lg:gap-x-4">
+            <!-- Coluna Esquerda: Player, Título e Materiais -->
+            <section class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0">
+                    <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-4 bg-gray-800 border-b border-t border-gray-700 flex-shrink-0">
+                    <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione uma aula</h2>
+                </div>
+                <!-- Container de Materiais de Estudo (agora como dropdown) -->
+                <div class="p-4 overflow-y-auto flex-grow">
+                     <details id="materialsDropdown" class="bg-gray-900/50 rounded-lg">
+                        <summary class="p-4 cursor-pointer text-lg font-bold text-white flex justify-between items-center">
+                            <span>Materiais de Estudo</span>
+                            <i class="fas fa-chevron-down chevron transition-transform duration-200"></i>
+                        </summary>
+                        <div id="materialsContainer" class="p-4 border-t border-gray-700 space-y-3">
+                            <!-- Conteúdo injetado via JS -->
+                        </div>
+                    </details>
+                </div>
+            </section>
+            <!-- Coluna Direita: Lista de Aulas -->
+            <aside class="mt-4 lg:mt-0 lg:col-span-1 bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col overflow-y-auto hide-scrollbar max-h-[calc(100vh-128px)]">
+                <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+                <div id="videosContainer" class="space-y-3"></div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        // --- Estrutura de Dados ---
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // ESTRUTURA DE DADOS DO CURSO COM LINKS ATUALIZADOS
+        const modulesData = [
+            {
+                id: 'module_00_livros', title: 'Módulo 00 - Livros', icon: 'fas fa-book', videos: [],
+                materials: [
+                    { title: 'ECG na Prática 2024 - Coelho, Valente', link: 'https://drive.google.com/file/d/1ABfgMjnSaO7CgwhyNJ9LYkum5-4R4yLN/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Livro Digital - 25 Casos de ECG', link: 'https://drive.google.com/file/d/1A50VChYPWWW3UKsRu_w6nAwYTvZrVvZi/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            },
+            {
+                id: 'module_01_comece', title: 'Módulo 01 - Comece por Aqui', icon: 'fas fa-play-circle',
+                videos: [ { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19tr96ZwqsdohRHsk3uL5vSVWepdGt_ae/view?usp=sharing'), title: 'Aula 01 - Introdução', icon: 'fas fa-video' } ],
+                materials: []
+            },
+            {
+                id: 'module_02_principios', title: 'Módulo 02 - Princípios Básicos do ECG', icon: 'fas fa-wave-square',
+                videos: [ { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BkpacwOCskHLhvQT2eCipx1NVsLboqje/view?usp=sharing'), title: 'Aula 01 - Princípios Básicos do Eletrocardiograma', icon: 'fas fa-video' } ],
+                materials: [ { title: 'Princípios Básicos do Eletrocardiograma', link: 'https://drive.google.com/file/d/1A1k0gkR-y-u5nG91hfMetW0-F4tJ5phq/view?usp=sharing', icon: 'fas fa-file-pdf' } ]
+            },
+            {
+                id: 'module_03_roteiro', title: 'Módulo 03 - Roteiro para Análise do ECG', icon: 'fas fa-list-check',
+                videos: [ { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BY8opJQRl4GhW7slGOs0Aqh8F9MXvBs6/view?usp=sharing'), title: 'Aula 01 - Roteiro para Análise Prática do Eletrocardiograma', icon: 'fas fa-video' } ],
+                materials: [ { title: 'Roteiro para Análise Prática do ECG', link: 'https://drive.google.com/file/d/1B6gaJ0qwEXDoGWcuebHBXYcZagszH93x/view?usp=sharing', icon: 'fas fa-file-pdf' } ]
+            },
+            {
+                id: 'module_04_arritmias', title: 'Módulo 04 - Passo I: Descartar Arritmias', icon: 'fas fa-heart-pulse',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BeJmHPAIIZ9h-vb3og88lGDp-WqAfSkv/view?usp=sharing'), title: 'Aula 01 - Frequência Cardíaca Normal: Identificar o Ritmo Cardíaco', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19vnAZM1wLsRNAjEQP7X8pnk4Q1wdgYBl/view?usp=sharing'), title: 'Aula 02 - Como Surge Uma Taquiarritmia?', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19yxLhpk8Ni6P-L5pYESJVsn-QzYJoc01/view?usp=sharing'), title: 'Aula 03 - Taquicardias Supraventriculares: Parte I', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Bc8sHnJ9WsIrBltlADwtpWG9HbshMCwC/view?usp=sharing'), title: 'Aula 04 - Taquicardias Supraventriculares: Parte II', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BWm9oWD8EDSKhJy5RXrTONriYkMJuqK-/view?usp=sharing'), title: 'Aula 05 - Taquicardia Ventricular', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Br-SeGcLM1uj7rJKgTcON-dY9-M9ItZu/view?usp=sharing'), title: 'Aula 06 - Algoritmo Diagnóstico das Taquiarritmias', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19saQH48PHtmwgo36JbzAAqROlYwigLkf/view?usp=sharing'), title: 'Aula 07 - Bradicardia: Identificar a Bradiarritmia - Parte I', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BfyLES70aj6iSKtxWcvJ4rtMlqFNRoPI/view?usp=sharing'), title: 'Aula 08 - Bradicardia: Identificar a Bradiarritmia - Parte II', icon: 'fas fa-video' }
+                ],
+                materials: [
+                    { title: 'Bradiarritmias - Identificar a Bradiarritmia', link: 'https://drive.google.com/file/d/1AEi20EICVw9NwOKI4LRcGxNztqbBSr6m/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo I (Descartar Arritmias) - Algoritmo Diagnóstico das Taquiarritmias', link: 'https://drive.google.com/file/d/1AEMM2nAm73LOIeuH1G84tzBnqlaAMgRZ/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo I (Descartar Arritmias) - Como Surge uma Taquiarritmia', link: 'https://drive.google.com/file/d/1AEBQMIH9nmzi8fuQXHXHJzn0iN73V7Gf/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo I (Descartar Arritmias) - Identificar o Ritmo Cardíaco na FC Normal', link: 'https://drive.google.com/file/d/1AH-Zp7PPoygnkhwVEW50Kt_k_4ao0mnP/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo I (Descartar Arritmias) - Taquicardia Supraventricular (TSV)', link: 'https://drive.google.com/file/d/1AES7E6FfTLpZPuFvCOuruPvgxWNnNkCe/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Taquicardia Ventricular', link: 'https://drive.google.com/file/d/1AC2NP5HEQhmUmh86rIG2IEXZJCxzrFEi/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Tratamento das Bradiarritmias', link: 'https://drive.google.com/file/d/1AICzu8nyCvxEmQ_EnsQAC2YbZiecKErV/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            },
+            {
+                id: 'module_05_isquemia', title: 'Módulo 05 - Passo II: Descartar Alterações Isquêmicas', icon: 'fas fa-magnifying-glass-heart',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BskCZQJx6s8dXbHoHvZxSwaJpwFoQcnU/view?usp=sharing'), title: 'Aula 01 - Supradesnivelamento do Segmento ST', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19y3qVuow3McBMxV770dnUok666Ooy1tv/view?usp=sharing'), title: 'Aula 02 - Diagnósticos Diferenciais do Supra de ST', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BWhzkDmDJNq9UQTWEDXx05sURmaM3xes/view?usp=sharing'), title: 'Aula 03 - Infradesnivelamento do Segmento ST', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BfFnv30CmpZ2saQOVdOCjS6A4-wxI5gN/view?usp=sharing'), title: 'Aula 04 - Padrões Isquêmicos de Alto Risco', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BCZTIgkr8fZMrA7D8K9-7zvapvSIJ4H8/view?usp=sharing'), title: 'Aula 05 - Avaliar Alterações da Onda T', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BtGY9UNJto1jpg6ZpVMNvyMpLduwAk4D/view?usp=sharing'), title: 'Aula 06 - Avaliar Presença de Área Inativa', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19zXlcVhbMlOptKuEJu0KRwuj6RSK9rmy/view?usp=sharing'), title: 'Aula 07 - Aula Bônus: Manejo da SCASSST', icon: 'fas fa-video' }
+                ],
+                materials: [
+                    { title: 'Aula Bônus - Manejo da SCASSST', link: 'https://drive.google.com/file/d/1AjcPrYBOocl9dYK9FFLanI56eLW5LJ_L/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Aula Bônus - Manejo do IAMCSST', link: 'https://drive.google.com/file/d/1AhWIL5RgR5BVY8rRtUr2X1dMG5mJLLmY/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo II (Descartar Alterações Isquêmicas) - Avaliar Alterações da Onda T', link: 'https://drive.google.com/file/d/1AqZ578vjDsWSwhBYtLnxup14IvbcunXo/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo II (Descartar Alterações Isquêmicas) - Avaliar Presença de Área Inativa', link: 'https://drive.google.com/file/d/1AlUK3oimzNeRAx-FKBfFRglyjkwMNYyJ/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo II (Descartar Alterações Isquêmicas) - Diagnósticos Diferenciais do Supra de ST', link: 'https://drive.google.com/file/d/1AqEOqCZ6BJ4jtNVFkHqqxjXWoWiFTph-/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo II (Descartar Alterações Isquêmicas) - Infradesnivelamento do Segmento ST', link: 'https://drive.google.com/file/d/1AhveiaISNDcR4U2sLPjL2IaGFCSlzWgh/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo II (Descartar Alterações Isquêmicas) - Padrões Isquêmicos de Alto Risco', link: 'https://drive.google.com/file/d/1AucorhtaFo0HBqrLUwBwLoAgbc_C9cD1/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Passo II (Descartar Alterações Isquêmicas) - Supradesnivelamento do Segmento ST', link: 'https://drive.google.com/file/d/1Ahu5GPmWjEdXjh0ZORPP8ewEhQT5Nj6i/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            },
+            {
+                id: 'module_06_qtc', title: 'Módulo 06 - Passo III: Calcular o Intervalo QT Corrigido', icon: 'fas fa-ruler-horizontal',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19xlukL7NLJJh9em8fKyeYN25aquvcwLf/view?usp=sharing'), title: 'Aula 01 - Como Medir o Intervalo QT Corrigido', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BZ6lblLIv65Opz5LwY2VtoFxejsoaAyQ/view?usp=sharing'), title: 'Aula 02 - Algoritmo da Avaliação do Intervalo QTc e Caso Clínico para Treinamento', icon: 'fas fa-video' }
+                ],
+                materials: [
+                    { title: 'Algoritmo da Avaliação do Intervalo QTc e Caso Clínico para Treinamento', link: 'https://drive.google.com/file/d/1B5fIg-V2siTrAuWfNG5gLS5Bexb8op1x/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Como Medir o Intervalo QT Corrigido', link: 'https://drive.google.com/file/d/1B4LfhRBRWb0TZbd-f-YZV4nshO663p85/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            },
+            {
+                id: 'module_07_padroes', title: 'Módulo 07 - Identificar "Padrões Eletrocardiográficos Típicos"', icon: 'fas fa-clipboard-check',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BF2lMLQPxKSwieuU0ivhdiyBIrpsZ6lx/view?usp=sharing'), title: 'Aula 01 - ECG em Doenças Específicas: Parte I', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19t4wxCRDe8qvzWyNJ-q-hZqu3uKbNrkk/view?usp=sharing'), title: 'Aula 02 - ECG em Doenças Específicas: Parte II', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19pbvVKRjnQa496TCpGZN0bBLQvhOHmDh/view?usp=sharing'), title: 'Aula 03 - Sobrecarga Atrial e Ventricular', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BGIYe-2HsRLYfm_bFTO_3kTG1fnBsR6Y/view?usp=sharing'), title: 'Aula 04 - Distúrbios de Condução Intraventricular (Bloqueio de Ramo Direito, Esquerdo e Divisionais)', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19pStBMXG3zNYYNx701wLXR5umVtBiq3H/view?usp=sharing'), title: 'Aula 05 - Estimulação Cardíaca Artificial (“Ritmo de Marcapasso”)', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BGP2dOMUTV1kUJU-UJ_mLE39kGvoabok/view?usp=sharing'), title: 'Aula 06 - Extrassístoles', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BTBywppMG1WzJjxJbW5Uet7K95gMVbZW/view?usp=sharing'), title: 'Aula 07 - Intoxicação Digitálica', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19va18AVBtWmijzXbe2lUBzrRUgvgrroc/view?usp=sharing'), title: 'Aula 08 - Cardiomiopatia (Displasia) Arritmogênica do Ventrículo Direito', icon: 'fas fa-video' }
+                ],
+                materials: [
+                    { title: 'Cardiomiopatia (Displasia) Arritmogênica do Ventrículo Direito', link: 'https://drive.google.com/file/d/1B3RYUKTu6OiZeWcUWRShPLLlvnIIPe2I/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Distúrbios de Condução Intraventricular (Bloqueio de Ramo Direito, Esquerdo e Divisionais)', link: 'https://drive.google.com/file/d/1Ayg0Pt6Jyao95g09FfE0B-dHYV46WO4j/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Estimulação Cardíaca Artificial (“Ritmo de Marcapasso”)', link: 'https://drive.google.com/file/d/1Ayonu5yWq34xbqRjENMH5Kk1mNHUBzrq/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Extrassístoles', link: 'https://drive.google.com/file/d/1B-Qh8ao09UP6UB8WQh4s5l0U8UMin8Wj/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Intoxicação Digitálica', link: 'https://drive.google.com/file/d/1Ao2r0zeUn8hkdwuuiggXx1Gz1QHpnaaP/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Sobrecarga Atrial e Ventricular', link: 'https://drive.google.com/file/d/1Ay1SGGBAN_SJRkvoJYrGbcWXYab2EtYF/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            },
+            {
+                id: 'module_08_bonus_casos', title: 'Módulo 08 (Bônus) - Aplicando os 4 Passos em Casos Clínicos Reais', icon: 'fas fa-lightbulb',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BIa4ITgTzd8v_urw2-o0ZXm1OkpuiTbZ/view?usp=sharing'), title: 'Aula 01 - Caso Clínico de Isquemia Circunferencial', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BJxfSDKuPkGBQduEh1syCGdM6rdJ_vtP/view?usp=sharing'), title: 'Aula 02 - Caso Clínico de Fibrilação Atrial', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Bj1UsnsuE_7h8T8jIhro4yG_PrtafViX/view?usp=sharing'), title: 'Aula 03 - Caso Clínico de Edema Agudo de Pulmão', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BMd60IPNE55g18tQmX55m_w6dVyuZXH4/view?usp=sharing'), title: 'Aula 04 - Aula Bônus: Casos Clínicos de ECG na Emergência', icon: 'fas fa-video' }
+                ],
+                materials: [
+                    { title: 'Caso Clínico de Edema Agudo de Pulmão', link: 'https://drive.google.com/file/d/1AV2AVaAfK0yZAnDqPDsKLUVuIQJ2r8-k/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Caso Clínico de Fibrilação Atrial', link: 'https://drive.google.com/file/d/1AYfQdiS-e4f4Nve1LpHjwvQhTgXYJu86/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Caso Clínico de Isquemia Circunferencial', link: 'https://drive.google.com/file/d/1Ag2Cb7F4LbCNLQZ_zFHndnMxXYfM-JPi/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                    { title: 'Casos Clínicos de ECG na Emergência', link: 'https://drive.google.com/file/d/1ASDyXXTXRVFtVC9ssLXNkdaY1Nvvf45I/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            },
+            {
+                id: 'module_09_bonus_aulas', title: 'Módulo 09 (Bônus) - Aulas Bônus', icon: 'fas fa-graduation-cap',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19tq75isbiEcRS8Sf15BSxzh-9k3r_tHf/view?usp=sharing'), title: 'Aula 01 - Aula Bônus: Como Realizar Pesquisas de Relevância e Publicar em Revistas', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BleSadSzbCUw8QSA7itUOAq28PO8HQnr/view?usp=sharing'), title: 'Aula 02 - Aula Bônus: Taquiarritmias na Infância com Dr. Mika Luglio', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_10_bonus_masterclass', title: 'Módulo 10 (Bônus) - Masterclass', icon: 'fas fa-star',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19vTDYpJo1ll-P0bIgVAQux3H5jwEqHAD/view?usp=sharing'), title: 'Aula 01 - Masterclass: ECG na Prática', icon: 'fas fa-video' }
+                ],
+                materials: [
+                    { title: 'Masterclass - ECG na Prática', link: 'https://drive.google.com/file/d/1B92isvPUVuL3WeKurk4Mp34RtVIHffy2/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                ]
+            }
+        ];
+
+        // --- Funções de Navegação e Renderização ---
+
+        function navigateTo(pageId) {
+            document.getElementById('moduleSelectionPage').classList.add('hidden');
+            document.getElementById('contentPage').classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        function showModuleSelectionPage() {
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            modulesData.forEach(module => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showContentPage('${module.id}')">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <i class="${module.icon} text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${module.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${module.videos.length} aulas e ${module.materials.length} materiais</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = 'ECG na Prática';
+            document.getElementById('backButton').classList.add('hidden');
+            navigateTo('moduleSelectionPage');
+        }
+
+        function showContentPage(moduleId) {
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            renderContent(module);
+            
+            document.getElementById('mainTitle').textContent = module.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            backButton.onclick = showModuleSelectionPage;
+            navigateTo('contentPage');
+        }
+
+        function renderContent(module) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const materialsDropdown = document.getElementById('materialsDropdown');
+            videosContainer.innerHTML = '';
+            materialsContainer.innerHTML = '';
+
+            let firstItem = null;
+            module.videos.forEach(item => {
+                if (!firstItem) firstItem = { type: 'video', data: item };
+                videosContainer.innerHTML += createItemHtml('video', item);
+            });
+            module.materials.forEach(item => {
+                if (!firstItem) firstItem = { type: 'material', data: item };
+                materialsContainer.innerHTML += createItemHtml('material', item);
+            });
+            
+            if (module.materials.length === 0) {
+                 materialsDropdown.style.display = 'none';
+            } else {
+                 materialsDropdown.style.display = 'block';
+            }
+
+            if (module.videos.length === 0) {
+                 videosContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma aula neste módulo.</p>';
+            }
+            
+            if (firstItem) {
+                if (firstItem.type === 'video') {
+                    loadVideo(firstItem.data.id, firstItem.data.title);
+                } else {
+                    loadMaterial(firstItem.data.link, firstItem.data.title);
+                }
+            } else {
+                updatePlayerAndSelection(null, '', 'Nenhum item disponível');
+            }
+        }
+
+        function createItemHtml(type, item) {
+            const onclickAction = type === 'video' 
+                ? `loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')`
+                : `loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')`;
+            const dataId = type === 'video' ? item.id : item.link;
+            return `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                     onclick="${onclickAction}" data-id="${dataId}">
+                    <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                        <p class="text-xs text-gray-400">${item.description || ''}</p>
+                    </div>
+                </div>`;
+        }
+
+        function loadVideo(videoId, lessonTitle) {
+            const isPlaceholder = !videoId || videoId.startsWith('placeholder');
+            const playerSrc = isPlaceholder ? '' : `https://drive.google.com/file/d/${videoId}/preview`;
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : lessonTitle;
+            updatePlayerAndSelection(videoId, playerSrc, displayTitle);
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const isPlaceholder = !link || link === '#';
+            const playerSrc = isPlaceholder ? '' : link.replace(/\/view\?usp=.*/, '/preview');
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : materialTitle;
+            updatePlayerAndSelection(link, playerSrc, displayTitle);
+        }
+
+        function updatePlayerAndSelection(itemId, playerSrc, title) {
+            document.getElementById('contentPlayer').src = playerSrc;
+            document.getElementById('lessonTitle').textContent = title;
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+            if (itemId) {
+                 const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+                if (currentSelected) currentSelected.classList.add('selected-lesson');
+            }
+            selectedItemId = itemId;
+        }
+
+        // --- Inicialização ---
+        window.onload = showModuleSelectionPage;
+    </script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casalmed 2025 - Clone</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Define a fonte Inter como padrão e a cor de fundo principal */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #10141a;
+        }
+
+        /* --- Estilos para a rolagem horizontal --- */
+        .horizontal-scroll-container {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            /* Adicionado padding em TODAS as direções para dar espaço ao efeito de scale */
+            padding: 1rem 0.5rem 2rem 0.5rem;
+            -webkit-overflow-scrolling: touch;
+            /* Esconde a barra de rolagem visualmente, mas mantém a funcionalidade */
+            scrollbar-width: none; /* Firefox */
+        }
+        .horizontal-scroll-container::-webkit-scrollbar { 
+            display: none; /* Chrome, Safari, and Opera */
+        }
+
+        /* Container para cada item na rolagem */
+        .scroll-item {
+            display: inline-block; 
+            flex-shrink: 0;
+            position: relative;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Wrapper Principal -->
+    <div class="min-h-screen bg-[#10141a]">
+
+        <!-- Cabeçalho / Navbar -->
+        <header id="main-header" class="fixed top-0 left-0 w-full z-50 p-4 md:px-8 lg:px-12 transition-colors duration-300">
+            <nav class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button id="menu-btn" class="text-white focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+                    <span class="font-bold text-lg">CASALMED 2025</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-white focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                    <button class="text-white focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Seção Principal (Hero) -->
+        <main class="relative overflow-hidden" style="background-image: url('https://static-media.hotmart.com/R6rFGTvKamhiZLpyZ40jrJSO9s8=/fit-in/1920x800/filters:upscale()/hotmart-template-files-production/membership/6785041ce573e97bf3b7e0ca/49cb463e-2a76-4a85-91c0-10acf95bc6a7'); background-size: cover; background-position: center center;">
+            <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+            <div class="relative container mx-auto px-4 min-h-[60vh] md:min-h-[70vh] flex items-center justify-center">
+                <div class="z-10 text-center">
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
+                        Os melhores resumos de medicina do Brasil
+                    </h1>
+                </div>
+            </div>
+        </main>
+
+        <div class="px-4 md:px-8 lg:px-12 py-12 space-y-16">
+            <!-- Seções dos Módulos (serão preenchidas pelo JS) -->
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const modules = [
+                {
+                    title: "COMBO PLANTÃO",
+                    type: 'image',
+                    code: 'cp',
+                    colors: ["#d37b3f", "#c5623d", "#b34c3a", "#a33a38", "#932c35", "#d37b3f", "#c5623d", "#b34c3a", "#a33a38"],
+                    items: [
+                        { long: "Guia de Prescrição Médica (Digital)", imageUrl: "Imagens/Combo Plantão/gp-logo.png", url: "Combo Plantão/comboPlantao1.html" },
+                        { long: "Guia de Procedimentos (Digital)", imageUrl: "Imagens/Combo Plantão/gpro-logo.png", url: "Combo Plantão/comboPlantao2.html" },
+                        { long: "Bulário A-Z (Versão Digital)", imageUrl: "Imagens/Combo Plantão/bu-az-logo.png", url: "Combo Plantão/comboPlantao3.html" },
+                        { long: "Resumão ATLS/ACLS/PALS", imageUrl: "Imagens/Combo Plantão/aap-logo.png", url: "Combo Plantão/comboPlantao4.html" },
+                        { long: "Prancheta-Resumo 2.0 (Internação e UTI)", imageUrl: "Imagens/Combo Plantão/pr-iuti-logo.png", url: "Combo Plantão/comboPlantao5.html" },
+                        { long: "Prancheta-Resumo 2.0 (Cirurgia)", imageUrl: "Imagens/Combo Plantão/pr-cr-logo.png", url: "Combo Plantão/comboPlantao6.html" },
+                        { long: "Pranchetas-Resumo 2.0 (Pediatria)", imageUrl: "Imagens/Combo Plantão/pr-ped-logo.png", url: "Combo Plantão/comboPlantao7.html" },
+                        { long: "Prancheta-Resumo 2.0 (Ginecologia e Obstetrícia)", imageUrl: "Imagens/Combo Plantão/pr-go-logo.png", url: "Combo Plantão/comboPlantao8.html" },
+                        { long: "Combo Pranchetas-Resumo 2.0 (Versão Digital)", imageUrl: "Imagens/Combo Plantão/pr-completo-logo.png", url: "Combo Plantão/comboPlantao9.html" }
+                    ]
+                },
+                {
+                    title: "Abordagem por Especialidades",
+                    type: 'image',
+                    code: 'ae',
+                    colors: ["#c5623d", "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef", "#3b82f6", "#6366f1"],
+                    items: [
+                        { long: "CLÍNICA MÉDICA", imageUrl: "Imagens/AE/cm-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades1.html" },
+                        { long: "CIRURGIA", imageUrl: "Imagens/AE/cr-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades2.html" },
+                        { long: "GINECOLOGIA", imageUrl: "Imagens/AE/gin-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades3.html" },
+                        { long: "OBSTETRÍCIA", imageUrl: "Imagens/AE/obs-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades4.html" },
+                        { long: "PEDIATRIA", imageUrl: "Imagens/AE/ped-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades5.html" },
+                        { long: "PREVENTIVA", imageUrl: "Imagens/AE/prev-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades6.html" },
+                        { long: "CADERNO COMPLETO", imageUrl: "Imagens/AE/completo-ae-logo.png", url: "Abordagem por Especialidades/abordagemEspecialidades7.html" }
+                    ]
+                },
+                 {
+                    title: "Abordagem Sindrômica",
+                    type: 'image',
+                    code: 'as',
+                    colors: ["#22c55e", "#10b981", "#14b8a6", "#0d9488", "#0f766e", "#22c55e", "#10b981", "#14b8a6"],
+                    items: [
+                        { long: "CLÍNICA MÉDICA", imageUrl: "Imagens/AS/cm-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica1.html"}, 
+                        { long: "CIRURGIA", imageUrl: "Imagens/AS/cr-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica2.html"}, 
+                        { long: "GINECOLOGIA", imageUrl: "Imagens/AS/gin-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica3.html" },
+                        { long: "OBSTETRÍCIA", imageUrl: "Imagens/AS/obs-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica4.html" },
+                        { long: "PEDIATRIA", imageUrl: "Imagens/AS/ped-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica5.html" }, 
+                        { long: "PREVENTIVA", imageUrl: "Imagens/AS/prev-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica6.html" },
+                        { long: "CADERNO COMPLETO", imageUrl: "Imagens/AS/completo-as-logo.png", url: "Abordagem Sindrômica/abordagemSindromica7.html" }
+                    ]
+                },
+                {
+                    title: "Mapas Mentais",
+                    type: 'image',
+                    code: 'mm',
+                    colors: ["#facc15", "#f59e0b", "#d97706", "#b45309", "#92400e", "#facc15", "#f59e0b", "#d97706", "#b45309"],
+                    items: [
+                        { long: "CLÍNICA MÉDICA", imageUrl: "Imagens/MP/cm-mp-logo.png", url: "Mapas Mentais/mapasMentais1.html" },
+                        { long: "CIRURGIA", imageUrl: "Imagens/MP/cr-mp-logo.png", url: "Mapas Mentais/mapasMentais2.html" },
+                        { long: "GINECOLOGIA", imageUrl: "Imagens/MP/gin-mp-logo.png", url: "Mapas Mentais/mapasMentais3.html" },
+                        { long: "OBSTETRÍCIA", imageUrl: "Imagens/MP/obs-mp-logo.png", url: "Mapas Mentais/mapasMentais4.html" },
+                        { long: "PEDIATRIA", imageUrl: "Imagens/MP/ped-mp-logo.png", url: "Mapas Mentais/mapasMentais5.html" },
+                        { long: "PREVENTIVA", imageUrl: "Imagens/MP/prev-mp-logo.png", url: "Mapas Mentais/mapasMentais6.html" },
+                        { long: "TEMAS DE PLANTÃO", imageUrl: "Imagens/MP/tp-mp-logo.png", url: "Mapas Mentais/mapasMentais7.html" },
+                        { long: "CADERNO COMPLETO", imageUrl: "Imagens/MP/completo-mp-logo.png", url: "Mapas Mentais/mapasMentais8.html" }
+                    ]
+                },
+                {
+                    title: "Resumos por Matérias",
+                    type: 'image',
+                    code: 'rm',
+                    colors: ["#ec4899", "#d946ef", "#c026d3", "#a855f7", "#9333ea"],
+                    items: [
+                        { long: "Clínica Médica (2025)", imageUrl: "Imagens/RM/cm-rm-logo.png", url: "Resumos por Matérias/resumosMaterias1.html" },
+                        { long: "Cirurgia (2025)", imageUrl: "Imagens/RM/cr-rm-logo.png", url: "Resumos por Matérias/resumosMaterias2.html" },
+                        { long: "Ginecologia e Obstetrícia (2025)", imageUrl: "Imagens/RM/go-rm-logo.png", url: "Resumos por Matérias/resumosMaterias3.html" },
+                        { long: "Pediatria (2025)", imageUrl: "Imagens/RM/ped-rm-logo.png", url: "Resumos por Matérias/resumosMaterias4.html" },
+                        { long: "Preventiva (2025)", imageUrl: "Imagens/RM/prev-rm-logo.png", url: "Resumos por Matérias/resumosMaterias5.html" }
+                    ]
+                },
+                {
+                    title: "Resumos Extra",
+                    type: 'image',
+                    code: 're',
+                    colors: ["#64748b", "#475569", "#334155", "#1e293b", "#0f172a", "#64748b", "#475569", "#334155", "#1e293b", "#0f172a", "#64748b"],
+                    items: [
+                        { long: "DERMATOLOGIA", imageUrl: "Imagens/RE/der-re-logo.png", url: "Resumos Extras/resumosExtras1.html" },
+                        { long: "OTORRINO", imageUrl: "Imagens/RE/oto-re-logo.png", url: "Resumos Extras/resumosExtras2.html" },
+                        { long: "OFTALMO", imageUrl: "Imagens/RE/oft-re-logo.png", url: "Resumos Extras/resumosExtras3.html" },
+                        { long: "PSIQUIATRIA", imageUrl: "Imagens/RE/psi-re-logo.png", url: "Resumos Extras/resumosExtras4.html" },
+                        { long: "CIRURGIA VASCULAR", imageUrl: "Imagens/RE/cv-re-logo.png", url: "Resumos Extras/resumosExtras5.html" },
+                        { long: "CIRURGIA PEDIÁTRICA", imageUrl: "Imagens/RE/cp-re-logo.png", url: "Resumos Extras/resumosExtras6.html" },
+                        { long: "TERAPIA INTENSIVA", imageUrl: "Imagens/RE/ti-re-logo.png", url: "Resumos Extras/resumosExtras7.html" },
+                        { long: "ANESTESIO", imageUrl: "Imagens/RE/anes-re-logo.png", url: "Resumos Extras/resumosExtras8.html" },
+                        { long: "ORTOPEDIA", imageUrl: "Imagens/RE/ort-re-logo.png", url: "Resumos Extras/resumosExtras9.html" },
+                        { long: "CADERNO COMPLETO", imageUrl: "Imagens/RE/completo-re-logo.png", url: "Resumos Extras/resumosExtras10.html" }
+                    ]
+                },
+                { 
+                    title: "R3", 
+                    type: 'image',
+                    code: 'r3',
+                    colors: ["#06b6d4"],
+                    items: [
+                        { long: "R3 Clínica Médica (2025)", imageUrl: "Imagens/R3/cm-r3-logo.png", url: "R3/r3.html" }
+                    ] 
+                },
+                {
+                    title: "Guias e Outros",
+                    type: 'image',
+                    code: 'go',
+                    colors: ["#7c3aed", "#6d28d9", "#5b21b6", "#4c1d95", "#3b0764", "#7c3aed", "#6d28d9"],
+                    items: [
+                        { long: "Guia POCUS (2025)", imageUrl: "Imagens/GO/gpocus-go-logo.png", url: "Guias e Outros/guiasOutros1.html" },
+                        { long: "Guia de Semiologia (2025)", imageUrl: "Imagens/GO/gsemi-go-logo.png", url: "Guias e Outros/guiasOutros2.html" },
+                        { long: "Mapas - Temas de Plantão (2025)", imageUrl: "Imagens/GO/gmp-go-logo.png", url: "Guias e Outros/guiasOutros3.html" },
+                        { long: "Ventilação Mecânica (2025)", imageUrl: "Imagens/GO/gvm-go-logo.png", url: "Guias e Outros/guiasOutros4.html" },
+                        { long: "Banco de Provas (2025)", imageUrl: "Imagens/GO/gbpres-go-logo.png", url: "Guias e Outros/guiasOutros5.html" }
+                    ]
+                },
+                {
+                    title: "Atualizações 2025 - Parte I",
+                    type: 'image',
+                    code: 'att',
+                    colors: ["#38bdf8", "#0ea5e9", "#0284c7", "#0369a1", "#075985", "#38bdf8", "#0ea5e9", "#0284c7"],
+                    items: [
+                        { long: "Suplementação de Vitamina D (SBP)", imageUrl: "Imagens/ATU/Parte I/card-I-logo.png", url: "Atualizações/atualizacoes20251.html" },
+                        { long: "Suplementação de Cálcio na Gestação", imageUrl: "Imagens/ATU/Parte I/card-II-logo.png", url: "Atualizações/atualizacoes20252.html" },
+                        { long: "Vacinação Influenza (MS)", imageUrl: "Imagens/ATU/Parte I/card-III-logo.png", url: "Atualizações/atualizacoes20253.html" },
+                        { long: "Esporotricose - Nova Lista SINAN", imageUrl: "Imagens/ATU/Parte I/card-IV-logo.png", url: "Atualizações/atualizacoes20254.html" },
+                        { long: "Lei 8.080 - Nova Composição da CONITEC", imageUrl: "Imagens/ATU/Parte I/card-V-logo.png", url: "Atualizações/atualizacoes20255.html" },
+                        { long: "Hepatite C - Esquemas de Tratamento", imageUrl: "Imagens/ATU/Parte I/card-VI-logo.png", url: "Atualizações/atualizacoes20256.html" },
+                        { long: "Lei 8.080 - Novo Princípio do SUS (Atenção Humanizada)", imageUrl: "Imagens/ATU/Parte I/card-VII-logo.png", url: "Atualizações/atualizacoes20257.html" }
+                    ]
+                },
+                {
+                    title: "Atualizações 2025 - Parte II",
+                    type: 'image',
+                    code: 'att',
+                    colors: ["#38bdf8", "#0ea5e9", "#0284c7", "#0369a1", "#075985", "#38bdf8", "#0ea5e9", "#0284c7"],
+                    items: [
+                        { long: "GINA 2025", imageUrl: "Imagens/ATU/Parte II/card-I-logo.png", url: "Atualizações/atualizacoes20258.html" },
+                        { long: "Cirurgia Bariátrica - Novas Recomendações", imageUrl: "Imagens/ATU/Parte II/card-II-logo.png", url: "Atualizações/atualizacoes20259.html" },
+                        { long: "Indicadores de Saúde - Cofinanciamento APS", imageUrl: "Imagens/ATU/Parte II/card-III-logo.png", url: "Atualizações/atualizacoes202510.html" },
+                        { long: "Epilepsia - ILAE 2025", imageUrl: "Imagens/ATU/Parte II/card-IV-logo.png", url: "Atualizações/atualizacoes202511.html" },
+                        { long: "ATLS 11", imageUrl: "Imagens/ATU/Parte II/card-V-logo.png", url: "Atualizações/atualizacoes202512.html" },
+                        { long: "Meningocócica ACWY", imageUrl: "Imagens/ATU/Parte II/card-VI-logo.png", url: "Atualizações/atualizacoes202513.html" }
+                    ]
+                }
+            ];
+
+            const mainContainer = document.querySelector('.space-y-16');
+
+            modules.forEach(moduleData => {
+                const sectionEl = document.createElement('section');
+                sectionEl.innerHTML = `
+                    <h2 class="text-xl font-bold mb-6">${moduleData.title}</h2>
+                    <div class="relative group/section">
+                        <div class="horizontal-scroll-container gap-6">
+                            <!-- Cards -->
+                        </div>
+                        <button class="scroll-btn-left absolute left-0 top-1/2 -translate-y-1/2 z-40 bg-black bg-opacity-50 h-24 w-10 rounded-r-lg opacity-0 group-hover/section:opacity-100 transition-opacity duration-300 hidden">
+                            <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button class="scroll-btn-right absolute right-0 top-1/2 -translate-y-1/2 z-40 bg-black bg-opacity-50 h-24 w-10 rounded-l-lg opacity-0 group-hover/section:opacity-100 transition-opacity duration-300">
+                             <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                `;
+                mainContainer.appendChild(sectionEl);
+
+                const scrollContainer = sectionEl.querySelector('.horizontal-scroll-container');
+                const leftBtn = sectionEl.querySelector('.scroll-btn-left');
+                const rightBtn = sectionEl.querySelector('.scroll-btn-right');
+
+                moduleData.items.forEach((item, index) => {
+                    const itemWrapper = document.createElement('div');
+                    itemWrapper.className = `scroll-item ${moduleData.type === 'large' ? 'w-52' : 'w-60'}`;
+
+                    const cardContainer = document.createElement('div');
+                    cardContainer.className = 'group relative w-full';
+
+                    const card = document.createElement('div');
+                    card.className = 'w-full bg-gray-800 rounded-lg shadow-lg cursor-pointer transition-transform duration-300 ease-in-out group-hover:scale-105';
+                    
+                    let cardVisualContent;
+
+                    if(moduleData.type === 'large') {
+                        card.classList.add('aspect-[2/3]');
+                        cardVisualContent = `
+                            <div class="w-full h-full flex flex-col justify-center items-center p-4 text-center gap-4 rounded-lg" style="background: linear-gradient(to top, ${moduleData.colors[index % moduleData.colors.length]}, #00000040), ${moduleData.colors[index % moduleData.colors.length]}">
+                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                </div>
+                                <h3 class="font-bold text-xl uppercase leading-tight">${item.short}</h3>
+                            </div>
+                        `;
+                    } else { // type 'image'
+                        card.classList.add('aspect-[450/650]');
+                        const imageUrl = item.imageUrl || (item.code && moduleData.code ? `Imagens/${item.code}-${moduleData.code}-logo.png` : `https://placehold.co/450x650/${moduleData.colors[index % moduleData.colors.length].substring(1)}/FFFFFF?text=+`);
+                        cardVisualContent = `
+                            <div class="w-full h-full bg-cover bg-center rounded-lg" style="background-image: url('${imageUrl}')" onerror="this.style.backgroundImage='url(https://placehold.co/450x650/cccccc/FFFFFF?text=Error)'"></div>
+                        `;
+                    }
+
+                    const hoverContent = `
+                        <div class="absolute inset-0 bg-black bg-opacity-80 rounded-lg p-4 flex flex-col justify-between text-left opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out">
+                            <div class="overflow-hidden">
+                                <h4 class="font-bold text-lg mb-1 break-words">${item.long}</h4>
+                                <p class="text-sm text-gray-300 mb-2">Cursos Online</p>
+                                <p class="text-xs text-gray-400 leading-snug break-words">${item.desc || 'Acesse para ver os detalhes completos.'}</p>
+                            </div>
+                            <a href="${item.url || '#'}" class="mt-4 w-full bg-white text-black font-semibold py-2 px-4 rounded-lg text-sm hover:bg-gray-200 transition-colors text-center flex-shrink-0">Acessar</a>
+                        </div>
+                    `;
+
+                    card.innerHTML = cardVisualContent;
+                    
+                    const titleBelow = document.createElement('p');
+                    titleBelow.className = 'text-xs text-gray-400 text-center whitespace-normal mt-2';
+                    titleBelow.textContent = item.long;
+                    
+                    cardContainer.innerHTML = card.outerHTML + hoverContent;
+                    itemWrapper.appendChild(cardContainer);
+                    itemWrapper.appendChild(titleBelow);
+                    
+                    scrollContainer.appendChild(itemWrapper);
+                });
+                
+                // Lógica dos botões de rolagem
+                const checkScroll = () => {
+                    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+                    leftBtn.classList.toggle('hidden', scrollLeft <= 0);
+                    rightBtn.classList.toggle('hidden', scrollLeft >= scrollWidth - clientWidth - 1);
+                };
+
+                leftBtn.addEventListener('click', () => scrollContainer.scrollBy({ left: -250, behavior: 'smooth' }));
+                rightBtn.addEventListener('click', () => scrollContainer.scrollBy({ left: 250, behavior: 'smooth' }));
+                scrollContainer.addEventListener('scroll', checkScroll);
+                new ResizeObserver(checkScroll).observe(scrollContainer);
+                checkScroll();
+            });
+        });
+
+        const menuBtn = document.getElementById('menu-btn');
+        menuBtn.addEventListener('click', () => { /* Lógica do menu aqui */ });
+        const header = document.getElementById('main-header');
+        window.addEventListener('scroll', () => {
+            header.classList.toggle('bg-[#10141a]', window.scrollY > 50);
+            header.classList.toggle('shadow-lg', window.scrollY > 50);
+        });
+    </script>
+
+</body>
+</html>

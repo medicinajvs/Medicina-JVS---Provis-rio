@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Documentos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilo base para a página */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        /* Estilo para a barra de rolagem no webkit (Chrome, Safari) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* bg-gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+        /* Classe para o item de sub-menu ativo (visualizando) */
+        .sub-item.active {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+        }
+         /* Classe para o item de sub-menu concluído */
+        .sub-item.completed {
+            color: #6b7280; /* text-gray-500 */
+        }
+        .sub-item.completed .sub-item-title::before {
+            content: '✓';
+            margin-right: 8px;
+            font-weight: bold;
+            color: #22c55e; /* green-500 */
+        }
+        /* Transição suave para o acordeão */
+        .submenu-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div id="app" class="flex flex-col h-screen">
+        <!-- Cabeçalho -->
+        <header class="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700/50 shadow-sm flex items-center justify-between px-4 md:px-6 h-16 flex-shrink-0 z-10">
+            <h1 class="text-xl font-bold text-white">Atualizações 2025</h1>
+            <div class="flex items-center space-x-4">
+                <button class="p-2 rounded-full hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
+                <button class="p-2 rounded-full hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </button>
+                <button class="p-1 rounded-full hover:bg-gray-700 transition-colors">
+                    <img src="https://placehold.co/32x32/6366f1/ffffff?text=U" alt="Avatar do usuário" class="w-8 h-8 rounded-full">
+                </button>
+            </div>
+        </header>
+
+        <!-- Conteúdo Principal e Barra Lateral -->
+        <div class="flex flex-1 overflow-hidden">
+            
+            <!-- Área de Conteúdo Principal -->
+            <main class="flex-1 flex flex-col p-4 md:p-6 lg:p-8 overflow-y-auto">
+                <div class="flex items-center justify-between mb-2">
+                     <a href="../casalMEDResumos.html" class="flex items-center space-x-2 text-sm text-gray-400 hover:text-white transition-colors">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                         <span>Voltar</span>
+                     </a>
+                     <div class="flex items-center space-x-2">
+                         <button id="prev-btn" class="p-2 rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                         </button>
+                          <button id="next-btn" class="p-2 rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                         </button>
+                     </div>
+                </div>
+
+                <h2 id="content-title" class="text-3xl font-bold text-white mb-4">Selecione um arquivo</h2>
+
+                <!-- Container do Visualizador de PDF -->
+                <div id="pdf-viewer-container" class="flex-1 bg-gray-800 rounded-lg border border-gray-700 flex items-center justify-center min-h-[75vh]">
+                    <!-- Mensagem inicial -->
+                    <div id="initial-message" class="text-center text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 mx-auto mb-4 text-gray-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <p class="text-lg">Selecione um documento na lista ao lado</p>
+                        <p class="text-sm">O conteúdo do PDF será exibido aqui.</p>
+                    </div>
+                    <!-- Iframe para o PDF (inicialmente oculto) -->
+                    <iframe id="pdf-viewer" class="w-full h-full rounded-lg hidden" src=""></iframe>
+                </div>
+            </main>
+
+            <!-- Barra Lateral -->
+            <aside class="w-80 lg:w-96 bg-gray-800/50 border-l border-gray-700/50 flex-shrink-0 flex flex-col">
+                <div class="p-4 border-b border-gray-700/50">
+                    <h3 class="text-lg font-semibold text-white">Lista de Conteúdos</h3>
+                </div>
+                <div class="p-4">
+                     <div class="relative">
+                         <input id="search-input" type="text" placeholder="Buscar conteúdo..." class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                     </div>
+                </div>
+                <nav id="content-list" class="flex-1 overflow-y-auto px-2">
+                    <!-- Itens do acordeão serão injetados aqui -->
+                </nav>
+            </aside>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DADOS HIERÁRQUICOS DE EXEMPLO ---
+            const contentData = [
+                // Parte I
+                { 
+                    id: 1, title: 'Suplementação de Vitamina D (SBP)',
+                    subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1_28QHtbVe-k4_pkQ5nE8EWYLiW3EnBPF/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1cnfe4WnhB0D_UF_SR-5_pU2rSGpGg_z2/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 2, title: 'Suplementação de Cálcio em Gestantes (MS)',
+                    subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1SjXBf4NGP-XsLDn4Ho_YjgjDuKg_bCFs/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1YBwK7EJrWU_GIh52gQxMKyG4CHH4qJ1O/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 3, title: 'Vacinação Influenza (MS)',
+                     subItems: [
+                        { title: 'Calendário de Vacinação 2025', pdfUrl: 'https://drive.google.com/file/d/1xbnp1f-69675yeYp-ML_x4vdPPz3BStT/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 4, title: 'Nova Lista de Notificação (SINAN) - Esporotricose',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1zuYPKXgS4RxLwqyAyD1N2kzB44mp0Wjh/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1kblLz7hnvSdFs218reIuBgCWrDiUERjU/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 5, title: 'Lei 8.080 - Nova Composição da CONITEC',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1YBrekI69Jz71nz_w6WBNtSNzHduhxWgn/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/12xgZBu9dlZbohlM3yJlkSCPrO5bCvdXk/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 6, title: 'Hepatite C - Esquemas de Tratamento',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1dF4cMQW45JAARkEPlylQgfYEvNf7Eq_9/preview', completed: false },
+                        { title: 'Nota Técnica', pdfUrl: 'https://drive.google.com/file/d/18zKirIrJy1EDgso_h_GUegJZQjWyq0NO/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 7, title: 'Lei 8.080 - Atenção Humanizada (SUS)',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1z8kZwcLEHNjyNqCXEXpxoK13yVpRxWMx/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/19d5GmoW3hS9yBI5Hg8QX_ldmrSFuJa2i/preview', completed: false }
+                    ]
+                },
+                // Parte II
+                { 
+                    id: 8, title: 'GINA 2025',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1o200jFuxiFJJUwonPmElD4u6-5nGnEpi/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/13R7sb9T__b7C6Sf311IxYGueFP4iE6PF/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 9, title: 'Cirurgia Bariátrica',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/174dLBVbFq1LPz5PWrikMtmmCrkUwJwb2/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1sHAo1kjx7K-98CcW9A8V_d39WSC_O6oG/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 10, title: 'Novos Indicadores de Saúde - Cofinanciamento APS',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1Plf-2NYtPm8uJANisDbEii6mOmIlIqvZ/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1Q-6159obDYADqgDY8DMdqvCvQ3ipsByr/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 11, title: 'Epilepsia - ILAE 2025',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/1vVWHPOqNRkk_P-Mn2T5wKaMW3VyIiq3f/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1lm6C_y4EduzFjKIY5KmZsYcWpGYYUNC3/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 12, title: 'ATLS 11',
+                     subItems: [
+                        { title: 'Documento', pdfUrl: 'https://drive.google.com/file/d/1KwVAtvV5Yo-jlL42FjVDMRW6QfXnUK_J/preview', completed: false }
+                    ]
+                },
+                { 
+                    id: 13, title: 'Meningocócica ACWY',
+                     subItems: [
+                        { title: 'Resumo', pdfUrl: 'https://drive.google.com/file/d/16-TMm7Rto9_I-Z0IxJFp783EdW3c12d_/preview', completed: false },
+                        { title: 'Documento Oficial', pdfUrl: 'https://drive.google.com/file/d/1dqyOmouapkUbFCtbu7B3eIfcduQwkIa5/preview', completed: false }
+                    ]
+                }
+            ];
+
+            // --- ELEMENTOS DO DOM ---
+            const contentList = document.getElementById('content-list');
+            const contentTitle = document.getElementById('content-title');
+            const pdfViewer = document.getElementById('pdf-viewer');
+            const initialMessage = document.getElementById('initial-message');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const searchInput = document.querySelector('input[type="text"]');
+
+            // --- ESTADO DA APLICAÇÃO ---
+            let activeCategoryIndex = -1;
+            let activeSubItemIndex = -1;
+
+            // --- FUNÇÕES ---
+
+            function loadPdf(categoryIndex, subItemIndex) {
+                const category = contentData[categoryIndex];
+                const subItem = category.subItems[subItemIndex];
+                
+                contentTitle.textContent = subItem.title;
+                initialMessage.innerHTML = `<div class="text-center text-gray-400"><svg class="animate-spin h-10 w-10 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="mt-4">Carregando "${subItem.title}"...</p></div>`;
+                initialMessage.classList.remove('hidden');
+                pdfViewer.classList.add('hidden');
+                pdfViewer.src = subItem.pdfUrl;
+                
+                pdfViewer.onload = () => { 
+                    initialMessage.classList.add('hidden'); 
+                    pdfViewer.classList.remove('hidden'); 
+                };
+                pdfViewer.onerror = () => {
+                    initialMessage.innerHTML = `<div class="text-center text-red-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 mx-auto mb-4"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg><p class="text-lg">Erro ao carregar o documento.</p><p class="text-sm">Não foi possível exibir o PDF.</p></div>`;
+                    initialMessage.classList.remove('hidden'); 
+                    pdfViewer.classList.add('hidden');
+                };
+
+                activeCategoryIndex = categoryIndex;
+                activeSubItemIndex = subItemIndex;
+                updateActiveSubItem();
+                updateNavButtons();
+            }
+            
+            function updateNavButtons() {
+                if (activeCategoryIndex === -1) {
+                    prevBtn.disabled = true;
+                    nextBtn.disabled = true;
+                    return;
+                }
+                const isFirstLessonOverall = activeCategoryIndex === 0 && activeSubItemIndex === 0;
+                const isLastLessonOverall = activeCategoryIndex === contentData.length - 1 && activeSubItemIndex === contentData[activeCategoryIndex].subItems.length - 1;
+                
+                prevBtn.disabled = isFirstLessonOverall;
+                nextBtn.disabled = isLastLessonOverall;
+            }
+
+            function updateActiveSubItem() {
+                 document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('active'));
+                 if (activeCategoryIndex > -1 && activeSubItemIndex > -1) {
+                    const categoryWrapper = contentList.children[activeCategoryIndex];
+                    if (categoryWrapper) {
+                        const subItemElement = categoryWrapper.querySelector(`.submenu-container`).children[activeSubItemIndex];
+                        if (subItemElement) {
+                            subItemElement.classList.add('active');
+                        }
+                    }
+                 }
+            }
+            
+            function updateCategoryProgress(categoryIndex) {
+                const category = contentData[categoryIndex];
+                if (!category.subItems || category.subItems.length === 0) return;
+
+                const completedCount = category.subItems.filter(item => item.completed).length;
+                const percentage = (completedCount / category.subItems.length) * 100;
+                
+                const categoryWrapper = contentList.children[categoryIndex];
+                const progressBar = categoryWrapper.querySelector('.progress-bar-fill');
+                const progressText = categoryWrapper.querySelector('.progress-text');
+
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `${Math.round(percentage)}%`;
+            }
+
+            function goToPrevLesson() {
+                if (activeCategoryIndex === -1) return;
+                if (activeSubItemIndex > 0) {
+                    loadPdf(activeCategoryIndex, activeSubItemIndex - 1);
+                } else if (activeCategoryIndex > 0) {
+                    const prevCategoryIndex = activeCategoryIndex - 1;
+                    const prevCategory = contentData[prevCategoryIndex];
+                    const lastSubItemIndex = prevCategory.subItems.length - 1;
+                    loadPdf(prevCategoryIndex, lastSubItemIndex);
+                }
+            }
+
+            function goToNextLesson() {
+                 if (activeCategoryIndex === -1) return;
+                const currentCategory = contentData[activeCategoryIndex];
+                if (activeSubItemIndex < currentCategory.subItems.length - 1) {
+                    loadPdf(activeCategoryIndex, activeSubItemIndex + 1);
+                } else if (activeCategoryIndex < contentData.length - 1) {
+                    loadPdf(activeCategoryIndex + 1, 0);
+                }
+            }
+
+            function renderList(filteredData) {
+                contentList.innerHTML = '';
+                const dataToRender = filteredData || contentData;
+
+                dataToRender.forEach((category) => {
+                    const originalCategoryIndex = contentData.findIndex(c => c.id === category.id);
+
+                    const categoryWrapper = document.createElement('div');
+                    categoryWrapper.className = 'border-b border-gray-700/60';
+
+                    const header = document.createElement('div');
+                    header.className = 'category-header flex items-center p-4 cursor-pointer hover:bg-gray-700/40 transition-colors duration-200';
+                    header.innerHTML = `
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center mr-4">
+                            <span class="font-bold text-sm">${category.id}</span>
+                        </div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-white">${category.title}</p>
+                            <div class="flex items-center mt-1">
+                                <div class="w-full bg-gray-600 rounded-full h-1.5 mr-2">
+                                    <div class="progress-bar-fill bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <span class="progress-text text-xs text-gray-400">0%</span>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-6 w-6 text-gray-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    `;
+
+                    const submenuContainer = document.createElement('div');
+                    submenuContainer.className = 'submenu-container bg-gray-900/50 pl-8';
+
+                    if (category.subItems.length > 0) {
+                        category.subItems.forEach((subItem) => {
+                            const originalSubItemIndex = contentData[originalCategoryIndex].subItems.findIndex(s => s.title === subItem.title);
+
+                            const subItemElement = document.createElement('a');
+                            subItemElement.href = '#';
+                            subItemElement.className = 'sub-item block p-3 pr-4 text-gray-300 hover:bg-gray-700 rounded-md my-1 mx-4 transition-colors duration-200';
+                            subItemElement.innerHTML = `<span class="sub-item-title">${subItem.title}</span>`;
+                            
+                            if (subItem.completed) {
+                                subItemElement.classList.add('completed');
+                            }
+
+                            subItemElement.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                loadPdf(originalCategoryIndex, originalSubItemIndex);
+
+                                if (!subItem.completed) {
+                                    subItem.completed = true;
+                                    subItemElement.classList.add('completed');
+                                    updateCategoryProgress(originalCategoryIndex);
+                                }
+                            });
+                            submenuContainer.appendChild(subItemElement);
+                        });
+                    } else {
+                        submenuContainer.innerHTML = `<p class="text-xs text-gray-500 p-4">Nenhum arquivo nesta categoria.</p>`;
+                    }
+
+                    header.addEventListener('click', () => {
+                        const chevron = header.querySelector('.chevron');
+                        const isOpening = !submenuContainer.style.maxHeight || submenuContainer.style.maxHeight === '0px';
+
+                        document.querySelectorAll('.submenu-container').forEach(container => {
+                            container.style.maxHeight = null;
+                            container.previousElementSibling.querySelector('.chevron').style.transform = 'rotate(0deg)';
+                        });
+
+                        if (isOpening) {
+                            submenuContainer.style.maxHeight = submenuContainer.scrollHeight + "px";
+                            chevron.style.transform = 'rotate(180deg)';
+                        }
+                    });
+                    
+                    categoryWrapper.appendChild(header);
+                    categoryWrapper.appendChild(submenuContainer);
+                    contentList.appendChild(categoryWrapper);
+
+                    updateCategoryProgress(originalCategoryIndex);
+                });
+            }
+
+            // --- INICIALIZAÇÃO ---
+            
+            function initializeApp() {
+                renderList();
+                
+                // *** MODIFIQUE AQUI PARA DEFINIR O MÓDULO PADRÃO ***
+                const defaultModuleName = 'Vacinação Influenza (MS)';
+
+                const moduleIndex = contentData.findIndex(module => module.title === defaultModuleName);
+
+                if (moduleIndex !== -1) {
+                    // Adiciona um pequeno delay para garantir que o DOM esteja pronto
+                    setTimeout(() => {
+                        const moduleElement = contentList.children[moduleIndex];
+                        if (moduleElement) {
+                            // Simula um clique no cabeçalho para abrir o acordeão
+                            const header = moduleElement.querySelector('.category-header');
+                            if(header) header.click();
+
+                            // Simula um clique na primeira aula para carregar o PDF
+                            const firstSubItem = moduleElement.querySelector('.sub-item');
+                            if(firstSubItem) firstSubItem.click();
+                        }
+                    }, 100); // 100ms de delay
+                }
+                
+                updateNavButtons();
+            }
+
+            prevBtn.addEventListener('click', goToPrevLesson);
+            nextBtn.addEventListener('click', goToNextLesson);
+            
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                if (!searchTerm) {
+                    renderList();
+                    return;
+                }
+                const filtered = contentData.map(category => {
+                    const filteredSubItems = category.subItems.filter(subItem => subItem.title.toLowerCase().includes(searchTerm));
+                    if (filteredSubItems.length > 0) {
+                        return { ...category, subItems: filteredSubItems };
+                    }
+                    return null;
+                }).filter(Boolean);
+                renderList(filtered);
+            });
+            
+            initializeApp();
+        });
+    </script>
+
+</body>
+</html>

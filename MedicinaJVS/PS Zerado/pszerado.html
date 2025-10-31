@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treinamento PS Zerado</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importando a fonte Inter do Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Icones (Heroicons) -->
+    <link href="https://cdn.jsdelivr.net/npm/heroicons@1.0.6/dist/outline.min.css" rel="stylesheet">
+    <style>
+        /* Estilo customizado para o corpo e fonte */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #E0E0E0;
+        }
+        /* Efeito de sobreposição de gradiente para os cards */
+        .card-gradient::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%);
+            border-radius: 0.5rem;
+        }
+        /* Efeito de brilho ao passar o mouse */
+        .glow-card {
+            position: relative;
+            transition: all 0.3s ease;
+            background-color: #1e1e1e;
+        }
+        .glow-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Estilo para o corte diagonal */
+        .diagonal-clip {
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 0% 100%);
+        }
+
+        /* Ajuste do clip-path para telas menores */
+        @media (max-width: 768px) {
+            .diagonal-clip {
+                clip-path: polygon(0 0, 100% 0, 100% 95%, 0% 100%);
+            }
+            .main-title {
+                font-size: 2.5rem; 
+            }
+        }
+        /* Estilo para a fonte da assinatura nos cards */
+        .font-signature {
+            font-family: 'Dancing Script', cursive; /* Exemplo de fonte cursiva, pode ser trocada */
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap');
+    </style>
+</head>
+<body class="bg-[#121212]">
+
+    <!-- 
+    ================================================================
+    PARA ALTERAR A IMAGEM DE FUNDO DO CABEÇALHO, 
+    TROQUE A URL DENTRO DE style="background-image: url('...')".
+    ================================================================
+    -->
+    <header class="relative text-white diagonal-clip pb-32 md:pb-48 lg:pb-56" style="background-image: url('https://cdn.areademembros.com/files/instancia_706/image/qKyxIP9WEVQj7hRhSY3fpXnJZDEzDHyYy3dUMoZJ.jpg'); background-size: cover; background-position: center;">
+        <!-- Camada escura para garantir a legibilidade do texto -->
+        <div class="absolute top-0 left-0 w-full h-full bg-black/50"></div>
+
+        <!-- Conteúdo do cabeçalho -->
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <!-- Barra de Navegação -->
+            <nav class="flex items-center justify-between py-4">
+                <!-- Logo -->
+                <div class="flex items-center space-x-2">
+                    <svg class="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span class="font-bold text-lg">PS ZERADO</span>
+                </div>
+                <!-- Links de Navegação (Desktop) -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="hover:text-red-500 transition-colors">Home</a>
+                    <a href="#" class="hover:text-red-500 transition-colors">Suporte</a>
+                    <a href="#" class="hover:text-red-500 transition-colors">FAQ</a>
+                    <a href="#" class="hover:text-red-500 transition-colors">Suporte WhatsApp</a>
+                </div>
+                <!-- Ícones de Ação -->
+                <div class="flex items-center space-x-4">
+                    <button class="relative hover:text-red-500 transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        <span class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
+                    </button>
+                    <button class="hover:text-red-500 transition-colors">
+                       <img class="h-8 w-8 rounded-full object-cover" src="https://placehold.co/40x40/6366f1/white?text=A" alt="Foto do perfil">
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Conteúdo Hero -->
+            <div class="relative pt-16 md:pt-24 h-full">
+                <div class="w-full lg:w-1/2">
+                    <p class="text-xl md:text-2xl font-semibold text-red-500">BEM-VINDO AO</p>
+                    <h1 class="main-title text-4xl md:text-6xl font-black uppercase tracking-tighter mt-2">
+                        <span class="text-red-500">*</span>PS ZERADØ
+                    </h1>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Container Principal (conteúdo escuro) -->
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 -mt-24 md:-mt-36 lg:-mt-48 z-10 relative">
+        <!-- Seção Principal com os Módulos -->
+        <main class="space-y-12 py-12">
+            <!-- Categoria: Treinamento PS Zerado -->
+            <section>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white">Treinamento PS Zerado</h2>
+                    <button class="flex items-center space-x-2 text-sm font-semibold bg-red-600 text-white px-4 py-2 rounded-full hover:bg-red-700 transition-colors">
+                        <span>PSØ</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-6">
+                    <a href="principalTreinamentoPSZerado.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/YZnKxtsChG8aktwmD7muYDQYIMarjMh5MYxVzIcN-550x550-resized.jpg" alt="Imagem do Treinamento PS Zerado" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/ffffff?text=Treinamento+PS';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">Treinamento PS Zerado</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Treinamento PS Zerado</h4></div>
+                        </div>
+                    </a>
+                </div>
+            </section>
+            
+            <!-- Categoria: Exames Complementares -->
+            <section>
+                <h2 class="text-2xl font-bold text-white mb-6">Exames Complementares</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-6">
+                    <!-- Card 1 -->
+                    <a href="examesLaboratoriais.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/8vAd1Ipj2dcv4xiMj6cFyfrTfLX6o04nd5rK1byc-550x550-resized.jpg" alt="[Imagem do curso Exames Laboratoriais]" onerror="this.onerror=null;this.src='https://placehold.co/600x400/374151/ffffff?text=Laboratoriais';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide">EXAMES LABORATORIAIS</h3>
+                                    <p class="text-white font-signature text-2xl mt-2">Tavares</p>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Exames Laboratoriais</h4></div>
+                        </div>
+                    </a>
+                    <!-- Card 2 (Destaque) -->
+                    <a href="ecgEmergencia.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                             <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/5DLl3vSqeHzKVWfB3CI8RS5wIdiT5Ffikpiuk59N-550x550-resized.jpg" alt="[Imagem do curso ECG na Emergência]" onerror="this.onerror=null;this.src='https://placehold.co/600x400/991b1b/ffffff?text=ECG';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide">ECG NA EMERGÊNCIA</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-red-600"><h4 class="text-white font-semibold">ECG na emergência</h4></div>
+                        </div>
+                    </a>
+                    <!-- Card 3 -->
+                    <a href="examesImagem.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                             <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/l36YOHfh4M8R8Pv4HZrGY99ygiEeBSCDQwbTXavu-550x550-resized.jpg" alt="[Imagem do curso Exames de Imagem]" onerror="this.onerror=null;this.src='https://placehold.co/600x400/5b21b6/ffffff?text=Imagem';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide">EXAMES DE IMAGEM NO PS</h3>
+                                    <p class="text-white font-signature text-2xl mt-2">Rinaldi</p>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Exames de imagem no PS</h4></div>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <!-- Categoria: Especialidades -->
+            <section>
+                <h2 class="text-2xl font-bold text-white mb-6">Especialidades</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-6">
+                    <a href="goEmergencia.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/5Mj7vsoxV6kEeCLwadSCBoAtifkiocr1kuIKSWSm-550x550-resized.jpg" alt="Obstetrícia na Emergência" onerror="this.onerror=null;this.src='https://placehold.co/600x400/3A3D5D/ffffff?text=Obstetrícia';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">Obstetrícia na Emergência</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Obstetrícia na Emergência</h4></div>
+                        </div>
+                    </a>
+                    <a href="pediatriaEmergencia.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/7XxBJCJUAVWcUbscH6VBwyqg3uFPdhpICRFGbpiF-550x550-resized.jpg" alt="Pediatria na Emergência" onerror="this.onerror=null;this.src='https://placehold.co/600x400/4B4453/ffffff?text=Pediatria';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">Pediatria na Emergência</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Pediatria na Emergência</h4></div>
+                        </div>
+                    </a>
+                    <a href="pilulasOrtopedicas.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/iT0i82w1O0wAUbXlAUBiTgHrexVXox5fFgywC8Cj-550x550-resized.jpg" alt="Ortopedia no PS" onerror="this.onerror=null;this.src='https://placehold.co/600x400/58504A/ffffff?text=Ortopedia';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">Ortopedia no PS</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Ortopedia no PS</h4></div>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <!-- Categoria: Academia PRAXIS - 2024 -->
+            <section>
+                 <h2 class="text-2xl font-bold text-white mb-6">Academia PRAXIS - 2024</h2>
+                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-6">
+                    <a href="Academia Praxis/academiaPraxis1.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/i2vObYS1lcogKQWynCDQvs52oOMG6ul3EWmJcUBl-550x550-resized.png" alt="PRAXIS" onerror="this.onerror=null;this.src='https://placehold.co/600x400/4a148c/ffffff?text=PRAXIS';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">PRAXIS</h3>
+                                    <p class="text-white/80 text-lg mt-2">Nova Academia</p>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Academia PRAXIS</h4></div>
+                        </div>
+                    </a>
+                    <a href="semiologia.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/S9dLafH0BqfLIG3ETLLNTf7rEd9YVLaXnknj8k4e-550x550-resized.jpg" alt="Semiologia" onerror="this.onerror=null;this.src='https://placehold.co/600x400/2E4057/ffffff?text=Semiologia';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">Semiologia</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Semiologia</h4></div>
+                        </div>
+                    </a>
+                    <a href="traumaEmergencia.html" class="block">
+                        <div class="rounded-lg overflow-hidden shadow-lg glow-card">
+                            <div class="relative">
+                                <img class="h-56 w-full object-cover" src="https://cdn.areademembros.com/cache/Q451fm4k3mJVJ0SZSC4Huv1YxtA4QXXPiY1h1wPL-550x550-resized.jpg" alt="Curso de Atendimento ao Trauma" onerror="this.onerror=null;this.src='https://placehold.co/600x400/004d40/ffffff?text=Trauma';">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-center p-4">
+                                    <h3 class="text-white font-bold text-2xl tracking-wide uppercase">Curso de Atendimento ao Trauma</h3>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-[#2a2a2a]"><h4 class="text-white font-semibold">Curso de Atendimento ao Trauma</h4></div>
+                        </div>
+                    </a>
+                 </div>
+            </section>
+        </main>
+        
+        <!-- Rodapé -->
+        <footer class="text-center mt-20 py-8 border-t border-gray-800">
+            <p class="text-sm text-gray-500">Copyright © 2024 - Todos os direitos reservados.</p>
+        </footer>
+    </div>
+
+</body>
+</html>

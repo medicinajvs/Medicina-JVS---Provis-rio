@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neurologia de A a Z</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Azul para destaque */
+            border: 2px solid #63b3ed; /* Borda para visibilidade */
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Estilos para os menus suspensos de sub-módulos */
+        .sub-module-details {
+            background-color: #2d3748;
+            border-radius: 0.375rem; /* rounded-lg */
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+        .sub-module-summary {
+            padding: 0.75rem 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .sub-module-summary:hover {
+            background-color: #4a5568;
+        }
+        .sub-module-summary::-webkit-details-marker {
+            display: none; /* Esconde o marcador padrão */
+        }
+        .sub-module-summary .icon {
+            transition: transform 0.2s ease-in-out;
+        }
+        .sub-module-details[open] > .sub-module-summary .icon {
+            transform: rotate(90deg); /* Gira o ícone quando aberto */
+        }
+        .lessons-list-container {
+            padding: 0.5rem;
+            border-top: 1px solid #4a5568;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Emergências Neurológicas</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções dos módulos principais serão preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-t-lg"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <div class="p-4 bg-gray-800">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula</h2>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas (agora com sub-módulos) -->
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <div id="lessonsContainer" class="space-y-2">
+                <!-- Aulas e sub-módulos serão injetados aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const modulesData = [
+            {
+                main_id: 'module_01', main_title: 'Módulo 01 - Neuroinfecções',
+                sub_modules: [
+                    { title: 'Meningite Bacteriana Aguda', items: [
+                        { link: 'https://drive.google.com/file/d/1nz35ge6U7KGWk-j_B1ZgsVqpheDuPXqY/view?usp=sharing', title: 'Aula 01 - Meningite Bacteriana Aguda: Conceitos', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nvbPfcJMlYTFrmEilTlsPSpGp__kF_av/view?usp=sharing', title: 'Aula 02 - Meningite Bacteriana Aguda: Quadro Clínico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nz7Ae4W7NYk3HJsUympchSj78oaTiSrZ/view?usp=sharing', title: 'Aula 03 - Meningite Bacteriana Aguda: Investigação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1o2crmFFhLtPd2pNCpdulOkhwQ2UyEq5G/view?usp=sharing', title: 'Aula 04 - Meningite Bacteriana Aguda: Tratamento', type: 'video' }
+                    ]},
+                    { title: 'Encefalite Infecciosa por Vírus Herpes', items: [
+                        { link: 'https://drive.google.com/file/d/1og4SBYa1H4pxJ8C3pFX7mLyb_zejwPhG/view?usp=sharing', title: 'Aula 01 - Encefalite Infecciosa por Vírus Herpes: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1o3Ps9igpmIhdYyvotkEmsHE9QlZa3AtK/view?usp=sharing', title: 'Aula 02 - Encefalite Infecciosa por Vírus Herpes: Parte II', type: 'video' }
+                    ]},
+                    { title: 'Neurossífilis', items: [
+                        { link: 'https://drive.google.com/file/d/1oQydcKAuiuxJMEQqBXYrDq4oz99DdMR_/view?usp=sharing', title: 'Aula 01 - Neurossífilis: Formas Clínicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nxQt81x59yeypE5ozK7sRsGFQhrJWBSy/view?usp=sharing', title: 'Aula 02 - Neurossífilis: Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oMzbgpnHTeUhDIOsuj40SNLazYN9tLLS/view?usp=sharing', title: 'Aula 03 - Neurossífilis: Tratamento', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_02', main_title: 'Módulo 02 - Cefaleia',
+                sub_modules: [
+                    { title: 'Aulas', items: [
+                        { link: 'https://drive.google.com/file/d/1o4w1TH2VfUx9MJmKKqepTISFMz6b7xs1/view?usp=sharing', title: 'Aula 01 - Abordagem Inicial ao Paciente com Cefaleia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oGGc4jOtnMsGqKZKYE8uoLLQAtqSc7HB/view?usp=sharing', title: 'Aula 02 - Enxaqueca (Migrânea) no PS', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nr6e8DoZBVbZ4opmQVrEoVwYKgB2frXD/view?usp=sharing', title: 'Aula 03 - Cefaleia Tensional e Cervicogênica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oA7y0Lwj7IAEu-ZBBEKoevUsyut3BP9W/view?usp=sharing', title: 'Aula 04 - Cefaleia Trigêmino-Autonômicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oXXhAI1dr3lKYoMRN8tUDvKFWAIFlEHn/view?usp=sharing', title: 'Aula 05 - Neuralgia do Trigêmeo', type: 'video' }
+                    ]},
+                    { title: 'Materiais de Estudos', items: [
+                        { link: 'https://drive.google.com/file/d/1oLIKsoDWnP3ruouZqmkcaweUbycqnhsh/view?usp=drive_link', title: 'Guia de Prescrição - Cefaleia', type: 'ebook' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_03', main_title: 'Módulo 03 - Epilepsia',
+                sub_modules: [
+                    { title: 'Perda Transitória da Consciência e Seus Diferenciais', items: [
+                        { link: 'https://drive.google.com/file/d/1odk2p1_nNqFLlPvzzLUGpLra88EQOf68/view?usp=sharing', title: 'Aula 01 - Perda Transitória da Consciência e Seus Diferenciais', type: 'video' }
+                    ]},
+                    { title: 'Crise Epiléptica e Epilepsia', items: [
+                        { link: 'https://drive.google.com/file/d/1o4o65R129qYGZCg9xdvjO2_CLKZ44T5T/view?usp=sharing', title: 'Aula 01 - Crise Epiléptica e Epilepsia', type: 'video' }
+                    ]},
+                    { title: 'Tratamento da Crise Epiléptica e Estado de Mal', items: [
+                        { link: 'https://drive.google.com/file/d/1nrtLUCtHl5ujRg11JKeE_xPjcieifxJz/view?usp=sharing', title: 'Aula 01 - Tratamento da Crise Epiléptica e Estado de Mal', type: 'video' }
+                    ]},
+                    { title: 'Investigação de Crise Epiléptica', items: [
+                        { link: 'https://drive.google.com/file/d/1oOrsY1ePmBbUGFzr-6Jx_ftrlW-VIAb0/view?usp=sharing', title: 'Aula 01 - Investigação de Crise Epiléptica', type: 'video' }
+                    ]},
+                    { title: 'Crise Não-Epiléptica Psicogênica', items: [
+                        { link: 'https://drive.google.com/file/d/1o90mm7zK1fa_JmYuHZqB7xQO4mqACBkb/view?usp=sharing', title: 'Aula 01 - Crise Não-Epiléptica Psicogênica: Conceito e Quadro Clínico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nt7-5t2dKMKC9pxkq9eJnJMwm4hLm7IS/view?usp=sharing', title: 'Aula 02 - Crise Não-Epiléptica Psicogênica: Diagnóstico e Tratamento', type: 'video' }
+                    ]},
+                    { title: 'Guia de Prescrição: Epilepsia', items: [
+                        { link: 'https://drive.google.com/file/d/1qgy9Kdf60_35cVZzfbniorIp1EhLFuU4/view?usp=drive_link', title: 'Guia de Prescrição - Epilepsia', type: 'ebook' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_04', main_title: 'Módulo 04 - Vertigem e Tontura',
+                sub_modules: [
+                    { title: 'Aulas', items: [
+                        { link: 'https://drive.google.com/file/d/1npET3ta0qvXxYqk9h3g2gqTQWHI1Xkvw/view?usp=sharing', title: 'Aula 01 - Abordagem Inicial ao Paciente com Vertigem', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oU3-ocynzitrlQp4AFUwW_J9GrOBUmKt/view?usp=sharing', title: 'Aula 02 - Episódio Único e Prolongada', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1o8Nb5cvRNeFRXIFTNQG09oOuKZejjGWr/view?usp=sharing', title: 'Aula 03 - Neurite Vestibular', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1noSyvPhGPF_JB8ffuQyiKEKo104oqmAk/view?usp=sharing', title: 'Aula 04 - Episódio Crônico Persistente', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oR-e6BmnwEagSdvhGY-crStfVYxkzqhs/view?usp=sharing', title: 'Aula 05 - Vertigem Posicional Paroxística Benigna (VPPB)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1o0ICIpS-LYcmL7FywxwKjUsEPaUSj2zW/view?usp=sharing', title: 'Aula 06 - Vertigem Recorrente Não-Provocada', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oF-0K_463CIPiZoNN76_HIzh66ZZO9BR/view?usp=sharing', title: 'Aula 07 - Causas Clínicas de Tontura', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_05', main_title: 'Módulo 05 - Neurologia Vascular',
+                sub_modules: [
+                    { title: 'Aulas', items: [
+                        { link: 'https://drive.google.com/file/d/1oRpETsKm9XL-tRDrfVkTRuXEw2Y4-V1J/view?usp=sharing', title: 'Aula 01 - Trombólise no AVC Isquêmico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oEry7OQPoou1Gkgdl93-2o12MME73jaG/view?usp=sharing', title: 'Aula 02 - Trombectomia Mecânica no AVC Isquêmico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oIw00bCC2bBAnMURmNJXSXeSgDpv71vx/view?usp=sharing', title: 'Aula 03 - Manejo do AVCi Não-Trombolisado', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nxM-o_weHsGFTE50XDp61ooNPugz20MZ/view?usp=sharing', title: 'Aula 04 - AIT no Pronto: Socorro', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oLddLgTsxGXm3wJ1-qYbykx_VyJqWl-m/view?usp=sharing', title: 'Aula 05 - Manejo do AVCh no PS', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1oSesoYX5CqFFGZ09xmpttGK6sQzRMy11/view?usp=sharing', title: 'Aula 06 - Manejo Clínico da HSA Aneurismática', type: 'video' }
+                    ]},
+                    { title: 'Materiais de Estudos', items: [
+                        { link: 'https://drive.google.com/file/d/1F-mh-efdMW0garTmZfDhk0aKThGm1pj1/view?usp=sharing', title: 'Fluxograma - Trombectomia', type: 'ebook' },
+                        { link: 'https://drive.google.com/file/d/1mjL7UFyz6TY7g0yZS8NOhzHSCfCmXSFr/view?usp=sharing', title: 'Fluxograma - Trombólise', type: 'ebook' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_06', main_title: 'Módulo 06 - Aulas Extras',
+                sub_modules: [
+                    { title: 'Aulas Extras', items: [
+                        { link: 'https://drive.google.com/file/d/1o7h6y8FcF1tA_iMElskjhWVfocokQkQp/view?usp=sharing', title: 'Aula 01 - Amnésia Global Transitória', type: 'video' }
+                    ]}
+                ]
+            }
+        ];
+
+        // Processa os dados para adicionar IDs e ícones
+        function processModulesData(data) {
+            return data.map(mainModule => ({
+                ...mainModule,
+                sub_modules: mainModule.sub_modules.map(subModule => ({
+                    ...subModule,
+                    items: subModule.items.map(item => ({
+                        ...item,
+                        id: extractIdFromGoogleDriveLink(item.link) || item.link
+                    }))
+                }))
+            }));
+        }
+
+        const processedModulesData = processModulesData(modulesData);
+
+        function loadContent(itemId, itemTitle, itemLink) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && itemLink) {
+                // Adiciona /preview para links do Google Drive para tentar incorporar
+                const previewLink = itemLink.replace(/view\?usp=sharing|edit\?usp=drive_link.*|view\?usp=drive_link/, 'preview');
+                contentPlayer.src = previewLink;
+            } else {
+                contentPlayer.src = '';
+            }
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            selectedItemId = itemId;
+            const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+        }
+
+        function renderMainModuleContent(mainModuleId) {
+            const lessonsContainer = document.getElementById('lessonsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+            const contentPlayer = document.getElementById('contentPlayer');
+
+            if (!lessonsContainer || !lessonTitleElement || !contentPlayer) return;
+
+            const mainModule = processedModulesData.find(m => m.main_id === mainModuleId);
+
+            if (!mainModule) {
+                console.error(`Módulo com ID ${mainModuleId} não encontrado.`);
+                lessonsContainer.innerHTML = '<p>Módulo não encontrado.</p>';
+                return;
+            }
+
+            let sidebarHtml = '';
+            let firstItem = null;
+
+            if(mainModule.sub_modules.length === 0) {
+                 sidebarHtml = '<p class="text-gray-400">Nenhuma aula disponível para este módulo ainda.</p>';
+            } else {
+                mainModule.sub_modules.forEach((subModule, index) => {
+                    let itemsHtml = '';
+                    subModule.items.forEach(item => {
+                        if (!firstItem) {
+                            firstItem = item;
+                        }
+                        const iconClass = item.type === 'ebook' ? 'fas fa-book-open' : 'fas fa-play-circle';
+                        itemsHtml += `
+                            <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] mt-2"
+                                 onclick="loadContent('${item.id}', '${item.title}', '${item.link}')" data-id="${item.id}">
+                                <div class="item-thumbnail-placeholder">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${item.title}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    const isOpen = index === 0 ? 'open' : '';
+
+                    sidebarHtml += `
+                        <details class="sub-module-details" ${isOpen}>
+                            <summary class="sub-module-summary">
+                                <span>${subModule.title}</span>
+                                <i class="fas fa-chevron-right icon"></i>
+                            </summary>
+                            <div class="lessons-list-container">
+                                ${itemsHtml}
+                            </div>
+                        </details>
+                    `;
+                });
+            }
+
+            lessonsContainer.innerHTML = sidebarHtml;
+
+            if (firstItem) {
+                loadContent(firstItem.id, firstItem.title, firstItem.link);
+            } else {
+                contentPlayer.src = '';
+                lessonTitleElement.textContent = 'Selecione uma aula';
+                if (selectedItemId) {
+                    const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                    if (prevSelected) prevSelected.classList.remove('selected-lesson');
+                }
+                selectedItemId = null;
+            }
+        }
+
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Limpa opções existentes para o caso de reinicialização
+            moduleSelector.innerHTML = '';
+
+            processedModulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.main_id;
+                option.textContent = module.main_title;
+                moduleSelector.appendChild(option);
+            });
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderMainModuleContent(event.target.value);
+            });
+
+            if (processedModulesData.length > 0) {
+                moduleSelector.value = processedModulesData[3].main_id;
+                renderMainModuleContent(processedModulesData[3].main_id);
+            }
+        }
+
+        // Inicializa a plataforma quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

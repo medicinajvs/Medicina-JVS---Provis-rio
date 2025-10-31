@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula selecionada */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Estilos para o menu suspenso de materiais */
+        details {
+            background-color: #2d3748; /* bg-gray-700 */
+            border-radius: 0.375rem; /* rounded-md */
+            overflow: hidden;
+            margin-bottom: 0.75rem; /* space-y-3 */
+        }
+
+        summary {
+            padding: 0.5rem 0.75rem; /* p-2 */
+            padding-left: 2rem; /* Adiciona espaço para o ícone do dropdown */
+            cursor: pointer;
+            font-weight: 600; /* font-semibold */
+            color: #e2e8f0; /* text-white */
+            list-style: none; /* Remove a seta padrão do summary */
+            position: relative;
+        }
+
+        summary::-webkit-details-marker {
+            display: none; /* Esconde a seta padrão no Webkit */
+        }
+
+        summary::before {
+            content: '\25B6'; /* Triângulo para a direita */
+            position: absolute;
+            left: 0.75rem; /* Ajustado para mover o ícone mais para a esquerda */
+            top: 50%;
+            transform: translateY(-50%); /* Centraliza verticalmente */
+            transition: transform 0.2s;
+            color: #a0aec0; /* gray-400 */
+        }
+
+        details[open] summary::before {
+            transform: translateY(-50%) rotate(90deg); /* Gira o triângulo para baixo quando aberto */
+        }
+
+        .material-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* Usando gap em vez de space-x para melhor compatibilidade */
+            background-color: #4a5568; /* bg-gray-600 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.5rem; /* p-2 */
+            margin-top: 0.5rem; /* mt-2 for items within details */
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-left: 1rem; /* Adiciona um pequeno recuo para os itens do sub-módulo */
+        }
+
+        .material-item:hover {
+            background-color: #2d3748; /* hover:bg-gray-700 */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Eletrocardiograma</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+        <!-- Ícones de usuário e notificações foram removidos daqui -->
+    </header>
+
+    <!-- A barra de navegação que estava aqui foi removida -->
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <!-- Alterado p-4 para py-2 px-4 para reduzir o preenchimento vertical -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+
+            <!-- Materiais de Estudo Movidos para abaixo do título da aula -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+
+            <!-- Materiais de Estudo foram movidos, então esta seção é removida daqui -->
+        </aside>
+    </main>
+
+    <!-- A barra de navegação inferior foi removida completamente. -->
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // LINKS FORNECIDOS PELO USUÁRIO (NOVOS DADOS)
+        const asBasesDoECGSub01Aulas = [
+            'https://drive.google.com/file/d/16ZG-pwnLRlIVLBu7uRjGwlhS3xdv_dDP/view?usp=sharing',
+            'https://drive.google.com/file/d/1iOBItlZpI75PXOFBCw46SmGWk7kR-mlR/view?usp=sharing',
+            'https://drive.google.com/file/d/1zSVLAfqcIDQ6WqRh0vHtMDThT2-RSPgd/view?usp=sharing',
+            'https://drive.google.com/file/d/1YaKQxFJxbnvwSo5WXcoUAsQp_a0r2pjD/view?usp=sharing',
+            'https://drive.google.com/file/d/1dhaJOsWhrYhNVj8fB4p2Vxf0QJU9XDG-/view?usp=sharing',
+            'https://drive.google.com/file/d/1EOS3BqqObTZqEwmUQvGPbPcOEjQHq9pO/view?usp=sharing',
+            'https://drive.google.com/file/d/1F2yL-Oi-TOhKAQ7yr2L1vlSrDGgUrubE/view?usp=sharing',
+            'https://drive.google.com/file/d/1uU_vFLwQk-UXvPfBz4_2pnpYGHlodGIF/view?usp=sharing',
+            'https://drive.google.com/file/d/1b1XGF5adSGiLF5Nc01BhWhYpJ238jq94/view?usp=sharing'
+        ];
+        const asBasesDoECGSub01Materiais = [
+            'https://drive.google.com/file/d/14YIFp9DMRfSk0Aqd9wa2wf3uzTEEHAyo/view?usp=sharing',
+            'https://drive.google.com/file/d/15J_wEZ2uJ4YQ6wk4T9jqMkoShjlDh2j2/view?usp=sharing',
+            'https://drive.google.com/file/d/1YoMVNQgld9L2O6DRY2VgA4W7GXLO-leH/view?usp=sharing',
+            'https://drive.google.com/file/d/1Q801JtbY5wp0qisSE6EudPKVQqmiqA5f/view?usp=sharing',
+            'https://drive.google.com/file/d/1U82lQ7Qrn8tbXARWK44Z3TU2JxNi5EKD/view?usp=sharing',
+            'https://drive.google.com/file/d/1kZPVCFQqkVgOXdoHL99IaM1tvmywn3qI/view?usp=sharing',
+            'https://drive.google.com/file/d/1Z4DJPR2DTUqr9sDdtIzKhQcB0YC2KNKw/view?usp=sharing',
+            'https://drive.google.com/file/d/1NHtrnvfpgLNlUWF4Abl7awL3tvelwv1J/view?usp=sharing',
+            'https://drive.google.com/file/d/1UhkAKMu9pdyK-xc4prRnBJCJ9Sey1Y0X/view?usp=sharing',
+            'https://drive.google.com/file/d/1bvrji_yac0cX8nPpgIf2vCjVH0gau387/view?usp=sharing',
+            'https://drive.google.com/file/d/1RQz-2jpwafLbmOmcOuvCHX4X4HHIXBo/view?usp=sharing',
+            'https://drive.google.com/file/d/19Ym43TBVouayOmM2UKPq_UiKbeXBQucm/view?usp=sharing',
+            'https://drive.google.com/file/d/1VP5BdNnhY83BIphk2NqbPfyUPAvgld1h/view?usp=sharing',
+            'https://drive.google.com/file/d/11Loa3pyHPOIwGuVPeQi1iEMHGTxq5eJb/view?usp=sharing',
+            'https://drive.google.com/file/d/1qn54mgIvk3OtawNgObN37T02i1loflfe/view?usp=sharing',
+            'https://drive.google.com/file/d/1Xmg2O4d9PAh68NIJK1WXohygRKGLPKNm/view?usp=sharing',
+            'https://drive.google.com/file/d/1zG7Gj2T2u14PyNcOnbd-1DX8C7qivclv/view?usp=sharing',
+            'https://drive.google.com/file/d/1fuyg0gIi7va16xR1wyFXtu2qnd8qDakE/view?usp=sharing'
+        ];
+
+        const asBasesDoECGSub02Aulas = [
+            'https://drive.google.com/file/d/1itvw3n9foIsXAb9ZGPmLa7tigUKUtIn-/view?usp=sharing',
+            'https://drive.google.com/file/d/1LgN-wa65bNjjiAaWbb4HI2hf4j9rQdY0/view?usp=sharing',
+            'https://drive.google.com/file/d/1xnbJawtgw0daUgoveZS20VEZ-3Yh9t0W/view?usp=sharing',
+            'https://drive.google.com/file/d/1bleDIlrCHIjvzuBCrbrfYyLdbrSoJyFC/view?usp=sharing',
+            'https://drive.google.com/file/d/1EAziyaibETWXzo4s99RHQX8pXeuLMjH6/view?usp=sharing',
+            'https://drive.google.com/file/d/1hjVqtnmENLS4gX2aaMM8rty0mYDaMZay/view?usp=sharing',
+            'https://drive.google.com/file/d/1oX2HR66FS1a5TkiKGmXicRDYh_qRDq4U/view?usp=sharing',
+            'https://drive.google.com/file/d/1jfALfVbkwWd2VODTGOJr6IY7FP0DwW_T/view?usp=sharing',
+            'https://drive.google.com/file/d/1f9Zt3vofcONHXM13uTzx1q8Cy-dcoqVb/view?usp=sharing',
+            'https://drive.google.com/file/d/122h2P7_POJkr21R7h-lxLccQ_TSssVEy/view?usp=sharing',
+            'https://drive.google.com/file/d/1kjhI2dmn4moco61bTsmSSfywuLrSjrP8/view?usp=sharing'
+        ];
+        const asBasesDoECGSub02Materiais = [
+            'https://drive.google.com/file/d/1CF-q4CBS9tr2kr0ewLNx9cqMDEl0MBW_/view?usp=sharing',
+            'https://drive.google.com/file/d/1z1kR8inULwItKC7TayQuhNE6C8OnHApw/view?usp=sharing',
+            'https://drive.google.com/file/d/1FsdH4tA2Li01zfWbD3m4m_bFLTUZ1ytc/view?usp=sharing',
+            'https://drive.google.com/file/d/1QkViP39zvtiTub6zARlgV5b97Elq3p6n/view?usp=sharing',
+            'https://drive.google.com/file/d/1V6qRi9o_zsCk1QIOvieg9T5cItzjeio5/view?usp=sharing',
+            'https://drive.google.com/file/d/1tmRxa8T2MMdBPGJqfnRx7IB5EX3IVofn/view?usp=sharing',
+            'https://drive.google.com/file/d/1RDblX5p83kHH16FqKPwkDrysrsU-hKZR/view?usp=sharing',
+            'https://drive.google.com/file/d/1fGkEtdNJPO32V4xO4-P6itjYeahqhAEZ/view?usp=sharing',
+            'https://drive.google.com/file/d/1hUFMmRghXfNdQ6QqPPVakqvBxpg3rK9Q/view?usp=sharing',
+            'https://drive.google.com/file/d/15rJLZ3xyqa8dj9832ex14ioEaxAm6Wkd/view?usp=sharing',
+            'https://drive.google.com/file/d/1BIJTrHh1y6vgg2ZQTadbi8f2oqMUB3BG/view?usp=sharing',
+            'https://drive.google.com/file/d/1B0tzK0sffRIa_huOkwpaGgE3uHblPaPZ/view?usp=sharing',
+            'https://drive.google.com/file/d/1PPaIPbcm8Fid2OZtbgKedU_4W-z0Er3Z/view?usp=sharing',
+            'https://drive.google.com/file/d/1t6wyARF0eFtRx26AkrRvmQnafuhcV5DD/view?usp=sharing',
+            'https://drive.google.com/file/d/1qeV4fZo-5UkQs3FIC-98qS5K9-sN-vhK/view?usp=sharing',
+            'https://drive.google.com/file/d/1S3KfTB-TnDwgGoaQ11SNeM4ZeZsAPCpS/view?usp=sharing',
+            'https://drive.google.com/file/d/1S6vfCQOXeGBlLKE22QpBJ9WKd7mSrDy6/view?usp=sharing',
+            'https://drive.google.com/file/d/1ykJVjghCb81HUWOzSJ-cFoFs6Mt4nSZk/view?usp=sharing',
+            'https://drive.google.com/file/d/1gONnUHj8lU76cLzcIwxFDgIJxHKzH1DC/view?usp=sharing',
+            'https://drive.google.com/file/d/15idq_f-IH7t6kDc-50nUANp6rUDlynb1/view?usp=sharing'
+        ];
+
+        // Original links for Coronary Disease lessons
+        const doencasCoronarianasAulas = [
+            'https://drive.google.com/file/d/106ZczaRnASumK5dlmIjjC1c9zOSZScQD/view?usp=sharing',
+            'https://drive.google.com/file/d/1AW2BFovvaLuWdn-l-K5YckV4p1Uk-0lR/view?usp=sharing',
+            'https://drive.google.com/file/d/1mbAg_QyfEa15bW1M2SP5cNsDdA3wHkHz/view?usp=sharing',
+            'https://drive.google.com/file/d/1N4plO5qP66Ae2muCz93GXM-Jug3JSYs8/view?usp=sharing',
+            'https://drive.google.com/file/d/1ojAokeGjelu9MiO_Ms8Gi6_eQ-yN-u7H/view?usp=sharing',
+            'https://drive.google.com/file/d/1MVWf5IFCUrh_dREESW7-ns3Xi1P8NgiQ/view?usp=sharing'
+        ];
+        const doencasCoronarianasMateriais = [
+            'https://drive.google.com/file/d/1RcbGJAyHNlrEFiSGdAcx8CMgszGM3oj2/view?usp=drive_link',
+            'https://drive.google.com/file/d/1D6Y8x3jwjO-s5Gth5ktzclnNNd9X1Lf9/view?usp=sharing',
+            'https://drive.google.com/file/d/1yQClfL53FOZ5aJlVXgYquirmpgSAFQpY/view?usp=sharing',
+            'https://drive.google.com/file/d/1wiIiqpqFQpsDz5MNK9WilGVyqs-fpmYP/view?usp=sharing',
+            'https://drive.google.com/file/d/1uNoEeGjYZC0Oe8af3sArP85A4VRjmRop/view?usp=sharing',
+            'https://drive.google.com/file/d/1-CEfo0ewNm2gCYJP2m6GmzT3kf-5_Aog/view?usp=sharing',
+            'https://drive.google.com/file/d/1KOVPvG2wMJ3PeXZwbjb6xb31CjNeW02N/view?usp=sharing',
+            'https://drive.google.com/file/d/1H3ZyCSU0uplj_QFZwDslLFw9s1rEPKXw/view?usp=sharing',
+            'https://drive.google.com/file/d/1xUd-ZaZQTaeG8akLDg-wvIbIbSv26y9kt2/view?usp=sharing',
+            'https://drive.google.com/file/d/1ipUmH2bYsiv4ff8TCGPDkV3rFS8rogse/view?usp=sharing',
+            'https://drive.google.com/file/d/1JZp0j_dQcZh2LdKDWkdOKVpUeDhZGrcy/view?usp=sharing'
+        ];
+
+        // Lessons for Arrhythmias
+        const arritmiasSub02Aulas = [
+            'https://drive.google.com/file/d/1FXCpDlwOa3tyP-qaBJTVXYSCeOYmMQfX/view?usp=sharing',
+            'https://drive.google.com/file/d/15VlUAndIE6PhD_vmPiI19DobtDqCQkrj/view?usp=sharing',
+            'https://drive.google.com/file/d/1il6QlX7w7jiZ5lkkARAvRKVbfkzhotME/view?usp=sharing',
+            'https://drive.google.com/file/d/1RFFCsHqbwXgPhA4Wf6eoK349VpxcP5WU/view?usp=sharing'
+        ];
+        const arritmiasSub01Aulas = [
+            'https://drive.google.com/file/d/1Optwt4ujaoHd4ekj9X0MwgcVaQ7pcaLc/view?usp=sharing',
+            'https://drive.google.com/file/d/1nUa3mNRexEzx3WI3ctJJJK3JaLeasp8x/view?usp=sharing',
+            'https://drive.google.com/file/d/1vv8rcByH_3-rEe_KefJpYrTQkDRswpES/view?usp=sharing',
+            'https://drive.google.com/file/d/1aBHnQbKxOD5qMz0ALxJvBoyCFjW_Djtc/view?usp=sharing',
+            'https://drive.google.com/file/d/1yP3HvTpVQuYUd6fzYAuNlMiGzftPioTT/view?usp=sharing'
+        ];
+        const arritmiasSub03Aulas = [
+            'https://drive.google.com/file/d/1zEksB86aa8ogqP4OoVOMf1wLcd2S5p3Y/view?usp=sharing',
+            'https://drive.google.com/file/d/1Udxq6rMFwY_UNppSoqNg-Z6B0EG5lgm6/view?usp=sharing',
+            'https://drive.google.com/file/d/1-YwTR9ehUVy0CuGEW7ArImhMjyBInl0b/view?usp=sharing',
+            'https://drive.google.com/file/d/1IKozhzbfp3GTOJvQQmrDw-mVsNdVzzec/view?usp=sharing',
+            'https://drive.google.com/file/d/1x59fVUK2-HufBkIJ_LeebeEtpsjo6GbA/view?usp=sharing',
+            'https://drive.google.com/file/d/1N6bD_9dLzOllbekX8AszZ6uor8se2fOS/view?usp=sharing',
+            'https://drive.google.com/file/d/1kQXgYsVuHT2jMJi8kJFPX_AJ8ZY0kNa9/view?usp=sharing'
+        ];
+
+        // Original arritmiasSub01Materiais (8 links)
+        const arritmiasSub02MateriaisOriginais = [
+            'https://drive.google.com/file/d/14QW6PSQjGmDP5jO1YB1nFw4zHaoqVHnV/view?usp=sharing', // Extrassistoles
+            'https://drive.google.com/file/d/1hTXthmrqRgsKpmQUqYOPy6L_SwLZoFsk/view?usp=sharing', // Extrassistoles - Anotações
+            'https://drive.google.com/file/d/1HVZvUIN9q-G5svX9KOgtq43Ptg6DB9uJ/view?usp=sharing', // Mecanismos das Arritmias
+            'https://drive.google.com/file/d/1nYPUHfz8a7ovFNLiS_Ruz6qp1hrwCsSB/view?usp=sharing', // Mecanismos das Arritmias - Anotações
+            'https://drive.google.com/file/d/11fpIreJ0Y9bjkTA6DhTZwCUvN0dgMvli/view?usp=sharing', // Taquicardias de QRS Estreito - Parte I
+            'https://drive.google.com/file/d/1MoEFLeRj2l0CZGY9crXya4496gVcqrgS/view?usp=sharing', // Taquicardias de QRS Estreito - Parte I: Anotações
+            'https://drive.google.com/file/d/1KDOUoZt7qb6Cg-vSVuvOEzm3yJku9cWM/view?usp=sharing', // Taquicardias de QRS Estreito - Parte II
+            'https://drive.google.com/file/d/1bOBwOVzXKlsLx4XNvN9d41Rbn-u7qGW6/view?usp=sharing'  // Taquicardias de QRS Estreito - Parte II: Anotações
+        ];
+        // Original arritmiasSub02Materiais (20 links)
+        const arritmiasSub01MateriaisOriginais = [
+            'https://drive.google.com/file/d/1yK36ovLW15gpTeH3l5FJgGNHOsZYXCle/view?usp=sharing', // Taquicardia Atrial Focal e Multifocal
+            'https://drive.google.com/file/d/1euThbhvsSXlrQKSQ4d-jcqrymCOr-6nh/view?usp=sharing', // Taquicardia Atrial Focal e Multifocal - Anotações
+            'https://drive.google.com/file/d/1cnbldtACxuuGaeFZWdPIHxGYD6umGkPJ/view?usp=sharing', // Taquicardias Relacionadas ao Nó Atrioventricular
+            'https://drive.google.com/file/d/1ORRLgiNPQXDCu-sLvNnP6jzbVPo4XwDa/view?usp=sharing', // Taquicardias Relacionadas ao Nó Atrioventricular - Anotações
+            'https://drive.google.com/file/d/122tKnrXQeomCoGjW7b1K6aPLf6r515Tc/view?usp=sharing', // Taquicardias Relacionadas às Vias Acessórias
+            'https://drive.google.com/file/d/1hNUXw3gugODZvI4J6I1ndrEn86y_Fzdd/view?usp=sharing', // Taquicardias Relacionadas às Vias Acessórias - Anotações
+            'https://drive.google.com/file/d/1Sts_F1JN3q9HLTTKBR8TucMV2Q7fGRXd/view?usp=sharing', // Vias Acessórias Típicas e Atípicas
+            'https://drive.google.com/file/d/1hDFH2-LJSPdGy5vF358_XQ9F3nxzxAnj/view?usp=sharing', // Vias Acessórias Típicas e Atípicas - Anotações
+            'https://drive.google.com/file/d/1AXYlvdTa3afK4wv5sMT_MYUmzNS-795_/view?usp=sharing', // Fibrilação Atrial e Flutter
+            'https://drive.google.com/file/d/1korkrYwIKs3XaOLFtBs_vYm4x9J-IEEg/view?usp=sharing', // Fibrilação Atrial e Flutter - Anotações
+            'https://drive.google.com/file/d/1CF-q4CBS9tr2kr0ewLNx9cqMDEl0MBW_/view?usp=sharing', // Placeholder 1
+            'https://drive.google.com/file/d/1z1kR8inULwItKC7TayQuhNE6C8OnHApw/view?usp=sharing', // Placeholder 2
+            'https://drive.google.com/file/d/1FsdH4tA2Li01zfWbD3m4m_bFLTUZ1ytc/view?usp=sharing', // Placeholder 3
+            'https://drive.google.com/file/d/1QkViP39zvtiTub6zARlgV5b97Elq3p6n/view?usp=sharing', // Placeholder 4
+            'https://drive.google.com/file/d/1V6qRi9o_zsCk1QIOvieg9T5cItzjeio5/view?usp=sharing', // Placeholder 5
+            'https://drive.google.com/file/d/1tmRxa8T2MMdBPGJqfnRx7IB5EX3IVofn/view?usp=sharing', // Placeholder 6
+            'https://drive.google.com/file/d/1RDblX5p83kHH16FqKPwkDrysrsU-hKZR/view?usp=sharing', // Placeholder 7
+            'https://drive.google.com/file/d/1fGkEtdNJPO32V4xO4-P6itjYeahqhAEZ/view?usp=sharing', // Placeholder 8
+            'https://drive.google.com/file/d/1hUFMmRghXfNdQ6QqPPVakqvBxpg3rK9Q/view?usp=sharing', // Placeholder 9
+            'https://drive.google.com/file/d/15rJLZ3xyqa8dj9832ex14ioEaxAm6Wkd/view?usp=sharing' // Placeholder 10
+        ];
+        const arritmiasSub03MateriaisOriginais = [
+            'https://drive.google.com/file/d/1GCSpghc6ge9yrdtA9PGKObD73-i03pxV/view?usp=sharing', // Taquicardias de QRS Largo: TV x TPSV?
+            'https://drive.google.com/file/d/1KA1TGYM_9a65W8-glfUlRVK1wvH4M9YD/view?usp=sharing', // Taquicardias de QRS Largo: TV x TPSV? - Anotações
+            'https://drive.google.com/file/d/1LfRuxRDJ4t_L38KMh_FoX1UND3GIE4z4/view?usp=sharing', // Arritmias Ventriculares de Corações Normais
+            'https://drive.google.com/file/d/1BmRFPfgsLaZ9a_XO5kJ0RcgIiqQlfCvm/view?usp=sharing', // Arritmias Ventriculares de Corações Normais - Anotações
+            'https://drive.google.com/file/d/1ehAP7TDO0mnetJqDvTmvUjHq8A5poZP_/view?usp=sharing', // Arritmias Ventriculares de Corações Doentes
+            'https://drive.google.com/file/d/1bFmm-4iBrsRmk2MrjWqMOLuXyQkTH3p8/view?usp=sharing', // Arritmias Ventriculares de Corações Doentes - Anotações
+            'https://drive.google.com/file/d/1YVWqcW_NMp0iD60J26-52FbEG_kCmtvi/view?usp=sharing', // Bradiarritmias I: Doenças do Nó Sinusal
+            'https://drive.google.com/file/d/1hEBx-zhK5qfoZnVatr1F6KODCkpgwhRX/view?usp=sharing', // Bradiarritmias I: Doenças do Nó Sinusal - Anotações
+            'https://drive.google.com/file/d/10QcGZPj6zJisLkcM5g2zaU3-bzX7jT-a/view?usp=sharing', // Bradiarritmias II: Bloqueios Atrioventriculares
+            'https://drive.google.com/file/d/1yXEIX9-dNWI8SSNq1SZSmcuiOCi3aAmo/view?usp=sharing', // Bradiarritmias II: Bloqueios Atrioventriculares - Anotações
+            'https://drive.google.com/file/d/1M4vHEUdhX5Bn9YElOyMk6RWJN20MOxOm/view?usp=sharing', // Canalopatias I: Síndromes do Ponto J
+            'https://drive.google.com/file/d/1QZvGxF6CmjKf4ajyYfKMt0K43aQXmlb-/view?usp=sharing', // Canalopatias I: Síndromes do Ponto J - Anotações
+            'https://drive.google.com/file/d/1ocetH-3V9p6RwNYP__NFtJVK0SjtsiQ6/view?usp=sharing', // Canalopatias II: SQTL, SQTC, TVPC
+            'https://drive.google.com/file/d/1EkBtsXzBZKLwdAHxWXlhiFWikxvXLhSa/view?usp=sharing'  // Canalopatias II: SQTL, SQTC, TVPC - Anotações
+        ];
+
+        // Lessons for the Module: Advanced ECG Topics (updated titles)
+        const temasAvancadosECGAulas = [
+            'https://drive.google.com/file/d/1rXFqItcCQnLzBegXY7eDVsSSyYKQrou3/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1vojAaNo-e6axvKlbMWVXt6o_nUf6R3xl/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1aknSpg9D-gIy9wjZY3gyUc9iq5Tyu7Y-/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1-cEwYsVM7eBpdZ1bPAQOg8Cw_H0Cg5rL/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1MqCzJPSMowyqLWb4p3la9D_VZBzOe1qy/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/16vh35jZzZYcbyhoThT-0f37K9jfz-T7Q/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1ON5H8ineLhzE-DeV0AFzB-xDmjFqejBB/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1EsbXhIdkyVI-ilDgyg-MKKoNT6RUE5sg/view?usp=sharing', // Placeholder link
+            'https://drive.google.com/file/d/1LoIweYRk70fGb20OR4OP9wsn4Cxld_Hc/view?usp=sharing'  // Placeholder link
+        ];
+        const temasAvancadosECGAulasTitulos = [
+            'Aula 01 - Cardiomiopatias Arritmogênicas: Parte I',
+            'Aula 02 - Cardiomiopatias Arritmogênicas: Parte II',
+            'Aula 03 - ECG em Ergometria',
+            'Aula 04 - ECG em Marca-Passo: Parte I',
+            'Aula 05 - ECG em Marca-Passo: Parte II',
+            'Aula 06 - ECG em Pediatria',
+            'Aula 07 - ECG em Doenças Congênitas',
+            'Aula 08 - ECG de Atletas',
+            'Aula 09 - ECG em Cenários Clínicos'
+        ];
+
+        const conteudoComplementarAulas = [
+            'https://drive.google.com/file/d/1dw4datGjRoN3G2rxbX7kpCyehxuA56D2/view?usp=sharing',
+            'https://drive.google.com/file/d/1GbLLdc0hmjrv3yMfJx5PuPdFmMvb4324/view?usp=sharing',
+            'https://drive.google.com/file/d/1h5C3AMl8kRjD1Xlq3W8I_eaG73r8V4eE/view?usp=sharing',
+            'https://drive.google.com/file/d/1mkIcmjfkteLvVYaB9Fu18daGdkmJdig2/view?usp=sharing',
+            'https://drive.google.com/file/d/1G1isQZ4ImKLjrbNdybEsI5kEvYgi9SQ-/view?usp=sharing'
+        ];
+        const conteudoComplementarTitulos = [
+            'Aula 01 - Atendimento de Pacientes com Síndrome Coronária Aguda',
+            'Aula 02 - Atendendo Pacientes com IC Usando o Protocolo SAVIC',
+            'Aula 03 - Taquicardias Ventriculares',
+            'Aula 04 - Estimulação Fisiológica: O Que Há de Novo no Mundo do Marca-Passo?',
+            'Aula 05 - Mentoria ECG Live: Torne-se um Expert!'
+        ];
+
+        // Definition of study materials grouped by sub-module for "Advanced ECG Topics"
+        const temasAvancadosECGMaterialData = [
+            {
+                title: 'Cardiomiopatias Arritmogênicas: Parte I',
+                items: [
+                    { title: 'Cardiomiopatias Arritmogênicas - Parte I', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'Cardiomiopatias Arritmogênicas - Parte I: Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'Cardiomiopatias Arritmogênicas: Parte II',
+                items: [
+                    { title: 'Cardiomiopatias Arritmogênicas - Parte II', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'Cardiomiopatias Arritmogênicas - Parte II: Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG em Ergometria',
+                items: [
+                    { title: 'ECG em Ergometria', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG em Ergometria - Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG em Marca-Passo: Parte I',
+                items: [
+                    { title: 'ECG em Marca-Passo - Parte I', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG em Marca-Passo - Parte I: Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG em Marca-Passo: Parte II',
+                items: [
+                    { title: 'ECG em Marca-Passo - Parte II', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG em Marca-Passo - Parte II: Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG em Pediatria',
+                items: [
+                    { title: 'ECG em Pediatria', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG em Pediatria - Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG em Doenças Congênitas',
+                items: [
+                    { title: 'ECG em Doenças Congênitas', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG em Doenças Congênitas - Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG de Atletas',
+                items: [
+                    { title: 'ECG de Atletas', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG de Atletas - Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            },
+            {
+                title: 'ECG em Cenários Clínicos',
+                items: [
+                    { title: 'ECG em Cenários Clínicos', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' },
+                    { title: 'ECG em Cenários Clínicos - Anotações', description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                ]
+            }
+        ];
+
+        // New titles for Arrhythmias I, II, and III lessons as provided by the user
+        const arritmiasSub01AulasTitulos = [
+            'Aula 01 - Mecanismos das Arritmias',
+            'Aula 02 - Extrassístoles',
+            'Aula 03 - Taquicardias de QRS Estreito: Parte I',
+            'Aula 04 - Taquicardias de QRS Estreito: Parte II'
+        ];
+        
+        const arritmiasSub02AulasTitulos = [
+            'Aula 01 - Taquicardia Atrial Focal e Multifocal',
+            'Aula 02 - Taquicardias Relacionadas ao Nó Atrioventricular',
+            'Aula 03 - Taquicardias Relacionadas às Vias Acessórias',
+            'Aula 04 - Vias Acessórias Típicas e Atípicas',
+            'Aula 05 - Fibrilação Atrial e Flutter'
+        ];
+
+        const arritmiasSub03AulasTitulos = [
+            'Aula 01 - Taquicardias de QRS Largo: TV x TPSV?',
+            'Aula 02 - Arritmias Ventriculares de Corações Normais',
+            'Aula 03 - Arritmias Ventriculares de Corações Doentes',
+            'Aula 04 - Bradiarritmias I: Doenças do Nó Sinusal',
+            'Aula 05 - Bradiarritmias II: Bloqueios Atrioventriculares',
+            'Aula 06 - Canalopatias I: Síndromes do Ponto J',
+            'Aula 07 - Canalopatias II: SQTL, SQTC, TVPC'
+        ];
+
+        // Updated structure for Arrhythmia module videos
+        const arritmiasVideoData = [
+            {
+                title: 'Arritmias - Parte I',
+                type: 'category',
+                items: arritmiasSub02Aulas.map((link, i) => ({
+                    id: extractIdFromGoogleDriveLink(link),
+                    title: arritmiasSub01AulasTitulos[i] || `Aula ${String(i + 1).padStart(2, '0')} - Arritmias - Parte I`,
+                    description: 'Descrição da aula de Arritmias - Parte I.',
+                    icon: 'fas fa-wave-square'
+                }))
+            },
+            {
+                title: 'Arritmias - Parte II',
+                type: 'category',
+                items: arritmiasSub01Aulas.map((link, i) => ({
+                    id: extractIdFromGoogleDriveLink(link),
+                    title: arritmiasSub02AulasTitulos[i] || `Aula ${String(i + 1).padStart(2, '0')} - Arritmias - Parte II`,
+                    description: 'Descrição da aula de Arritmias - Parte II.',
+                    icon: 'fas fa-wave-square'
+                }))
+            },
+            {
+                title: 'Arritmias - Parte III',
+                type: 'category',
+                items: arritmiasSub03Aulas.map((link, i) => ({
+                    id: extractIdFromGoogleDriveLink(link),
+                    title: arritmiasSub03AulasTitulos[i] || `Aula ${String(i + 1).padStart(2, '0')} - Arritmias - Parte III`,
+                    description: 'Descrição da aula de Arritmias - Parte III.',
+                    icon: 'fas fa-wave-square'
+                }))
+            }
+        ];
+
+        // Sub-module titles for study materials in "Arrhythmias - Part I"
+        const arritmiasSub01MaterialSubmodulesTitles = [
+            'Extrassistoles',
+            'Mecanismos das Arritmias',
+            'Taquicardias de QRS Estreito - Parte I',
+            'Taquicardias de QRS Estreito - Parte II'
+        ];
+
+        // Structure of study materials for "Arrhythmias - Part I"
+        let materialIndexArritmias01 = 0;
+        const newArritmiasSub01MaterialStructure = arritmiasSub01MaterialSubmodulesTitles.map(submoduleTitle => {
+            const items = [];
+            if (arritmiasSub01MateriaisOriginais[materialIndexArritmias01]) {
+                items.push({
+                    title: submoduleTitle,
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: arritmiasSub01MateriaisOriginais[materialIndexArritmias01++]
+                });
+            }
+            if (arritmiasSub01MateriaisOriginais[materialIndexArritmias01]) {
+                items.push({
+                    title: `${submoduleTitle} - Anotações`,
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: arritmiasSub01MateriaisOriginais[materialIndexArritmias01++]
+                });
+            }
+            return {
+                title: submoduleTitle,
+                type: 'category',
+                items: items
+            };
+        });
+
+        // Sub-module titles for study materials in "Arrhythmias - Part II" (UPDATED)
+        const arritmiasSub02MaterialSubmodulesTitles = [
+            'Fibrilação Atrial e Flutter',
+            'Taquicardia Atrial Focal e Multifocal',
+            'Taquicardias Relacionadas ao Nó AV',
+            'Taquicardias Relacionadas as Vias Acessórias',
+            'Vias Acessórias Típicas e Atípicas'
+        ];
+
+        // Structure of study materials for "Arrhythmias - Part II" (UPDATED)
+        let materialIndexArritmias02 = 0;
+        const newArritmiasSub02MaterialStructure = arritmiasSub02MaterialSubmodulesTitles.map(submoduleTitle => {
+            const items = [];
+            // Each sub-module will have a main material and a notes material, if available
+            // The order of links in arritmiasSub02MateriaisOriginais must match the order of titles here
+            for (let i = 0; i < 2 && materialIndexArritmias02 < arritmiasSub02MateriaisOriginais.length; i++) {
+                items.push({
+                    title: `${submoduleTitle} - Material ${i + 1}`,
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: arritmiasSub02MateriaisOriginais[materialIndexArritmias02++]
+                });
+            }
+            return {
+                title: submoduleTitle,
+                type: 'category',
+                items: items
+            };
+        });
+
+
+        // Sub-module titles for study materials in "Arrhythmias - Part III" (UPDATED based on user input)
+        const arritmiasSub03MaterialSubmodulesTitles = [
+            'TPSV x TV',
+            'Arritmias Ventriculares de Corações Normais',
+            'Arritmias Ventriculares de Corações Doentes',
+            'Bradiarritmias I - Doenças do no Sinusal',
+            'Bradiarritmias II - Doenças do Nó AV',
+            'Canalopatias I - Síndromes do Ponto J',
+            'Canalopatias II - SQTL, SQTC e TVPC'
+        ];
+
+        // Combine the original links with the new specific titles provided by the user, ensuring the correct order
+        // This array maps each provided title to its corresponding Google Drive link.
+        const arritmiasSub03MateriaisComTitulosEspecificos = [
+            { title: 'TPSV x TV', link: 'https://drive.google.com/file/d/1GCSpghc6ge9yrdtA9PGKObD73-i03pxV/view?usp=sharing' },
+            { title: 'TPSV x TV - Anotações', link: 'https://drive.google.com/file/d/1KA1TGYM_9a65W8-glfUlRVK1wvH4M9YD/view?usp=sharing' },
+            { title: 'Arritmias Ventriculares de Corações Normais', link: 'https://drive.google.com/file/d/1LfRuxRDJ4t_L38KMh_FoX1UND3GIE4z4/view?usp=sharing' },
+            { title: 'Arritmias Ventriculares de Corações Normais - Anotações', link: 'https://drive.google.com/file/d/1BmRFPfgsLaZ9a_XO5kJ0RcgIiqQlfCvm/view?usp=sharing' },
+            { title: 'Arritmias Ventriculares de Corações Doentes', link: 'https://drive.google.com/file/d/1ehAP7TDO0mnetJqDvTmvUjHq8A5poZP_/view?usp=sharing' },
+            { title: 'Arritmias Ventriculares de Corações Doentes - Anotações', link: 'https://drive.google.com/file/d/1bFmm-4iBrsRmk2MrjWqMOLuXyQkTH3p8/view?usp=sharing' },
+            { title: 'Bradiarritmias I - Doenças do no Sinusal', link: 'https://drive.google.com/file/d/1YVWqcW_NMp0iD60J26-52FbEG_kCmtvi/view?usp=sharing' },
+            { title: 'Bradiarritmias I - Doenças do no Sinusal: Anotações', link: 'https://drive.google.com/file/d/1hEBx-zhK5qfoZnVatr1F6KODCkpgwhRX/view?usp=sharing' },
+            { title: 'Bradiarritmias II - Doenças do Nó AV', link: 'https://drive.google.com/file/d/10QcGZPj6zJisLkcM5g2zaU3-bzX7jT-a/view?usp=sharing' },
+            { title: 'Bradiarritmias II - Doenças do Nó AV: Anotações', link: 'https://drive.google.com/file/d/1yXEIX9-dNWI8SSNq1SZSmcuiOCi3aAmo/view?usp=sharing' },
+            { title: 'Canalopatias I - Síndromes do Ponto J', link: 'https://drive.google.com/file/d/1M4vHEUdhX5Bn9YElOyMk6RWJN20MOxOm/view?usp=sharing' },
+            { title: 'Canalopatias I - Síndromes do Ponto J: Anotações', link: 'https://drive.google.com/file/d/1QZvGxF6CmjKf4ajyYfKMt0K43aQXmlb-/view?usp=sharing' },
+            { title: 'Canalopatias II - SQTL, SQTC e TVPC', link: 'https://drive.google.com/file/d/1ocetH-3V9p6RwNYP__NFtJVK0SjtsiQ6/view?usp=sharing' },
+            { title: 'Canalopatias II - SQTL, SQTC e TVPC: Anotações', link: 'https://drive.google.com/file/d/1EkBtsXzBZKLwdAHxWXlhiFWikxvXLhSa/view?usp=sharing' }
+        ];
+
+        // Structure of study materials for "Arrhythmias - Part III" (UPDATED)
+        let materialIndexArritmias03SpecificTitles = 0;
+        const newArritmiasSub03MaterialStructure = arritmiasSub03MaterialSubmodulesTitles.map(submoduleTitle => {
+            const items = [];
+            // Each submodule will have two corresponding materials from the arritmiasSub03MateriaisComTitulosEspecificos array
+            if (arritmiasSub03MateriaisComTitulosEspecificos[materialIndexArritmias03SpecificTitles]) {
+                items.push({
+                    title: arritmiasSub03MateriaisComTitulosEspecificos[materialIndexArritmias03SpecificTitles].title,
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: arritmiasSub03MateriaisComTitulosEspecificos[materialIndexArritmias03SpecificTitles].link
+                });
+                materialIndexArritmias03SpecificTitles++;
+            }
+            if (arritmiasSub03MateriaisComTitulosEspecificos[materialIndexArritmias03SpecificTitles]) {
+                items.push({
+                    title: arritmiasSub03MateriaisComTitulosEspecificos[materialIndexArritmias03SpecificTitles].title,
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: arritmiasSub03MateriaisComTitulosEspecificos[materialIndexArritmias03SpecificTitles].link
+                });
+                materialIndexArritmias03SpecificTitles++;
+            }
+            return {
+                title: submoduleTitle,
+                type: 'category',
+                items: items
+            };
+        });
+
+
+        // New structure for Arrhythmia module materials
+        const arritmiasMaterialData = [
+            {
+                title: 'Arritmias - Parte I',
+                type: 'category',
+                items: newArritmiasSub01MaterialStructure // Now using the correct sub-module structure
+            },
+            {
+                title: 'Arritmias - Parte II',
+                type: 'category',
+                items: newArritmiasSub02MaterialStructure // Now using the correct sub-module structure
+            },
+            {
+                title: 'Arritmias - Parte III',
+                type: 'category',
+                items: newArritmiasSub03MaterialStructure // Using the new sub-module structure here
+            }
+        ];
+
+        // New titles for Doenças Coronarianas e Infartos lessons as provided by the user
+        const doencasCoronarianasAulasTitulos = [
+            'Aula 01 - Oclusão Coronária Aguda: Um Novo Nome para uma Conhecida Doença - Atualização',
+            'Aula 02 - Introdução à Síndrome Coronariana Aguda',
+            'Aula 03 - ECG em Síndrome Coronariana Aguda: Parte I',
+            'Aula 04 - ECG em Síndrome Coronariana Aguda: Parte II',
+            'Aula 05 - ECG em Síndrome Coronariana Aguda: Parte III',
+            'Aula 06 - ECG em Doença Coronariana Crônica'
+        ];
+
+        // Original structure for Doenças Coronarianas e Infartos module videos (reverted to flat)
+        const doencasCoronarianasVideoData = doencasCoronarianasAulas.map((link, i) => ({
+            id: extractIdFromGoogleDriveLink(link),
+            title: `Aula ${String(i + 1).padStart(2, '0')} - Doenças Coronarianas`, // Keeping original generic titles for videos
+            description: 'Descrição da aula de Doenças Coronarianas e Infartos.',
+            icon: 'fas fa-heart-crack'
+        }));
+
+        // New structure for Doenças Coronarianas e Infartos module materials (using the provided lesson titles as categories)
+        const doencasCoronarianasMaterialData = [
+            {
+                        title: doencasCoronarianasAulasTitulos[0], // Aula 01 - Oclusão Coronária Aguda
+                        type: 'category',
+                        items: [
+                            { title: `Material 01 - ${doencasCoronarianasAulasTitulos[0]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[0] }
+                        ]
+                    },
+                    {
+                        title: doencasCoronarianasAulasTitulos[1], // Aula 02 - Introdução à Síndrome Coronariana Aguda
+                        type: 'category',
+                        items: [
+                            { title: `Material 01 - ${doencasCoronarianasAulasTitulos[1]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[1] },
+                            { title: `Material 02 - ${doencasCoronarianasAulasTitulos[1]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[2] }
+                        ]
+                    },
+                    {
+                        title: doencasCoronarianasAulasTitulos[2], // Aula 03 - ECG em Síndrome Coronariana Aguda: Parte I
+                        type: 'category',
+                        items: [
+                            { title: `Material 01 - ${doencasCoronarianasAulasTitulos[2]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[3] },
+                            { title: `Material 02 - ${doencasCoronarianasAulasTitulos[2]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[4] }
+                        ]
+                    },
+                    {
+                        title: doencasCoronarianasAulasTitulos[3], // Aula 04 - ECG em Síndrome Coronariana Aguda: Parte II
+                        type: 'category',
+                        items: [
+                            { title: `Material 01 - ${doencasCoronarianasAulasTitulos[3]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[5] },
+                            { title: `Material 02 - ${doencasCoronarianasAulasTitulos[3]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[6] }
+                        ]
+                    },
+                    {
+                        title: doencasCoronarianasAulasTitulos[4], // Aula 05 - ECG em Síndrome Coronariana Aguda: Parte III
+                        type: 'category',
+                        items: [
+                            { title: `Material 01 - ${doencasCoronarianasAulasTitulos[4]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[7] },
+                            { title: `Material 02 - ${doencasCoronarianasAulasTitulos[4]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[8] }
+                        ]
+                    },
+                    {
+                        title: doencasCoronarianasAulasTitulos[5], // Aula 06 - ECG em Doença Coronariana Crônica
+                        type: 'category',
+                        items: [
+                            { title: `Material 01 - ${doencasCoronarianasAulasTitulos[5]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[9] },
+                            { title: `Material 02 - ${doencasCoronarianasAulasTitulos[5]}`, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: doencasCoronarianasMateriais[10] }
+                        ]
+                    },
+        ];
+
+        // New titles for "As Bases do ECG - Parte I" lessons
+        const asBasesDoECGPart1LessonTitles = [
+            'Aula 01 - Introdução ao ECG',
+            'Aula 02 - Anatomia e Fisiologia Cardíaca: Básica',
+            'Aula 03 - Anatomia e Fisiologia Cardíaca: Avançada',
+            'Aula 04 - O Eletrocardiógrafo e os Sistemas de Derivações',
+            'Aula 05 - O ECG Normal',
+            'Aula 06 - O ECG Normal: Avançado',
+            'Aula 07 - Artefatos',
+            'Aula 08 - Anormalidades Atriais: Básica',
+            'Aula 09 - Anormalidades Atriais: Avançada'
+        ];
+
+        // New titles for "As Bases do ECG - Parte II" lessons
+        const asBasesDoECGPart2LessonTitles = [
+            'Aula 01 - Sobrecargas Ventriculares',
+            'Aula 02 - Bloqueio de Ramo Direito: Básica',
+            'Aula 03 - Bloqueio de Ramo Direito: Avançada',
+            'Aula 04 - Bloqueio de Ramo Esquerdo: Básica',
+            'Aula 05 - Bloqueio de Ramo Esquerdo: Avançada',
+            'Aula 06 - Bloqueios Divisionais: Básica',
+            'Aula 07 - Bloqueios Divisionais: Avançada',
+            'Aula 08 - Bloqueios Zonais',
+            'Aula 09 - Alterações da Repolarização Ventricular',
+            'Aula 10 - Alterações da Repolarização Ventricular (Atualizado)',
+            'Aula 11 - Inversões de Onda T e Onda R Ampla em V1 e V2'
+        ];
+
+        // Data for "As Bases do ECG" module, separated into two parts for videos (UPDATED WITH NEW TITLES)
+        const asBasesDoECGVideoData = [
+            {
+                title: 'As Bases do ECG - Parte I',
+                type: 'category',
+                items: asBasesDoECGSub01Aulas.map((link, i) => ({
+                    id: extractIdFromGoogleDriveLink(link),
+                    title: asBasesDoECGPart1LessonTitles[i] || `Aula ${String(i + 1).padStart(2, '0')} - Bases do ECG - Parte I`,
+                    description: 'Descrição da aula de Bases do ECG - Parte I.',
+                    icon: 'fas fa-heartbeat'
+                }))
+            },
+            {
+                title: 'As Bases do ECG - Parte II',
+                type: 'category',
+                items: asBasesDoECGSub02Aulas.map((link, i) => ({
+                    id: extractIdFromGoogleDriveLink(link),
+                    title: asBasesDoECGPart2LessonTitles[i] || `Aula ${String(i + 1).padStart(2, '0')} - Bases do ECG - Parte II`,
+                    description: 'Descrição da aula de Bases do ECG - Parte II.',
+                    icon: 'fas fa-heartbeat'
+                }))
+            }
+        ];
+
+        // New titles for "As Bases do ECG - Parte I" materials submodules as provided by the user in the image
+        const asBasesDoECGPart1MaterialSubmodulesTitles = [
+            'Aula 01 - Introdução ao ECG',
+            'Aula 02, 03 - Anatomia e Fisiologia Cardíaca',
+            'Aula 04 - O Eletrocardiógrafo e os Sistemas de Derivações',
+            'Aula 05, 06 - O ECG Normal',
+            'Aula 07 - Artefatos',
+            'Aula 08, 09 - Anormalidades Atriais'
+        ];
+
+        // New titles for "As Bases do ECG - Parte II" materials submodules as provided by the user in the image
+        const asBasesDoECGPart2MaterialSubmodulesTitles = [
+            'Aula 01 - Sobrecargas Ventriculares',
+            'Aula 02, 03 - Bloqueio de Ramo Direito',
+            'Aula 04, 05 - Bloqueio de Ramo Esquerdo',
+            'Aula 06, 07 - Bloqueios Divisionais',
+            'Aula 08 - Bloqueios Zonais',
+            'Aula 09 - Alterações da Repolarização Ventricular',
+            'Aula 10 - Inversões de Onda T e Onda R Ampla em V1 e V2'
+        ];
+
+        // Data for "As Bases do ECG" module, separated into two parts for materials (UPDATED WITH NEW TITLES AND STRUCTURE)
+        let materialIndexBasesECGPart1 = 0;
+        const asBasesDoECGMaterialPart1Categories = asBasesDoECGPart1MaterialSubmodulesTitles.map(submoduleTitle => {
+            const items = [];
+            // Assign 2 materials per submodule title, or fewer if not enough are available
+            for (let i = 0; i < 2 && materialIndexBasesECGPart1 < asBasesDoECGSub01Materiais.length; i++) {
+                items.push({
+                    title: `${submoduleTitle} - Material ${i + 1}`, // Using the submodule title as base
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: asBasesDoECGSub01Materiais[materialIndexBasesECGPart1++]
+                });
+            }
+            return {
+                title: submoduleTitle,
+                type: 'category',
+                items: items
+            };
+        });
+
+        let materialIndexBasesECGPart2 = 0;
+        const asBasesDoECGMaterialPart2Categories = asBasesDoECGPart2MaterialSubmodulesTitles.map(submoduleTitle => {
+            const items = [];
+            // Assign 2 materials per submodule title, or fewer if not enough are available
+            for (let i = 0; i < 2 && materialIndexBasesECGPart2 < asBasesDoECGSub02Materiais.length; i++) {
+                items.push({
+                    title: `${submoduleTitle} - Material ${i + 1}`, // Using the submodule title as base
+                    description: 'Material de apoio.',
+                    icon: 'fas fa-file-pdf',
+                    link: asBasesDoECGSub02Materiais[materialIndexBasesECGPart2++]
+                });
+            }
+            return {
+                title: submoduleTitle,
+                type: 'category',
+                items: items
+            };
+        });
+
+        const asBasesDoECGMaterialData = [
+            {
+                title: 'As Bases do ECG - Parte I',
+                type: 'category',
+                items: asBasesDoECGMaterialPart1Categories
+            },
+            {
+                title: 'As Bases do ECG - Parte II',
+                type: 'category',
+                items: asBasesDoECGMaterialPart2Categories
+            }
+        ];
+
+        // Module: The Bases of ECG (UPDATED) - Remove the existing entry and add the new one
+        const existingEcgBasesModuleIndex = modulesData.findIndex(m => m.id === 'module_ecg_bases');
+        if (existingEcgBasesModuleIndex !== -1) {
+            modulesData.splice(existingEcgBasesModuleIndex, 1); // Remove the old entry
+        }
+        modulesData.push({
+            id: 'module_ecg_bases',
+            title: 'Módulo - As Bases do ECG',
+            path: 'Início / As Bases do ECG',
+            videos: asBasesDoECGVideoData, // Using the new structured data for videos
+            materials: asBasesDoECGMaterialData // Using the new structured data for materials
+        });
+
+
+        // Module: Coronary Diseases and Infarcts
+        modulesData.push({
+            id: 'module_doencas_coronarianas',
+            title: 'Módulo - Doenças Coronarianas e Infartos',
+            path: 'Início / Doenças Coronarianas e Infartos',
+            videos: doencasCoronarianasVideoData, // Using the original flat data for videos
+            materials: doencasCoronarianasMaterialData // Using the new structured data for materials
+        });
+
+        // Module: Arrhythmias
+        modulesData.push({
+            id: 'module_arritmias',
+            title: 'Módulo - Arritmias',
+            path: 'Início / Arritmias',
+            videos: arritmiasVideoData, // Using the new data structure for videos
+            materials: arritmiasMaterialData // Using the new data structure for materials
+        });
+
+        // Module: Advanced ECG Topics
+        modulesData.push({
+            id: 'module_ecg_avancado',
+            title: 'Módulo - Temas Avançados em ECG',
+            path: 'Início / Temas Avançados em ECG',
+            videos: temasAvancadosECGAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: temasAvancadosECGAulasTitulos[i] || `Aula ${String(i + 1).padStart(2, '0')} - Temas Avançados em ECG`,
+                description: 'Descrição da aula de Temas Avançados em ECG.',
+                icon: 'fas fa-chart-line'
+            })),
+            materials: temasAvancadosECGMaterialData.map(category => ({
+                type: 'category', // Custom type to indicate a collapsible category
+                title: category.title,
+                items: category.items.map(item => ({
+                    title: item.title,
+                    description: item.description,
+                    icon: item.icon,
+                    link: item.link
+                }))
+            }))
+        });
+
+        // Module: Complementary Content
+        modulesData.push({
+            id: 'module_conteudo_complementar',
+            title: 'Módulo - Conteúdo Complementar',
+            path: 'Início / Conteúdo Complementar',
+            videos: conteudoComplementarAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: conteudoComplementarTitulos[i] || `Aula ${String(i + 1).padStart(2, '0')} - Conteúdo Complementar`, // Use provided titles
+                description: 'Descrição da aula de Conteúdo Complementar.',
+                icon: 'fas fa-book'
+            })),
+            materials: [] // No materials for Complementary Content
+        });
+
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement) return;
+
+            // Encontra o módulo selecionado
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstItemId = null;
+            let firstItemTitle = null;
+            let firstItemType = null;
+
+            // Renderiza os vídeos
+            module.videos.forEach(item => {
+                const itemDescription = item.description || '';
+                if (item.type === 'category') {
+                    // Renderiza um sub-módulo (dropdown) para vídeos
+                    videosHtml += `
+                        <details>
+                            <summary>${item.title}</summary>
+                            <div class="px-4 py-2 space-y-2">
+                                ${item.items.map(subItem => `
+                                    <div class="material-item"
+                                            onclick="loadVideo('${subItem.id}', '${subItem.title.replace(/'/g, "\\'")}')" data-id="${subItem.id}">
+                                        <div class="item-thumbnail-placeholder">
+                                            <i class="${subItem.icon}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-white">${subItem.title}</p>
+                                            <p class="text-xs text-gray-400">${subItem.description || ''}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </details>
+                    `;
+                } else {
+                    // Se for um item de vídeo comum
+                    // Captura o ID e título do primeiro item para carregamento inicial (prioriza o primeiro vídeo do módulo)
+                    if (firstItemId === null) {
+                        firstItemId = item.id;
+                        firstItemTitle = item.title;
+                        firstItemType = 'video';
+                    }
+
+                    videosHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                             onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            // Renderiza os materiais
+            module.materials.forEach(item => {
+                const itemDescription = item.description || '';
+                if (item.type === 'category') {
+                    // Renderiza um sub-módulo (dropdown)
+                    materialsHtml += `
+                        <details>
+                            <summary>${item.title}</summary>
+                            <div class="px-4 py-2 space-y-2">
+                                ${item.items.map(subItem => {
+                                    if (subItem.type === 'category') { // Nested category (sub-module)
+                                        return `
+                                            <details class="ml-4">
+                                                <summary>${subItem.title}</summary>
+                                                <div class="px-4 py-2 space-y-2">
+                                                    ${subItem.items.map(nestedItem => `
+                                                        <div class="material-item"
+                                                                onclick="loadMaterial('${nestedItem.link}', '${nestedItem.title.replace(/'/g, "\\'")}')" data-id="${nestedItem.link}">
+                                                            <div class="item-thumbnail-placeholder">
+                                                                <i class="${nestedItem.icon}"></i>
+                                                            </div>
+                                                            <div>
+                                                                <p class="text-sm font-semibold text-white">${nestedItem.title}</p>
+                                                                <p class="text-xs text-gray-400">${nestedItem.description || ''}</p>
+                                                            </div>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </details>
+                                        `;
+                                    } else { // Direct material item
+                                        return `
+                                            <div class="material-item"
+                                                    onclick="loadMaterial('${subItem.link}', '${subItem.title.replace(/'/g, "\\'")}')" data-id="${subItem.link}">
+                                                <div class="item-thumbnail-placeholder">
+                                                    <i class="${subItem.icon}"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-semibold text-white">${subItem.title}</p>
+                                                    <p class="text-xs text-gray-400">${itemDescription}</p>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }
+                                }).join('')}
+                            </div>
+                        </details>
+                    `;
+                } else {
+                    // Renderiza um material comum
+                    if (firstItemId === null && module.videos.length === 0) {
+                        firstItemId = item.link; /* Usar o link como ID para materiais para seleção */
+                        firstItemTitle = item.title;
+                        firstItemType = 'material';
+                    }
+
+                    materialsHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                             onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            videosContainer.innerHTML = videosHtml;
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstItemId && firstItemTitle && firstItemType) {
+                if (firstItemType === 'video') {
+                    loadVideo(firstItemId, firstItemTitle);
+                } else if (firstItemType === 'material') {
+                    loadMaterial(firstItemId, firstItemTitle);
+                }
+            } else {
+                // Limpa o player e o título se o módulo não tiver conteúdo
+                document.getElementById('contentPlayer').src = '';
+                document.getElementById('lessonTitle').textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+        }
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Clear existing options before populating
+            moduleSelector.innerHTML = '';
+
+            modulesData.sort((a, b) => {
+                // Sort to ensure "As Bases do ECG" is always first for consistent initial load
+                if (a.id === 'module_ecg_bases') return -1;
+                if (b.id === 'module_ecg_bases') return 1;
+                return 0;
+            }).forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                // Ensure 'module_ecg_bases' is selected by default if it exists and is not the first in the array due to re-adding
+                const defaultModuleId = 'module_ecg_bases';
+                const defaultModule = modulesData.find(m => m.id === defaultModuleId);
+                if (defaultModule) {
+                    moduleSelector.value = defaultModuleId;
+                    renderModuleContent(defaultModuleId);
+                } else {
+                    moduleSelector.value = modulesData[0].id; // Define a primeira opção como selecionada
+                    renderModuleContent(modulesData[0].id);
+                }
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

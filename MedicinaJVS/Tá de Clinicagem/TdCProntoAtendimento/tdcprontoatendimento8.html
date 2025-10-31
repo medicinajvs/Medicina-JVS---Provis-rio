@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Cursos TdC</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .disabled-item {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Curso TdC de Pronto-Atendimento</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio (PDFs)</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais em PDF injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            // Módulos Principais
+            { id: 'module_1', title: 'Módulo 1 - Síncope', items: [
+                { type: 'video', title: 'Abordagem da perda transitória da consciência', link: 'https://drive.google.com/file/d/1gX2FwrZsF2UxE6tD6AAeNWPpjY9H4NBL/view?usp=sharing' },
+                { type: 'video', title: 'Tipos de síncope', link: 'https://drive.google.com/file/d/1ECyxlRq9Pch9c4fZNYev01vUzHw6rIeB/view?usp=sharing' },
+                { type: 'video', title: 'Síncope reflexa', link: 'https://drive.google.com/file/d/15NihH1SBWoccaRI0vUjGRS5Ra-B2qtgA/view?usp=sharing' },
+                { type: 'video', title: 'Hipotensão postural', link: 'https://drive.google.com/file/d/1N73KDmKoXGCmmrc9qnDKlBRJd6Am6EdC/view?usp=sharing' },
+                { type: 'video', title: 'Síncope cardíaca', link: 'https://drive.google.com/file/d/1CD-K19wVd1VMb4tRTtz6fVmP1K41each/view?usp=sharing' },
+            ]},
+            { id: 'module_2', title: 'Módulo 2 - Dor Abdominal', items: [
+                { type: 'video', title: 'Causas ameaçadoras à vida', link: 'https://drive.google.com/file/d/1qmNgWtpGWHcbwXpTKAmJmjJM-0Br2ETI/view?usp=sharing' },
+                { type: 'video', title: 'Dor em andar superior', link: 'https://drive.google.com/file/d/1UPoh-ifMrqDTZ1VHNE6avsPD_dB9MDQg/view?usp=sharing' },
+                { type: 'video', title: 'Dor em andar inferior', link: 'https://drive.google.com/file/d/1fsYZZrcrrBxUHGy8A65neGZ-6mkydpSF/view?usp=sharing' },
+                { type: 'video', title: 'Dor difusa', link: 'https://drive.google.com/file/d/1ZwGrz1Y1unwnmS3y35HjBJ8cXOd3uABT/view?usp=sharing' },
+                { type: 'video', title: 'Manejo do paciente com dor abdominal', link: 'https://drive.google.com/file/d/1G3xXyKbxEN90MD_rptQ9ZtaiUCzwZiit/view?usp=sharing' },
+            ]},
+            { id: 'module_3', title: 'Módulo 3 - Febre', items: [
+                { type: 'video', title: 'Abordagem inicial ao paciente com febre', link: 'https://drive.google.com/file/d/1LU56TdW9C-gGY0gZfYx6v7J4VwqqS3XI/view?usp=sharing' },
+                { type: 'video', title: 'Dengue: diagnóstico e tratamento', link: 'https://drive.google.com/file/d/1VNB4xVch6KqGm-K6T1LiPHctAD43NyCT/view?usp=sharing' },
+                { type: 'video', title: 'Diagnósticos diferenciais de dengue', link: 'https://drive.google.com/file/d/1LNvbLhHArG3dFzcT-yOCpk6iTcrIN_zu/view?usp=sharing' },
+                { type: 'video', title: 'Febre sem foco', link: 'https://drive.google.com/file/d/1WYMoS-saSf4HIt6L-He-UeWr2U6h3wtF/view?usp=sharing' },
+            ]},
+            { id: 'module_4', title: 'Módulo 4 - Dor Torácica', items: [
+                { type: 'video', title: 'Abordagem da dor torácica', link: 'https://drive.google.com/file/d/1IyTwal6rZfU8r1ZELyir4hvKwn1U3Mzv/view?usp=sharing' },
+                { type: 'video', title: 'Infarto sem supra do segmento ST', link: 'https://drive.google.com/file/d/12XAHwW-QqXy10lFQjgofdzTzeg_JjFCA/view?usp=sharing' },
+                { type: 'video', title: 'Infarto com supra do segmento ST', link: 'https://drive.google.com/file/d/1Ml4Yl4NqXK7cM6ZjWjGDCuDy5oqiUxpY/view?usp=sharing' },
+                { type: 'video', title: 'Tromboembolismo pulmonar', link: 'https://drive.google.com/file/d/1u_jP8rFuffm97PqiqMkiYGuT-BFFrjBy/view?usp=sharing' },
+                { type: 'video', title: 'Analgesia na síndrome coronariana', link: 'https://drive.google.com/file/d/1ozHv_krIf2W89rrDwRhhJ0fgPf4s3gSC/view?usp=sharing' },
+            ]},
+            { id: 'module_5', title: 'Módulo 5 - Perna Vermelha', items: [
+                { type: 'video', title: 'Celulite não complicada', link: 'https://drive.google.com/file/d/13du5a85Vq_Ep8S_M3S4FnX-xfgILzH7e/view?usp=sharing' },
+                { type: 'video', title: 'Abscessos', link: 'https://drive.google.com/file/d/1_sE1aAv-Xr9RryEu6rjaugmBccHoblaW/view?usp=sharing' },
+                { type: 'video', title: 'Celulite complicada', link: 'https://drive.google.com/file/d/1CyiUhD6AdjNEZAHUSBtyeNMS09UYQhcG/view?usp=sharing' },
+                { type: 'video', title: 'Perna vermelha não infecciosa', link: 'https://drive.google.com/file/d/1OdRXuVUWGigfkx422Dnhtoau6Ave18Z5/view?usp=sharing' },
+            ]},
+            { id: 'module_6', title: 'Módulo 6 - ISTs', items: [
+                { type: 'video', title: 'Uretrite', link: 'https://drive.google.com/file/d/1w3YYITQ6Tei_Myk6Iii2Hk19_ipVJn4G/view?usp=sharing' },
+                { type: 'video', title: 'Corrimento vaginal', link: 'https://drive.google.com/file/d/130VNM6yBd80K4-PlLXV9QKm7r9Aw-byT/view?usp=sharing' },
+                { type: 'video', title: 'Úlcera genital não dolorosa', link: 'https://drive.google.com/file/d/1BpIyAD21BtE2PMkXTD14LE3kp7gxlTZI/view?usp=sharing' },
+                { type: 'video', title: 'Úlcera genital dolorosa', link: 'https://drive.google.com/file/d/1WCVYOfmidN8F-kamWLknUi3GTXml8av7/view?usp=sharing' },
+                { type: 'video', title: 'Bônus: Abordagem das parcerias sexuais', link: 'https://drive.google.com/file/d/1ipKsMCsXQOUdcYSlS0F-XnSuqXfYWdfI/view?usp=sharing' },
+            ]},
+            { id: 'module_7', title: 'Módulo 7 - Tosse', items: [
+                { type: 'video', title: 'Bronquite aguda', link: 'https://drive.google.com/file/d/1qXo6ngwxDfS0dGNLyoW4ggQ7SkRJV3lL/view?usp=sharing' },
+                { type: 'video', title: 'Asma', link: 'https://drive.google.com/file/d/1rddGkizB29iH2Gqmg7LMjhpeuw59SX-w/view?usp=sharing' },
+                { type: 'video', title: 'DPOC', link: 'https://drive.google.com/file/d/1s3Ak_YEVaBXK3tigrd453nQXjUQujUdl/view?usp=sharing' },
+                { type: 'video', title: 'Pneumonia', link: 'https://drive.google.com/file/d/1oLFX4imGZfV567apCa1dvzJQz3w99pMo/view?usp=sharing' },
+            ]},
+            { id: 'module_8', title: 'Módulo 8 - Cefaleia', items: [
+                { type: 'video', title: 'Cefaleia secundária - parte 1', link: 'https://drive.google.com/file/d/1a5X4cYZAXNanV8vfYIrBanarLGZVM4Um/view?usp=sharing' },
+                { type: 'video', title: 'Cefaleia secundária - parte 2', link: 'https://drive.google.com/file/d/1Dl1d_CebmsGtN2Bz8t_0YleT2hfIB5Yr/view?usp=sharing' },
+                { type: 'video', title: 'Enxaqueca', link: 'https://drive.google.com/file/d/1-aQ3tcBZVhRrhc7QmJ-CXlerdbUzHmLp/view?usp=sharing' },
+                { type: 'video', title: 'Cefaleia tipo tensão', link: 'https://drive.google.com/file/d/1X2_AbepK9A8nrE9LM5NOm0FDL4fitWQe/view?usp=sharing' },
+            ]},
+            { id: 'module_9', title: 'Módulo 9 - Tontura', items: [
+                { type: 'video', title: 'Tontura intermitente provocada', link: 'https://drive.google.com/file/d/1rcXaE8X3ftVIib8-f0E2n0f0ZN_yXy7v/view?usp=sharing' },
+                { type: 'video', title: 'Tontura intermitente não provocada', link: 'https://drive.google.com/file/d/1e3lZawRJI2rUSJZsFKX2SNGZRM738J_g/view?usp=sharing' },
+                { type: 'video', title: 'Tontura persistente provocada', link: 'https://drive.google.com/file/d/1-xfFUkVrR_adOUFlPl7FNt4ljAzkr2bH/view?usp=sharing' },
+            ]},
+            { id: 'module_10', title: 'Módulo 10 - Disúria', items: [
+                { type: 'video', title: 'Cistite', link: 'https://drive.google.com/file/d/1DvldE7SQJmVfkyWdc4Fr4NgAlhK2r4EY/view?usp=sharing' },
+                { type: 'video', title: 'Pielonefrite', link: 'https://drive.google.com/file/d/1k29jE92EC7TNC_4DMP_cz9F38drqQZ7G/view?usp=sharing' },
+                { type: 'video', title: 'Piúria estéril', link: 'https://drive.google.com/file/d/1XnYMnC845KBnH_Ah0QX5b4egZOxSsw5w/view?usp=sharing' },
+            ]},
+            { id: 'module_11', title: 'Módulo 11 - Diarreia', items: [
+                { type: 'video', title: 'Diarreia aguda', link: 'https://drive.google.com/file/d/1HGElJ4h8_lv2nai9BKs_M7HDjjwnObrw/view?usp=sharing' },
+                { type: 'video', title: 'Diarreia inflamatória', link: 'https://drive.google.com/file/d/1gmk1Yj4x4_QhBQbtSX_lUY7JM9Zvuh_G/view?usp=sharing' },
+                { type: 'video', title: 'Colite por Clostridioides', link: 'https://drive.google.com/file/d/1Bv-fi9W-SVPrGqgHB7yi0w93XHg8cQB5/view?usp=sharing' },
+            ]},
+            { id: 'module_12', title: 'Módulo 12 - Dor Lombar', items: [
+                { type: 'video', title: 'Dor lombar secundária - parte 1', link: 'https://drive.google.com/file/d/1JtlRkTFdjSy4xNJiDW7p-WLov2mQ9-u4/view?usp=sharing' },
+                { type: 'video', title: 'Dor lombar secundária - parte 2', link: 'https://drive.google.com/file/d/1Ep86gd9IxqTwptYqBmR9khc80bcmtrCx/view?usp=sharing' },
+                { type: 'video', title: 'Dor lombar inespecífica - diagnóstico e tratamento', link: 'https://drive.google.com/file/d/111BiZFQnMNWyRLrAmSvIDnKeKv1LAIDe/view?usp=sharing' },
+            ]},
+            { id: 'module_13', title: 'Módulo 13 - IVAS', items: [
+                { type: 'video', title: 'Faringite', link: 'https://drive.google.com/file/d/1fzk27NIzsHjX6zBfi519qJrh7qn64jF9/view?usp=sharing' },
+                { type: 'video', title: 'Faringite complicada', link: 'https://drive.google.com/file/d/1aMboW6hRK64hq9XaAWy5Qw2h_pD2nbUf/view?usp=sharing' },
+                { type: 'video', title: 'Sinusite', link: 'https://drive.google.com/file/d/14rba4FNHSOTnTxqu_0CabnR6P1RbJKAb/view?usp=sharing' },
+            ]},
+            { id: 'module_14', title: 'Módulo 14 - Náuseas e Vômitos', items: [
+                { type: 'video', title: 'Causas externas e gastroenterites', link: 'https://drive.google.com/file/d/1i7lJ5xsnDV_7-hgcWHIXA4-ueTeiKpZM/view?usp=sharing' },
+                { type: 'video', title: 'Neurológico e metabólico', link: 'https://drive.google.com/file/d/1vP67yS-1w5ROkR6K0s8mJnWh3VkOpGYj/view?usp=sharing' },
+            ]},
+            /*
+                { id: 'module_15', title: 'Módulo 15 - COVID-19', items: [
+                    { type: 'video', title: 'COVID-19 ambulatorial', link: 'https://drive.google.com/file/d/1YAeoVRHyz2ZrIRK92AHn1jZc8Ug3GgV-/view?usp=sharing' },
+                    { type: 'video', title: 'COVID-19 hospitalizado', link: 'https://drive.google.com/file/d/1ErSt1gyYPwMhKbfp6dqEn3SMil6V50MS/view?usp=sharing' },
+                ]},
+                // Módulos Bônus
+                { id: 'bonus_1', title: 'Bônus: Material Suplementar PA + Gasometria', items: [
+                    { type: 'pdf', title: 'Material suplementar: PA 2023 - parte 1', link: '#' },
+                    { type: 'pdf', title: 'Material suplementar: PA 2023 - parte 2', link: '#' },
+                    { type: 'pdf', title: 'Material suplementar: Gasometria', link: 'https://drive.google.com/file/d/1XcQnQX8fH_TgtsrPqGoYRHsVH-27FLo5/view?usp=sharing' },
+                ]},
+                { id: 'bonus_2', title: 'Bônus: Tópicos do Guia TdC + Cupom', items: [
+                    { type: 'video', title: 'Escore de internação de síncope', link: 'https://drive.google.com/file/d/160whhbZRLtUerBJmpe1rVGQzZ9u57BVz/view?usp=sharing' },
+                    { type: 'video', title: 'Piúria, bacteriúria e delirium', link: 'https://drive.google.com/file/d/1ubZpV9DnhuFqH3fz1JOYr67EdtTUeaV5/view?usp=sharing' },
+                    { type: 'video', title: 'Tonsilectomia para faringite de repetição', link: 'https://drive.google.com/file/d/1QxIVZvItH_iq4SJ05TYvujRlSNsXorRI/view?usp=sharing' },
+                    { type: 'pdf', title: 'Cupom GuiaTdC: PA2MESES (texto)', link: '#' },
+                ]},
+                { id: 'gaso_1', title: 'Gasometria Módulo 1 - Introdução', items: [
+                    { type: 'video', title: 'Introdução ao curso - objetivos e conteúdo', link: 'https://drive.google.com/file/d/1T5zXRU3ujwKolUzgm5fEMt85UDkbjwVP/view?usp=sharing' },
+                    { type: 'video', title: 'Panorama geral de interpretação e conceitos', link: 'https://drive.google.com/file/d/1y3yEgKLzUheLmbE3VDVeN3Bs2NSnZPxp/view?usp=sharing' },
+                    { type: 'video', title: 'Quando coletar uma gasometria', link: 'https://drive.google.com/file/d/1xhJJiRmNIPBVHGrkR-onYSD-TjFRv_Rp/view?usp=sharing' },
+                ]},
+                { id: 'gaso_2', title: 'Gasometria Módulo 2 - Acidose Metabólica', items: [
+                    { type: 'video', title: 'Acidose Geral e pCO2 Esperado', link: 'https://drive.google.com/file/d/13IfXGZDnS2rQuJ3IKLxdVtVq6bwyH2Dc/view?usp=sharing' },
+                    { type: 'video', title: 'Anion gap', link: 'https://drive.google.com/file/d/1Cyf2qnbJoznFqb-rDIX3GqyC2dsPaVuJ/view?usp=sharing' },
+                    { type: 'video', title: 'Anion gap alto - lactato', link: 'https://drive.google.com/file/d/1zOAKYSmoBRJakBTYwmTqHDrN3WMGpKPB/view?usp=sharing' },
+                    { type: 'video', title: 'Anion gap alto - cetoacidose', link: 'https://drive.google.com/file/d/1jjSd43gwY1TlQmf4fq18voJwoAWKcZFw/view?usp=sharing' },
+                    { type: 'video', title: 'Anion gap alto - doença renal e intoxicações', link: 'https://drive.google.com/file/d/1kONJKkruuFSU0B5Br30556GqGOYkb3tA/view?usp=sharing' },
+                    { type: 'video', title: 'Anion gap normal', link: 'https://drive.google.com/file/d/1B7RX3XBNdpNA5XgsSgVZzmN8MINy5fwN/view?usp=sharing' },
+                    { type: 'video', title: 'Delta-delta', link: 'https://drive.google.com/file/d/1RMUBMXLi3IrTr4w3vujAsfe78QyZQgjc/view?usp=sharing' },
+                ]},
+                { id: 'gaso_3', title: 'Gasometria Módulo 3 - Respiratório', items: [
+                    { type: 'video', title: 'Acidose respiratória', link: 'https://drive.google.com/file/d/1dHs46M_D5Bw9Jq41DVLL2aDrVozrG1W9/view?usp=sharing' },
+                    { type: 'video', title: 'Alcalose respiratória', link: 'https://drive.google.com/file/d/1j1ZIZ37ZWBG0ta5rCZN9xnp-GDa9F4yu/view?usp=sharing' },
+                    { type: 'video', title: 'Hipoxemia', link: 'https://drive.google.com/file/d/1vbv0QVr4RQBg4ZZmQdT4neH6H3fgGgpm/view?usp=sharing' },
+                ]},
+                { id: 'gaso_4', title: 'Gasometria Módulo 4 - Extras', items: [
+                    { type: 'video', title: 'Alcalose metabólica', link: 'https://drive.google.com/file/d/1o3eq-Uttf3eMlQtDolH-JA7eSD_h0T-J/view?usp=sharing' },
+                    { type: 'video', title: 'Base excess', link: 'https://drive.google.com/file/d/1VCBkLRk05Zrbff1_cvgbtsXgZ11lG8vq/view?usp=sharing' },
+                ]},
+                { id: 'gaso_5', title: 'Gasometria Módulo 5 - Resolução dos Casos', items: [
+                    { type: 'video', title: 'Caso simples', link: 'https://drive.google.com/file/d/1jY0GWeBGsEz-4PhU3H-YLPhXFjMTI79x/view?usp=sharing' },
+                    { type: 'video', title: 'Caso intermediário', link: 'https://drive.google.com/file/d/1MYApNboqZGLmm2RqrklPESJJ0qIXtXJs/view?usp=sharing' },
+                    { type: 'video', title: 'Caso complexo', link: 'https://drive.google.com/file/d/1SNIkKAF364iHW72T5kcdvG7cSmLauuhp/view?usp=sharing' },
+                ]},
+                { id: 'atb_4', title: 'Antibióticos Módulo 4 - Infecção Intra-abdominal', items: [
+                    { type: 'pdf', title: 'Roteiro do módulo', link: 'https://drive.google.com/file/d/1N3S01E_wv0mMgwG6j5GN9t2BJ3VEk9lL/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: infecção abdominal não grave', link: 'https://drive.google.com/file/d/1VrePHVimtQQh0Z7PmH6IFvlGk45zL_Vn/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Anaeróbios', link: 'https://drive.google.com/file/d/1sLqO6yCDaFU92dxLL3LS4oEzragL1RHX/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Metronidazol', link: 'https://drive.google.com/file/d/1_U8bD8ME-y98f-uEXuP75h2CWQN9lS1A/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Terapia empírica e resolução do caso', link: 'https://drive.google.com/file/d/1F-DXX6zjONKihWvc7w9FDk9egmZ1Py_n/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Infecção intra-abdominal grave', link: 'https://drive.google.com/file/d/1aPxY8QwtiblRZBG2UkWC2i_yMccujCcc/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Pseudomonas', link: 'https://drive.google.com/file/d/1jVVaFu5QSSse8WUEAQJWh81Sdz6DHsJ9/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Piperacilina+tazobactam', link: 'https://drive.google.com/file/d/1yzLhRJ5n0-5_LJjc4ioLTbS-UuRQhDCh/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Cefepima (4ª geração)', link: 'https://drive.google.com/file/d/12MC3SsSEu-jxQLey6h1hjLCfwUELlqpP/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Carbapenêmicos', link: 'https://drive.google.com/file/d/1WQQp0B2SUwCQ5ONPCjFOyzs8ec_WjBYl/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Terapia empírica e resolução do caso', link: 'https://drive.google.com/file/d/1aVX4-ujSJrQkUmAE5k0XUTKoXhPnEu1a/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 3: Infecção em paciente hospitalizado', link: 'https://drive.google.com/file/d/1rA9jKg1bjHwEPJb1pqfvqfU9UOvAehth/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 3: Enterococcus', link: 'https://drive.google.com/file/d/1PELn9ueWdRRa_JRIs2wafrjqEJym6YJG/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 3: Exercícios e resolução do caso', link: 'https://drive.google.com/file/d/1WK1VjJfRPOyFCczX-thI71GiFRX-5Rfn/view?usp=sharing' },
+                ]},
+                { id: 'atb_5', title: 'Antibióticos Módulo 5 - Pneumonia', items: [
+                    { type: 'pdf', title: 'Roteiro do módulo de pneumonia', link: 'https://drive.google.com/file/d/1y5hPg8dkQGBe0DHVcglA3kVlSeRw_CXR/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Pneumonia ambulatorial', link: 'https://drive.google.com/file/d/1SuOJVg0YScMXmc6HOKXVYDl8ooDYMHwI/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Streptococcus pneumoniae', link: 'https://drive.google.com/file/d/1BYwos1_jh3MzN3x5LSk3DpxzsyM-63sq/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Haemophilus influenzae e atípicos', link: 'https://drive.google.com/file/d/1oTaKJ_fRYHUBn8RDYUTawj7gngwH20vY/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Macrolídeos e tetraciclinas', link: 'https://drive.google.com/file/d/1Hv48MKN3z-3eF5jyd3IRKwdbFK-leCpL/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Quinolonas respiratórias', link: 'https://drive.google.com/file/d/1g_ymTt2PjQNeFRLGhEC5YyZx2s3-0ylE/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 1: Terapia empírica e resolução do caso', link: 'https://drive.google.com/file/d/1Z7oXdKnafREdcro9HouPsh44HZiPIpNP/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Pneumonia ambulatorial com comorbidades', link: 'https://drive.google.com/file/d/18W3mzAfs4LP8rFo7lFLLs0VP5cpuTaWK/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 2: Beta-lactâmicos+inibidores', link: 'https://drive.google.com/file/d/1DXAmqx4rgAnu_MoIFTiqhhqTkRKAEDfZ/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 3: Pneumonia em paciente hospitalizado', link: 'https://drive.google.com/file/d/1cE6PC94QAaXmqMunP_8d0AV0xEUaMKhW/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 3: Pseudomonas e MRSA na pneumonia', link: 'https://drive.google.com/file/d/1IsevPfbOMpkgzlvJIMeZr2J6tXbW2qVw/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 3: Condutas no paciente com pneumonia grave', link: 'https://drive.google.com/file/d/19_RCjxWn3sMiocp3bRNzOq0R-ai-A9Nz/view?usp=sharing' },
+                    { type: 'video', title: 'Caso 4: Pneumonia aspirativa', link: 'https://drive.google.com/file/d/1zR1pQyuEfFKK2e455AjONoop3xiCGube/view?usp=sharing' },
+                ]},
+                */
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            // Não faz nada se o link não existir (para itens desabilitados)
+            if (!itemLink || itemLink === '#') {
+                // Opcional: poderia mostrar uma mensagem
+                return;
+            }
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+        }
+        window.loadItem = loadItem;
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+
+            // Filtra e renderiza vídeos
+            const videos = module.items.filter(item => item.type === 'video');
+            videosContainer.innerHTML = videos.map(item => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                </div>
+            `).join('');
+
+            // Filtra e renderiza PDFs
+            const pdfs = module.items.filter(item => item.type === 'pdf');
+            materialsContainer.innerHTML = pdfs.map(item => {
+                const isDisabled = !item.link || item.link === '#';
+                const itemClass = isDisabled ? 'disabled-item' : 'cursor-pointer';
+                const clickHandler = isDisabled ? '' : `onclick="loadItem('${item.link}', '${item.title.replace(/'/g, "\\'")}')"`;
+
+                return `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 transition-colors ${itemClass}"
+                         ${clickHandler} data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-pdf"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>
+                `;
+            }).join('');
+
+            // Carrega o primeiro VÍDEO do módulo, se houver. Senão, o primeiro PDF.
+            const firstVideo = videos[0];
+            const firstPdf = pdfs.find(p => p.link && p.link !== '#'); // Encontra o primeiro PDF clicável
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else if (firstPdf) {
+                loadItem(firstPdf.link, firstPdf.title);
+            } else {
+                loadItem('', 'Nenhum item neste módulo', '');
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            if (modulesData.length > 0) {
+                renderModuleContent(modulesData[0].id);
+            }
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[7].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[7].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

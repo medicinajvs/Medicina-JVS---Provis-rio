@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estratégia MED - Gastroenterologia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos gerais e específicos */
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+
+        .accordion-item {
+             margin-bottom: 0.0625rem; /* Espaçamento de 1px (se 1rem = 16px) entre os módulos */
+        }
+        .accordion-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .menu-item-header {
+            border: 1px solid #e2e8f0; /* Cinza Tailwind 300 */
+            padding: 0.75rem 1rem; /* p-3 e px-4 */
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, border-radius 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+            width: 100%;
+        }
+        .menu-item-header:hover { background-color: #f8fafc; } /* Cinza Tailwind 50 */
+
+        .menu-item-header[aria-expanded="true"] {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            border-bottom-color: transparent;
+        }
+
+        .menu-item-content {
+            padding: 0.5rem 1rem 1rem 1rem; /* py-2 px-4 pb-4 */
+            background-color: white;
+            border-left: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-bottom-left-radius: 0.375rem; /* rounded-b-md */
+            border-bottom-right-radius: 0.375rem; /* rounded-b-md */
+        }
+
+        .sub-accordion-header { padding: 0.75rem 0.5rem; border-radius: 0.375rem; margin-top: 0.5rem; background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; text-align: left; transition: background-color 0.2s ease-in-out; }
+        .sub-accordion-header:hover { background-color: #f1f5f9; }
+        .sub-accordion-header:disabled { cursor: default; opacity: 0.6; background-color: #f8fafc; }
+        .sub-accordion-header:disabled:hover { background-color: #f8fafc; }
+
+        .sub-accordion-content { padding-left: 1rem; margin-top: 0.25rem; }
+        .sub-item-details { padding: 0.75rem 0.5rem 0.75rem 1rem; border-radius: 0.375rem; margin-top: 0.25rem; background-color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s ease-in-out; }
+        .sub-item-details[data-drive-video-url],
+        .sub-item-details[data-download-url] { cursor: pointer; }
+        .sub-item-details[data-drive-video-url]:hover,
+        .sub-item-details[data-download-url]:hover { background-color: #cbd5e1; }
+        .sub-item-details.is-active { background-color: #bfdbfe; }
+        .sub-item-details.is-active .item-icon { color: #3b82f6; }
+        .item-details-content { display: flex; align-items: center; flex-grow: 1; margin-right: 0.5rem; overflow: hidden; }
+        .item-details-content .item-icon + .overflow-hidden { margin-left: 0.75rem; }
+
+        .download-link { display: inline-flex; align-items: center; color: #6b7280; transition: color 0.2s ease-in-out; }
+        .download-link:hover { color: #1f2937; }
+        .status-toggle { cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem; border-radius: 0.25rem; transition: background-color 0.2s ease-in-out; }
+        .status-toggle:hover { background-color: #e5e7eb; }
+        .status-toggle .icon-completed { display: none; }
+        .status-toggle .icon-not-completed { display: inline-block; }
+        .status-toggle.is-completed .icon-completed { display: inline-block; }
+        .status-toggle.is-completed .icon-not-completed { display: none; }
+        .video-container-yt { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #ccc; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); margin-bottom: 1rem; }
+        .video-container-yt iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        .menu-container { flex-shrink: 0; max-height: calc(100vh - 150px); overflow-y: auto; }
+        .menu-container::-webkit-scrollbar { width: 6px; }
+        .menu-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb:hover { background: #aaaaaa; }
+        .hidden { display: none; }
+        .rotate-180 { transform: rotate(180deg); }
+        .transition-transform { transition: transform 0.2s ease-in-out; }
+
+        .like-button .heart-outline { display: inline-block; }
+        .like-button .heart-filled { display: none; }
+        .like-button.is-liked .heart-outline { display: none; }
+        .like-button.is-liked .heart-filled { display: inline-block; color: #ef4444; }
+        .like-button.is-liked .heart-filled { animation: pulse 0.3s ease-out; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white shadow-md py-3 px-4 md:px-8 sticky top-0 z-10">
+        <div class="container mx-auto max-w-full flex justify-between items-center">
+            <div class="flex items-center gap-4 flex-wrap">
+                <a href="estrategiamed.html" class="flex items-center text-sm text-gray-600 hover:text-gray-900"> <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Voltar
+                </a>
+                <h1 class="text-lg font-semibold text-gray-700">Hematologia</h1>
+                <div class="relative inline-block text-left">
+                    <button type="button" class="inline-flex justify-center items-center w-full rounded-md border border-gray-300 shadow-sm px-3 py-1 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                        2025
+                        <svg class="-mr-1 ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="like-button" class="like-button text-gray-500 hover:text-red-500 transition-colors duration-200">
+                    <svg class="heart-outline w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <svg class="heart-filled w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                </button>
+                </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto max-w-full p-4 md:p-8">
+        <div class="flex flex-row flex-wrap gap-6 md:gap-8">
+            <div class="w-full md:flex-1 min-w-[300px]">
+                <div class="video-container-yt">
+                    <iframe
+                        id="content-viewer" src="" title="Visualizador de Conteúdo"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                <p id="content-description" class="mt-4 text-gray-600 text-sm md:text-base">
+                    Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar.
+                </p>
+            </div>
+
+            <div class="w-full md:w-[350px] menu-container mt-6 md:mt-0 pr-2">
+
+                <template id="subitem-details-template">
+                    <div class="sub-item-details">
+                        <div class="item-details-content">
+                            <div class="overflow-hidden"> <div class="item-title text-sm font-medium text-gray-800 truncate">Placeholder Title</div>
+                                <div class="item-subtitle text-xs text-gray-500">Estratégia Educacional</div>
+                            </div>
+                        </div>
+                        <a href="#" class="download-link flex-shrink-0" title="Baixar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </a>
+                    </div>
+                </template>
+
+                <div id="menu-items-list">
+                    </div>
+
+            </div> </div> </main>
+
+    <script>
+        // --- Dados e Configurações ---
+        // MODIFICADO: Links do módulo 16 atualizados
+        const menuItemsData = [
+            { // Módulo 1: Introdução ao Estudo das Anemias
+                title: "Introdução ao Estudo das Anemias",
+                description: "Descrição Introdução ao Estudo das Anemias.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/1wcswflL-I4eg5XuuOf9CTwFqU0FYntQl/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1-hreWpCBjWomrUqY4je8ISHfZ9oLAiuD/preview?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/1gqdRfTSR8p9tqztJ6L7GkSLkECY0NmCb/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Introdução ao Estudo das Anemias', downloadUrl: 'https://drive.google.com/file/d/1lBH_P7nC02yFqQaTS2VPhWcHLHFq26-W/preview?usp=sharing' }
+                    ],
+                    'Resumos': [],
+                    'Slides': [
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1-kKIeKX34i1sb3eKLSX-WPgmel2FZQ5v/preview?usp=sharing' },
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/12AblGbt9FruM6zMYv5qvtxNDgMAN6YD1/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1mbRrmBXNGVsG45xSspajov4pOmJW5Jq_/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [],
+                    'Flashcards': [
+                        { name: 'Flashcard - Introdução ao Estudo das Anemias', downloadUrl: 'https://drive.google.com/file/d/1oTCoNO52XGsZuwZti6SXzteYDtLsqUw9/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 2: Anemias Microcíticas
+                title: "Anemias Microcíticas",
+                description: "Descrição Anemias Microcíticas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/1Ka1yqnQPOurnSTqrSndr2yx-PD7AXnq8/view?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1X9iqk0lYCdcrs9_-SfPLdIQOX9GhrrUQ/view?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/1Qn6Q4PkS_Lz0TMHx3zUB1LoG14J7FnZe/view?usp=sharing' },
+                        { title: 'Videoaula 4', driveVideoUrl: 'https://drive.google.com/file/d/17DTNbyyxMgrYWJ-OrDzdemrIMCgb7HQS/view?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Anemias Microcíticas', downloadUrl: 'https://drive.google.com/file/d/1k2yAbInKr1TBvyUHiVgRQvdZQtJxR-s9/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Anemias Microcíticas', downloadUrl: 'https://drive.google.com/file/d/1gh6OWd_k1yJ0KPOYzIBh-WipXizEgQg-/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/12_MT3x0n6VAGhOVhI5Ww0ssYSFUHkU9R/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1hbc3-xYGMd2PyEktK_MswKVSI5jzJkh_/preview?usp=sharing' },
+                        { name: 'Slide Aula 3', downloadUrl: 'https://drive.google.com/file/d/1krkeBICfIKJ3W9Z5u2SKieYmUluQROT7/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1axU7Dk0p-PulYDMu9DHboa3SaPx5lUOk/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Anemias Microcíticas', downloadUrl: 'https://drive.google.com/file/d/1Ia0_DxOu-QCmLCogHycUw-TP_OIt55bK/preview?usp=sharing' }
+                    ],
+                    'Flashcards': []
+                }
+            },
+            { // Módulo 3: Anemias Macrocíticas
+                title: "Anemias Macrocíticas",
+                description: "Descrição Anemias Macrocíticas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/17HLZfq-sypheNgy-mQaq_IVGGGEJYNN5/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/10qxa9TzghMrvsUaKvrnXxZFB_TpiayLT/preview?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/1lUNRDVCDXfVS58m2feYZfx1gzv6wYcMe/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Anemias Macrocíticas', downloadUrl: 'https://drive.google.com/file/d/1WSEhOkSuNA0g2ufSphz0pT3VOY4VFxFC/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Anemias Macrocíticas', downloadUrl: 'https://drive.google.com/file/d/18fGw01jTaAe3GTiIZXsjsHRj3ZxcY23_/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/1IaDLLjhOeBmL66p8k0ddITp-e8wWPx3h/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1nfiTkdPS2KiYs3mRusaDx9fcyvF7xYiI/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1PRCuPT-fv4d5uorlR8i9ubIU062LJHuz/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [],
+                    'Flashcards': [
+                        { name: 'Flashcard - Anemias Macrocíticas', downloadUrl: 'https://drive.google.com/file/d/10DGc4KxtkOw23EiPNIUuHrkJ9uZQFWOK/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 4: Anemias Hemolíticas
+                title: "Anemias Hemolíticas",
+                description: "Descrição Anemias Hemolíticas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/11gbdCDF9k002JU3eTxLqKepM-hEQoj7B/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1rGorx9zbpp7V3s1hxCrlC_teEqGraFQt/preview?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/124Q7uL7VZDPx2NnmGCMKJXac2yXLAsiz/preview?usp=sharing' },
+                        { title: 'Videoaula 4', driveVideoUrl: 'https://drive.google.com/file/d/1pL0dvgmxjbO0X5Bx2jpldExsNk6Q-SwN/preview?usp=sharing' },
+                        { title: 'Videoaula 5', driveVideoUrl: 'https://drive.google.com/file/d/1AZipipvG1eFS9aTo_HysrGVXqisBmMPN/preview?usp=sharing' },
+                        { title: 'Videoaula 6', driveVideoUrl: 'https://drive.google.com/file/d/11e6Jt7g33XbbBzCshbmrShIQ3QuqRoMQ/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Anemias Hemolíticas', downloadUrl: 'https://drive.google.com/file/d/1Dd9sC7c7EgOTTuj4Gsg8IFQpYYXe6rCR/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Anemias Hemolíticas', downloadUrl: 'https://drive.google.com/file/d/14aWiX5w4lyEDldUPquCWX7OldqsXh4_v/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/1_aN8E3P9yXNi0FuhcNGEDRO9ma4ykKxn/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1r9uvZ9u_oqUuADJ15DVXV_YZysKXtZyS/preview?usp=sharing' },
+                        { name: 'Slide Aula 3', downloadUrl: 'https://drive.google.com/file/d/1P1OaAxQr5NZ_PApb0PAJlgAMnnI09A95/preview?usp=sharing' },
+                        { name: 'Slide Aula 4', downloadUrl: 'https://drive.google.com/file/d/1jCAf2Z6404fcbdzr7-YqIqJvaP5_hhrQ/preview?usp=sharing' },
+                        { name: 'Slide Aula 5', downloadUrl: 'https://drive.google.com/file/d/1vYDAjRsactBOu9Ww45asnMKROhkDgcxC/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1yrCTyA8BJCqUmiKT37RQXrrJXCtOanUR/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Anemias Hemolíticas', downloadUrl: 'https://drive.google.com/file/d/1CY0CcECq5QXgLQvLzQV0jElLVdtLimx-/preview?usp=sharing' }
+                    ],
+                    'Flashcards': [
+                        { name: 'Flashcard - Anemias Hemolíticas', downloadUrl: 'https://drive.google.com/file/d/1fq4CluPHYszZv25P-bT-auYTZMxtm0tQ/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 5: Anemia Associada a Condições Não Hematológicas
+                title: "Anemia Associada a Condições Não Hematológicas",
+                description: "Descrição Anemia Associada a Condições Não Hematológicas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/131KDq4R_DKhZ-FtLgFUVKTndCWeXk6e0/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1d3RNKEIMTN58YXonbzBDXp4PcjgfRI-n/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [],
+                    'Resumos': [
+                        { name: 'RE - Anemias Associadas a Condições Não Hematológicas', downloadUrl: 'https://drive.google.com/file/d/1MsmrOcp8BdOI-pURf1g7M9VvBh4TxBBS/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/1lBydnl09eKya27QpTHjvKt98lUgUdsoJ/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1QmECw-dgatZ1mwp5hLiZ10Ni-F9EwaRy/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1rgmPpaX3zQZsAfeIVVThrmNdP7LhzfT9/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [],
+                    'Flashcards': []
+                }
+            },
+            { // Módulo 6: Leucemias Agudas
+                title: "Leucemias Agudas",
+                description: "Descrição Leucemias Agudas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/13CbKFZxmIvJc7Hj7RBu5syGyo-CnSYJr/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1RSXMA4-zmVnNCpDzwFI6eDT1oexJbzOY/preview?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/1U5koDUDTWKu1u_q3eRcdhsaw5cA5vOXi/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Leucemias Agudas', downloadUrl: 'https://drive.google.com/file/d/12aGQ1G8-xfYG0MrI-1VOSC6gf4-gWgBp/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Leucemias Agudas', downloadUrl: 'https://drive.google.com/file/d/1RTuJWq1auhbIFjWvrRMh3qctV8Lh3IQK/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/1k784iljmguiFuq2FL0ZtCK0k71Hlw7-8/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1salfMfuXhkS21fooluEAM1slztkLbykB/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1claAwrz6ARTD5gOSfohx8HUXzgl-3Hwg/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Leucemias Agudas', downloadUrl: 'https://drive.google.com/file/d/173cAOil54BuCxlvBkSO0_S7919je5Svf/preview?usp=sharing' }
+                    ],
+                    'Flashcards': []
+                }
+            },
+            { // Módulo 7: Leucemias Crônicas, Linfomas, Mielodisplasias e Mieloproliferações
+                title: "Leucemias Crônicas, Linfomas, Mielodisplasias e Mieloproliferações",
+                description: "Descrição Leucemias Crônicas, Linfomas, Mielodisplasias e Mieloproliferações.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/13Yq4RbuEvTl4izqf18RF83meiMthzz1f/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/13eFZf8-BtWJ2umr5Uqqhvm0jb7ZcCw9x/preview?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/1bDvHlZH-rmxksJ4I6uzx-uqoc0KFS5qc/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Leucemias Crônicas, Mieloproliferações e Linfomas', downloadUrl: 'https://drive.google.com/file/d/19vrHUMubAsBJWmr_x8orD1b5S8UFQ4Y9/preview?usp=sharing' }
+                    ],
+                    'Resumos': [],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/11RuRaha8L0eK0G-s9ffanCAdBH8Tgqwu/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/1ZdathvUqfqXhBnlVOk8xDjujduqdOfil/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1fejVli8qiDIX_qYUuglAFjpcv1fQMuad/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Leucemias Crônicas, Mieloproliferações e Linfomas', downloadUrl: 'https://drive.google.com/file/d/18OGxg4OEEhtQBM4fBbCFqLapefF1AY-M/preview?usp=sharing' }
+                    ],
+                    'Flashcards': [
+                        { name: 'Flashcard - Leucemias Crônicas, Mieloproliferações e Linfomas', downloadUrl: 'https://drive.google.com/file/d/160v7i8D-m5i_0BlxryN2DWjKpbqFIoce/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 8: Mieloma Múltiplo (Gamopatias Monoclonais)
+                title: "Mieloma Múltiplo (Gamopatias Monoclonais)",
+                description: "Descrição Mieloma Múltiplo e Gamopatias Monoclonais.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/14-xdyBReKUXPe6XVrgOakzUbVOl87fj3/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1n1Ea0_5E7mm-fhDukcLs7Ogkqh_Tpg81/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Mieloma Múltiplo (Gamopatias Monoclonais)', downloadUrl: 'https://drive.google.com/file/d/1RlRSgvArwq4Q6iWZDyhcWgwmv4Qxj4uN/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Mieloma Múltiplo (Gamopatias Monoclonais)', downloadUrl: 'https://drive.google.com/file/d/1RKIMmb3nHIuyUfxygBjbE6tRgiGN3VBS/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula', downloadUrl: 'https://drive.google.com/file/d/1sAiEK1as1ACVP3HEslSf8HCXFOSA673P/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1yz35zU15Oz0i1b7_FDC7Yu0tFQnhzliO/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Mieloma Múltiplo (Gamopatias Monoclonais)', downloadUrl: 'https://drive.google.com/file/d/1loOGbAvptQXKiT2RvXpdZirwqt6_aayy/preview?usp=sharing' }
+                    ],
+                    'Flashcards': [
+                        { name: 'Flashcard - Mieloma Múltiplo (Gamopatias Monoclonais)', downloadUrl: 'https://drive.google.com/file/d/1vqePl0I1CFEM9vXkTjI3NnUNUW52RZhI/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 9: Hemostasia I: Conceitos Básicos e Anticoagulantes
+                title: "Hemostasia I: Conceitos Básicos e Anticoagulantes",
+                description: "Descrição Hemostasia I: Conceitos Básicos e Anticoagulantes.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/1UMdLVfDlkMXe-PuNahq6XRzpFSBriKJa/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1atq2J-yyE6L4jT53VB7ObQhn_SA208G5/preview?usp=sharing' },
+                        { title: 'Videoaula 3', driveVideoUrl: 'https://drive.google.com/file/d/15-wpilOqpK6jln1vKX9AUKHF4eNX_pjs/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Hemostasia I - Conceitos Básicos e Medicações Anticoagulantes', downloadUrl: 'https://drive.google.com/file/d/1_k7Faqb803ruS7wHppdvUh0OCP649I27/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Hemostasia I - Conceitos Básicos e Medicações Anticoagulantes', downloadUrl: 'https://drive.google.com/file/d/1vKfkyE6DR1CtQlBk0hdELrxv7xKfGdP3/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula 1', downloadUrl: 'https://drive.google.com/file/d/1X1byHmj7tSHVc8r-fZEirKKOaRsHdxW7/preview?usp=sharing' },
+                        { name: 'Slide Aula 2', downloadUrl: 'https://drive.google.com/file/d/17hETTMYmindgXQWUpynnu80tjSYKVqUF/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1ipXLkgX3lCtsO79lYHeqB4PTJFKVvOh9/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Hemostasia I - Conceitos Básicos e Medicações Anticoagulantes', downloadUrl: 'https://drive.google.com/file/d/1llNeCOvHJ-yIOrajWzje5tahjm-36drV/preview?usp=sharing' }
+                    ],
+                    'Flashcards': [
+                        { name: 'Flashcard - Hemostasia I - Conceitos Básicos e Medicações Anticoagulantes', downloadUrl: 'https://drive.google.com/file/d/1wLo4oEAKF4GZpNvi0kpqb5t-MBZN_jJD/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 10: Hemostasia II: Doenças Hemostáticas
+                title: "Hemostasia II: Doenças Hemostáticas",
+                description: "Descrição Hemostasia II: Doenças Hemostáticas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/15VBSfjgfs6aPAuXOidYT442mHNw2RAaR/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1-YgWZrJkpIjWcq0lraXxN0XcdXHLLWA8/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Hemostasia II - Doenças Hemostáticas', downloadUrl: 'https://drive.google.com/file/d/1LSGYBgZL7TC1z-bd8XpkoGveOJ_6DK3d/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Hemostasia II - Doenças Hemostáticas', downloadUrl: 'https://drive.google.com/file/d/1KF55CiEGTTgLLFoEgoEChnTHJ0juwpfR/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula', downloadUrl: 'https://drive.google.com/file/d/1_isejPwdbHqvu-OG0OmN93c4oUH-Fiq_/preview?usp=sharing' },
+                        { name: 'Slide Resumo', downloadUrl: 'https://drive.google.com/file/d/1pm09wO-wjeJ1Q6h_psxuyhLf0P2QBmx-/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Hemostasia II - Doenças Hemostáticas', downloadUrl: 'https://drive.google.com/file/d/14EMFZBTxAr_TG0r7bAPaCInYgPMQUgXx/preview?usp=sharing' }
+                    ],
+                    'Flashcards': [
+                        { name: 'Flashcard - Hemostasia II - Doenças Hemostáticas', downloadUrl: 'https://drive.google.com/file/d/1U1084Q0GoQvSCZKTxcPV9QZcqPR97DDW/preview?usp=sharing' }
+                    ]
+                }
+            },
+            { // Módulo 11: Medicina Transfusional
+                title: "Medicina Transfusional",
+                description: "Descrição Medicina Transfusional.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: 'Videoaula 1', driveVideoUrl: 'https://drive.google.com/file/d/1WQUJR6UeazT-D407K0G0h9ZGu3fYUPOO/preview?usp=sharing' },
+                        { title: 'Videoaula 2', driveVideoUrl: 'https://drive.google.com/file/d/1Ym7ou42kXAHP9MA1lQtrYdBgzr7TnN73/preview?usp=sharing' }
+                    ],
+                    'Livros digitais': [
+                        { name: 'LD - Medicina Transfusional', downloadUrl: 'https://drive.google.com/file/d/1XPIo1G3bTEAdlOLdEKx_gfrVjBrKj5U7/preview?usp=sharing' }
+                    ],
+                    'Resumos': [
+                        { name: 'RE - Medicina Transfusional', downloadUrl: 'https://drive.google.com/file/d/1Mo5gYDm9FB-j3LTOIi9TfC6b085UwWOM/preview?usp=sharing' }
+                    ],
+                    'Slides': [
+                        { name: 'Slide Aula', downloadUrl: 'https://drive.google.com/file/d/1gNhM-T4rDcTzuqleYjSUm1pBNpJ3VG_4/preview?usp=sharing' }
+                    ],
+                    'Mapas mentais': [
+                        { name: 'Mapa Mental - Medicina Transfusional', downloadUrl: 'https://drive.google.com/file/d/18XzhOw7WABQjPJiEvadc-RbCZimLr_2h/preview?usp=sharing' }
+                    ],
+                    'Flashcards': [
+                        { name: 'Flashcard - Medicina Transfusional', downloadUrl: 'https://drive.google.com/file/d/1UxsOViFGqxzcJZlFhmRt3wh_AegKWpay/preview?usp=sharing' }
+                    ]
+                }
+            }
+        ];
+
+        // Configuração dos ícones
+        const subItemIcons = {
+            'Videoaulas': 'M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z', // Play
+            'Livros digitais': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', // Livro
+            'Resumos': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', // Documento
+            'Slides': 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', // Apresentação
+            'Mapas mentais': 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M12 12a3 3 0 100-6 3 3 0 000 6z' // Mapa
+        };
+        const subItemOrder = ['Videoaulas', 'Livros digitais', 'Resumos', 'Slides', 'Mapas mentais'];
+
+        // Referências aos elementos do DOM
+        const menuListContainer = document.getElementById('menu-items-list');
+        const detailsTemplate = document.getElementById('subitem-details-template');
+        const contentViewer = document.getElementById('content-viewer');
+        const contentDescription = document.getElementById('content-description');
+        const likeButton = document.getElementById('like-button');
+
+        // --- Funções Auxiliares ---
+        function romanize(num) {
+            if (isNaN(num) || num < 1) return num;
+            const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+            let roman = '', i;
+            for ( i in lookup ) { while ( num >= lookup[i] ) { roman += i; num -= lookup[i]; } }
+            return roman;
+        }
+
+        function createSubItemDetail(subItemType, detailData, mainTitle, videoIndex, totalVideos) {
+            if (!detailsTemplate || !detailData) return null;
+            const detailNode = detailsTemplate.content.cloneNode(true);
+            const detailDiv = detailNode.querySelector('.sub-item-details');
+            const itemDetailsContent = detailNode.querySelector('.item-details-content');
+            const titleEl = detailNode.querySelector('.item-title');
+            const subtitleEl = detailNode.querySelector('.item-subtitle');
+            const downloadLink = detailNode.querySelector('.download-link');
+            const iconPathData = subItemIcons[subItemType];
+
+            if (iconPathData) {
+                const iconContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                const isVideo = subItemType === 'Videoaulas';
+                const iconSizeClass = isVideo ? 'w-8 h-8 mr-3' : 'w-6 h-6 mr-2';
+                iconContainer.setAttribute('class', `item-icon ${iconSizeClass} text-gray-600 flex-shrink-0`);
+                iconContainer.setAttribute('fill', isVideo ? 'currentColor' : 'none');
+                iconContainer.setAttribute('stroke', isVideo ? 'none' : 'currentColor');
+                iconContainer.setAttribute('viewBox', isVideo ? '0 0 20 20' : '0 0 24 24');
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', iconPathData);
+                if (isVideo) {
+                    path.setAttribute('fill-rule', 'evenodd');
+                    path.setAttribute('clip-rule', 'evenodd');
+                } else {
+                    path.setAttribute('stroke-linecap', 'round');
+                    path.setAttribute('stroke-linejoin', 'round');
+                    path.setAttribute('stroke-width', '1.5');
+                }
+                iconContainer.appendChild(path);
+                itemDetailsContent.insertBefore(iconContainer, itemDetailsContent.firstChild);
+            } else {
+                 titleEl.closest('.overflow-hidden').style.marginLeft = '0';
+            }
+
+            if (titleEl) {
+                if (subItemType === 'Videoaulas') {
+                    if (totalVideos === 1 && (!detailData.title || detailData.title.toLowerCase().startsWith("videoaula") || detailData.title.toLowerCase().startsWith("videoaula placeholder"))) {
+                         titleEl.textContent = mainTitle;
+                    } else {
+                        titleEl.textContent = (detailData.title && !detailData.title.toLowerCase().startsWith("videoaula") && !detailData.title.toLowerCase().startsWith("videoaula placeholder"))
+                            ? detailData.title
+                            : `${mainTitle} - Parte ${romanize(videoIndex + 1)}`;
+                    }
+                } else {
+                    titleEl.textContent = detailData.title && !detailData.title.toLowerCase().includes("placeholder")
+                        ? detailData.title
+                        : `${subItemType.slice(0,-1)} - ${mainTitle}`;
+                }
+            }
+
+
+            if (subtitleEl) {
+                subtitleEl.textContent = "Estratégia Educacional";
+            }
+
+            if (downloadLink) {
+                if (detailData.downloadUrl && detailData.downloadUrl !== '#') {
+                    if (!detailData.downloadUrl.startsWith('#dl-')) {
+                        downloadLink.href = detailData.downloadUrl;
+                        downloadLink.setAttribute('target', '_blank');
+                        downloadLink.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                        });
+                    } else {
+                         downloadLink.href = detailData.downloadUrl;
+                         downloadLink.removeAttribute('target');
+                    }
+                    downloadLink.title = `Baixar ${titleEl.textContent}`;
+                }
+                else {
+                    downloadLink.remove();
+                }
+            }
+
+            const itemDisplayTitle = titleEl.textContent;
+            const videoUrl = detailData.driveVideoUrl;
+            const docUrl = detailData.downloadUrl;
+
+            if (subItemType === 'Videoaulas' && videoUrl && videoUrl !== '#') {
+                detailDiv.setAttribute('data-drive-video-url', videoUrl);
+                detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                detailDiv.classList.add('cursor-pointer');
+            }
+            else if (subItemType !== 'Videoaulas' && docUrl && docUrl !== '#' && !docUrl.startsWith('#dl-')) {
+                detailDiv.setAttribute('data-download-url', docUrl);
+                detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                detailDiv.classList.add('cursor-pointer');
+            }
+            else {
+                 if (subItemType !== 'Videoaulas') {
+                     detailDiv.classList.remove('cursor-pointer');
+                 }
+            }
+
+            return detailDiv;
+        }
+
+
+        // --- Geração do Menu ---
+        if (menuListContainer && detailsTemplate && contentViewer && contentDescription && likeButton) {
+            contentDescription.textContent = "Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar.";
+            menuListContainer.innerHTML = '';
+
+            menuItemsData.forEach((itemData, mainIndex) => {
+                const title = itemData.title;
+                const description = itemData.description;
+                const subItems = itemData.subItems || {};
+                const mainContentId = `content-${mainIndex}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30)}`;
+
+                const accordionItem = document.createElement('div');
+                accordionItem.className = 'accordion-item';
+                accordionItem.setAttribute('data-completed', 'false');
+                accordionItem.setAttribute('data-main-description', description);
+
+                const headerButton = document.createElement('button');
+                headerButton.className = 'menu-item-header w-full accordion-header';
+                headerButton.setAttribute('aria-expanded', 'false');
+                headerButton.setAttribute('aria-controls', mainContentId);
+
+                const headerContent = document.createElement('div');
+                headerContent.className = 'text-left flex-grow mr-2 overflow-hidden';
+                headerContent.innerHTML = `
+                    <h3 class="text-sm font-medium text-gray-800 truncate">${title}</h3>
+                    <div class="text-xs text-gray-500 mt-1 flex justify-between items-center flex-wrap gap-2">
+                        <span>Estratégia Educacional</span>
+                        <button type="button" class="status-toggle flex-shrink-0" title="Marcar como concluído"> <span class="mr-1">Concluído</span> <svg class="icon-not-completed w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="1.5"></rect></svg>
+                            <svg class="icon-completed w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>`;
+
+                const chevronIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                chevronIcon.setAttribute('class', 'w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon');
+                chevronIcon.setAttribute('fill', 'none');
+                chevronIcon.setAttribute('stroke', 'currentColor');
+                chevronIcon.setAttribute('viewBox', '0 0 24 24');
+                chevronIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
+
+                headerButton.appendChild(headerContent);
+                headerButton.appendChild(chevronIcon);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.id = mainContentId;
+                contentDiv.className = 'menu-item-content hidden';
+
+                subItemOrder.forEach((subItemType, subIndex) => {
+                    const subItemArray = subItems[subItemType] || [];
+                    const count = subItemArray.length;
+                    const nestedContentId = `nested-content-${mainIndex}-${subIndex}`;
+
+                    const subAccordionItem = document.createElement('div');
+                    subAccordionItem.className = `sub-accordion-item ${subIndex > 0 ? 'mt-2' : ''}`;
+
+                    const subHeaderButton = document.createElement('button');
+                    subHeaderButton.className = 'sub-accordion-header w-full';
+                    subHeaderButton.setAttribute('aria-expanded', 'false');
+                    subHeaderButton.setAttribute('aria-controls', nestedContentId);
+                    if (count === 0) {
+                        subHeaderButton.disabled = true;
+                    }
+                    subHeaderButton.innerHTML = `
+                        <span class="text-sm font-medium text-gray-700">${subItemType} (${count})</span>
+                        <svg class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon-nested ${count === 0 ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    `;
+
+                    const subContentDiv = document.createElement('div');
+                    subContentDiv.id = nestedContentId;
+                    subContentDiv.className = 'sub-accordion-content hidden';
+
+                    if (count > 0) {
+                        const totalVideos = (subItemType === 'Videoaulas') ? count : 0;
+                        subItemArray.forEach((detailData, detailIndex) => {
+                            const detailElement = createSubItemDetail(subItemType, detailData, title, detailIndex, totalVideos);
+                            if (detailElement) {
+                                subContentDiv.appendChild(detailElement);
+                            }
+                        });
+                    }
+
+                    subAccordionItem.appendChild(subHeaderButton);
+                    subAccordionItem.appendChild(subContentDiv);
+                    contentDiv.appendChild(subAccordionItem);
+                });
+
+                accordionItem.appendChild(headerButton);
+                accordionItem.appendChild(contentDiv);
+                menuListContainer.appendChild(accordionItem);
+            });
+
+            // --- Lógica dos Acordeões ---
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', (event) => {
+                    if (event.target.closest('.status-toggle')) return;
+                    const content = header.nextElementSibling;
+                    if (!content || !content.classList.contains('menu-item-content')) return;
+                    const isExpanded = header.getAttribute('aria-expanded') === 'true';
+                    const chevronIcon = header.querySelector('.chevron-icon');
+                    header.setAttribute('aria-expanded', String(!isExpanded));
+                    content.classList.toggle('hidden');
+                    if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                });
+            });
+
+            const subAccordionHeaders = document.querySelectorAll('.sub-accordion-header');
+            subAccordionHeaders.forEach(subHeader => {
+                if (!subHeader.disabled) {
+                    subHeader.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        const content = subHeader.nextElementSibling;
+                        if (!content || !content.classList.contains('sub-accordion-content')) return;
+                        const isExpanded = subHeader.getAttribute('aria-expanded') === 'true';
+                        const chevronIcon = subHeader.querySelector('.chevron-icon-nested');
+                        subHeader.setAttribute('aria-expanded', String(!isExpanded));
+                        content.classList.toggle('hidden');
+                        if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                    });
+                }
+            });
+
+            // --- Lógica para Marcar/Desmarcar como Concluído ---
+            const statusToggles = document.querySelectorAll('.status-toggle');
+            statusToggles.forEach(toggle => {
+                toggle.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const accordionItem = toggle.closest('.accordion-item');
+                    if (!accordionItem) return;
+                    const isCompleted = accordionItem.getAttribute('data-completed') === 'true';
+                    const newCompletedState = !isCompleted;
+                    accordionItem.setAttribute('data-completed', String(newCompletedState));
+                    toggle.classList.toggle('is-completed', newCompletedState);
+                    toggle.title = newCompletedState ? 'Marcar como não concluído' : 'Marcar como concluído';
+                    console.log(`Item "${accordionItem.querySelector('h3').innerText}" marcado como ${newCompletedState ? 'concluído' : 'não concluído'}`);
+                });
+            });
+
+            // --- Lógica para Carregar Conteúdo ---
+            menuListContainer.addEventListener('click', (event) => {
+                const detailItem = event.target.closest('.sub-item-details');
+                if (event.target.closest('.download-link')) { return; }
+
+                if (detailItem && contentViewer && contentDescription) {
+                    const driveVideoUrl = detailItem.getAttribute('data-drive-video-url');
+                    const downloadUrl = detailItem.getAttribute('data-download-url');
+                    const itemTitle = detailItem.getAttribute('data-item-title') || 'Conteúdo selecionado';
+                    const parentAccordionItem = detailItem.closest('.accordion-item');
+                    const mainTitle = parentAccordionItem?.querySelector('.menu-item-header h3')?.textContent || 'Módulo';
+
+                    if (driveVideoUrl || downloadUrl) {
+                        document.querySelectorAll('.sub-item-details.is-active').forEach(activeItem => {
+                            activeItem.classList.remove('is-active');
+                        });
+                        detailItem.classList.add('is-active');
+                        let contentType = '';
+                        if (driveVideoUrl) {
+                            contentViewer.src = driveVideoUrl;
+                            contentType = 'Assistindo';
+                            console.log(`Carregando vídeo do Drive: ${driveVideoUrl}`);
+                        }
+                        else if (downloadUrl) {
+                            contentViewer.src = downloadUrl;
+                            contentType = 'Visualizando';
+                            console.log(`Carregando documento: ${downloadUrl}`);
+                        }
+                        contentDescription.textContent = `Aula sobre ${mainTitle} - ${contentType}: ${itemTitle}`;
+                    }
+                }
+            });
+
+            // --- Lógica para o botão de Like ---
+            if(likeButton) {
+                likeButton.addEventListener('click', () => {
+                    likeButton.classList.toggle('is-liked');
+                    const isLiked = likeButton.classList.contains('is-liked');
+                    console.log(`Item ${isLiked ? 'curtido' : 'descurtido'}`);
+                });
+            }
+
+            // --- Carregar o Primeiro Conteúdo Clicável ao Iniciar ---
+            const firstClickableDetail = document.querySelector('#menu-items-list .sub-item-details[data-drive-video-url]:not([data-drive-video-url="#"]), #menu-items-list .sub-item-details[data-download-url]:not([data-download-url="#"]):not([data-download-url^="#dl-"])');
+            if (firstClickableDetail) {
+                 setTimeout(() => {
+                    const parentAccordionItem = firstClickableDetail.closest('.accordion-item');
+                    const parentHeader = parentAccordionItem?.querySelector('.accordion-header');
+                    if (parentHeader && parentHeader.getAttribute('aria-expanded') === 'false') {
+                        if(typeof parentHeader.click === 'function') parentHeader.click();
+                    }
+                    const parentSubAccordionContent = firstClickableDetail.closest('.sub-accordion-content');
+                    if (parentSubAccordionContent && parentSubAccordionContent.classList.contains('hidden')) {
+                        const parentSubHeader = parentSubAccordionContent.previousElementSibling;
+                        if(parentSubHeader && !parentSubHeader.disabled && typeof parentSubHeader.click === 'function') {
+                             parentSubHeader.click();
+                        }
+                    }
+                    if(typeof firstClickableDetail.click === 'function'){
+                         firstClickableDetail.click();
+                    }
+                 }, 100);
+            } else {
+                contentViewer.src = '';
+                contentDescription.textContent = 'Nenhum conteúdo selecionado ou disponível para visualização.';
+                console.log("Nenhum item inicial clicável encontrado para carregar.");
+            }
+
+        } else {
+            console.error("Erro: Elementos essenciais do DOM não foram encontrados.");
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula selecionada */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Emergências Cardiovasculares</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+        <!-- Ícones de usuário e notificações foram removidos daqui -->
+    </header>
+
+    <!-- A barra de navegação que estava aqui foi removida -->
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <!-- Alterado p-4 para py-2 px-4 para reduzir o preenchimento vertical -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+
+            <!-- Materiais de Estudo Movidos para abaixo do título da aula -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+
+            <!-- Materiais de Estudo foram movidos, então esta seção é removida daqui -->
+        </aside>
+    </main>
+
+    <!-- A barra de navegação inferior foi removida completamente. -->
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // NOVO MÓDULO: Cardiologia de Hospital - Dor Torácica
+        // Módulo 01 - Avaliação de dor torácica na sala de emergência
+        modulesData.push({
+            id: 'module_avaliacao_dor_toracica',
+            title: 'Módulo 01 - Avaliação de dor torácica na sala de emergência',
+            path: 'Início / Módulo 01',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Cgh4nvyEGCvaNJtVQoMn1FETg0qI7fiT/view?usp=sharing'),
+                title: 'Avaliação de dor torácica na sala de emergência',
+                description: 'Aula completa sobre a avaliação de dor torácica.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 02 - Síndrome coronária aguda com supradesnivelamento do segmento ST
+        modulesData.push({
+            id: 'module_sca_com_supra',
+            title: 'Módulo 02 - Síndrome coronária aguda com supradesnivelamento do segmento ST',
+            path: 'Início / Módulo 02',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VEmxwB9JlGq7xF_Z65Tke0vBCOG1fZIC/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Síndrome coronária aguda com supradesnivelamento do segmento ST.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RGpVgOXmxDUrWZMAuPTMwZ-BZbDt8pQO/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Síndrome coronária aguda com supradesnivelamento do segmento ST.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1z1XjWCr5h2rB2BiJHVAoc8X3-J9Ic_CM/view?usp=sharing'),
+                title: 'Parte III',
+                description: 'Síndrome coronária aguda com supradesnivelamento do segmento ST.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 03 - Síndrome coronária aguda sem supradesnivelamento do segmento ST
+        modulesData.push({
+            id: 'module_sca_sem_supra',
+            title: 'Módulo 03 - Síndrome coronária aguda sem supradesnivelamento do segmento ST',
+            path: 'Início / Módulo 03',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rIJoHXLgGVEtwCI335tXbapNTwH0ZbJy/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Síndrome coronária aguda sem supradesnivelamento do segmento ST.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DEQAUAjVKM6veC1oVnXsdt5HVO978i3r/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Síndrome coronária aguda sem supradesnivelamento do segmento ST.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 04 - Infarto agudo do miocárdio com coronariografia normal
+        modulesData.push({
+            id: 'module_iam_coronariografia_normal',
+            title: 'Módulo 04 - Infarto agudo do miocárdio com coronariografia normal',
+            path: 'Início / Módulo 04',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o1J2Of6vZiMnWEwC8uRvSKTiLyhdAmqX/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Infarto agudo do miocárdio com coronariografia normal.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ri7NcxPXxWMKc1iOPxPWH4P08wV6Odpf/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Infarto agudo do miocárdio com coronariografia normal.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 05 - Abordagem do valvopata na emergência
+        modulesData.push({
+            id: 'module_abordagem_valvopata',
+            title: 'Módulo 05 - Abordagem do valvopata na emergência',
+            path: 'Início / Módulo 05',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1amYR2UocoXZxIollaCO-z4R73CakM4tG/view?usp=sharing'),
+                title: 'Abordagem do valvopata na emergência',
+                description: 'Aula completa sobre a abordagem do valvopata.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 06 - Endocardite infecciosa
+        modulesData.push({
+            id: 'module_endocardite_infecciosa',
+            title: 'Módulo 06 - Endocardite infecciosa',
+            path: 'Início / Módulo 06',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N9QkQCU692vDp_5MJ6KQjeCqEyrw3JR2/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Endocardite infecciosa.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_9pumXsprlMNm4xFz_0ppnOOrOBXozFl/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Endocardite infecciosa.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 07 - Abordagem da Síncope
+        modulesData.push({
+            id: 'module_abordagem_sincope',
+            title: 'Módulo 07 - Abordagem da Síncope',
+            path: 'Início / Módulo 07',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mXnx7OWbmhMtyPFolp2gRje_WYQVTuey/view?usp=sharing'),
+                title: 'Abordagem da Síncope',
+                description: 'Aula completa sobre a abordagem da síncope.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 08 - Fibrilação atrial
+        modulesData.push({
+            id: 'module_fibrilacao_atrial',
+            title: 'Módulo 08 - Fibrilação atrial',
+            path: 'Início / Módulo 08',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LK6qtqHp0N1rUuygGMFchNSX1qoC2dQN/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Fibrilação atrial.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lTz8QkeTjMh1CgNXmcc64dW9tfM1UgSt/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Fibrilação atrial.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 09 - Taquicardias supraventriculares
+        modulesData.push({
+            id: 'module_taquicardias_supraventriculares',
+            title: 'Módulo 09 - Taquicardias supraventriculares',
+            path: 'Início / Módulo 09',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MIATw8EJfDA5bNjdyoIlaQtJ8GjNgLWz/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Taquicardias supraventriculares.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iXcJ_97CZavPXL15NYJbUK-kQK5na8qG/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Taquicardias supraventriculares.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 10 - Taquicardias Ventriculares
+        modulesData.push({
+            id: 'module_taquicardias_ventriculares',
+            title: 'Módulo 10 - Taquicardias Ventriculares',
+            path: 'Início / Módulo 10',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16iZDG3qTFVYbQr7u3E5iyhM8nluDg9EL/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Taquicardias Ventriculares.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bs0ApFxDSIDWo6Gy-GMhWIwbSAlLeW1K/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Taquicardias Ventriculares.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 11 - Bradicardias
+        modulesData.push({
+            id: 'module_bradicardias',
+            title: 'Módulo 11 - Bradicardias',
+            path: 'Início / Módulo 11',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1J2mkzJUYtulWrWYdwq5vuUOQPH4zbSdL/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Bradicardias.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lPGQqDE9FWw__f5tvija8Qim0p2O5eSm/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Bradicardias.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 12 - Edema agudo de pulmão
+        modulesData.push({
+            id: 'module_edema_agudo_pulmao',
+            title: 'Módulo 12 - Edema agudo de pulmão',
+            path: 'Início / Módulo 12',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1pMIUM0U622IPntqgsXyAjh-tVlx09Ocg/view?usp=sharing'),
+                title: 'Edema agudo de pulmão',
+                description: 'Aula completa sobre edema agudo de pulmão.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 13 - Insuficiência cardíaca descompensada
+        modulesData.push({
+            id: 'module_ic_descompensada',
+            title: 'Módulo 13 - Insuficiência cardíaca descompensada',
+            path: 'Início / Módulo 13',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OdGnXeQ6r11-fdPZygB_EWGUoVANaAuC/view?usp=sharing'),
+                title: 'Insuficiência cardíaca descompensada',
+                description: 'Aula completa sobre insuficiência cardíaca descompensada.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 14 - Dissecção aguda de aorta
+        modulesData.push({
+            id: 'module_disseccao_aorta',
+            title: 'Módulo 14 - Dissecção aguda de aorta',
+            path: 'Início / Módulo 14',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/199dxqBcy11t0R5WAry_sQ42d9I-klB7K/view?usp=sharing'),
+                title: 'Dissecção aguda de aorta',
+                description: 'Aula completa sobre dissecção aguda de aorta.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 15 - Manejo do paciente transplantado na sala de emergência
+        modulesData.push({
+            id: 'module_manejo_transplantado',
+            title: 'Módulo 15 - Manejo do paciente transplantado na sala de emergência',
+            path: 'Início / Módulo 15',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14gXp7j2lElAixMKktpy3BmUsz5WtSNyP/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Manejo do paciente transplantado na sala de emergência.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fkDIbrSvK72KV6ECug_Bu8Oi34XSUcFJ/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Manejo do paciente transplantado na sala de emergência.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 16 - Abordagem das crises hipertensivas
+        modulesData.push({
+            id: 'module_crises_hipertensivas',
+            title: 'Módulo 16 - Abordagem das crises hipertensivas',
+            path: 'Início / Módulo 16',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TOJM4gaG-QM0Rz9MnaLpPJVru08NlR8d/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Abordagem das crises hipertensivas.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dkGwDQo3G6UftCi4hP8BSZEqAKoJ_Zbw/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Abordagem das crises hipertensivas.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 17 - Parada Cardiorrespiratória
+        modulesData.push({
+            id: 'module_pcr',
+            title: 'Módulo 17 - Parada Cardiorrespiratória',
+            path: 'Início / Módulo 17',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10J3IqNkUSdNqgNa7Gc0H2hpZrxkmGNfn/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Parada Cardiorrespiratória.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RUO6Xf9v_P0hKdd7l8OBnTQH0AkPiUQ_/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Parada Cardiorrespiratória.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1290Dpgmb3Q7dYWgbN7xPHLim8lSkM4Dw/view?usp=sharing'),
+                title: 'Parte III',
+                description: 'Parada Cardiorrespiratória.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 18 - Tromboembolismo venoso
+        modulesData.push({
+            id: 'module_tromboembolismo_venoso',
+            title: 'Módulo 18 - Tromboembolismo venoso',
+            path: 'Início / Módulo 18',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xWSXvc2Dha8kJlJOKGhEVpfo39TrSF8y/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Tromboembolismo venoso.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_q9DJq9jCO4Np7j02qADe8AXFy_aMjCy/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Tromboembolismo venoso.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 19 - Manejo de sangramentos em pacientes anticoagulados
+        modulesData.push({
+            id: 'module_manejo_sangramentos',
+            title: 'Módulo 19 - Manejo de sangramentos em pacientes anticoagulados',
+            path: 'Início / Módulo 19',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eBLUmOVCLPqUlTsF7zZodjWi2uGf0Lo9/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Manejo de sangramentos em pacientes anticoagulados.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bNmaat_aoZ6KAUslwxAnXSi9t-9SJq_-/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Manejo de sangramentos em pacientes anticoagulados.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rGHOPyQm-MrEpFDgCAsAOxFDghp_hdGt/view?usp=sharing'),
+                title: 'Parte III',
+                description: 'Manejo de sangramentos em pacientes anticoagulados.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+        // Módulo 20 - Abordagem no Pronto Socorro do paciente portador de dispositivo cardíaco eletrônico implantável
+        modulesData.push({
+            id: 'module_abordagem_dispositivo_cardiaco',
+            title: 'Módulo 20 - Abordagem no PS de paciente com dispositivo cardíaco',
+            path: 'Início / Módulo 20',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F86kqcJVSZpkI0HF9jsNlNDJm1rTUdWv/view?usp=sharing'),
+                title: 'Parte I',
+                description: 'Abordagem no PS de paciente com dispositivo cardíaco.',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1swmuKFJpufFateCzrNMoKTBgy43SehGM/view?usp=sharing'),
+                title: 'Parte II',
+                description: 'Abordagem no PS de paciente com dispositivo cardíaco.',
+                icon: 'fas fa-video'
+            }],
+            materials: []
+        });
+
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview'); // Added replace for drive_link
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement) return;
+
+            // Encontra o módulo selecionado
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstItemId = null;
+            let firstItemTitle = null;
+            let firstItemType = null;
+
+            // Renderiza os vídeos
+            module.videos.forEach(item => {
+                const itemDescription = item.description || '';
+                // Captura o ID e título do primeiro item para carregamento inicial (prioriza o primeiro vídeo do módulo)
+                if (firstItemId === null) {
+                    firstItemId = item.id;
+                    firstItemTitle = item.title;
+                    firstItemType = 'video';
+                }
+
+                videosHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Renderiza os materiais
+            module.materials.forEach(item => {
+                const itemDescription = item.description || '';
+                // Captura o ID e título do primeiro item para carregamento inicial, se ainda não houver um primeiro item (prioriza vídeos)
+                if (firstItemId === null && module.videos.length === 0) {
+                    firstItemId = item.link; /* Usar o link como ID para materiais para seleção */
+                    firstItemTitle = item.title;
+                    firstItemType = 'material';
+                }
+
+                materialsHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            videosContainer.innerHTML = videosHtml;
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstItemId && firstItemTitle && firstItemType) {
+                if (firstItemType === 'video') {
+                    loadVideo(firstItemId, firstItemTitle);
+                } else if (firstItemType === 'material') {
+                    loadMaterial(firstItemId, firstItemTitle);
+                }
+            } else {
+                // Limpa o player e o título se o módulo não tiver conteúdo
+                document.getElementById('contentPlayer').src = '';
+                document.getElementById('lessonTitle').textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+        }
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Clear existing options before populating
+            moduleSelector.innerHTML = '';
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[10].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[10].id);
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

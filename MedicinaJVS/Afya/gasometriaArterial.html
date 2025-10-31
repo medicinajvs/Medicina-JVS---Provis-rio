@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curso de Gasometria Arterial</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca de ícones Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* bg-gray-800 */
+            overflow: hidden; /* Evita a rolagem do body principal */
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        /* Scrollbar customizada para a playlist */
+        #playlist-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #playlist-container::-webkit-scrollbar-track {
+            background: #111827; /* bg-gray-900 */
+        }
+        #playlist-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        #playlist-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="main-view" class="flex flex-col lg:flex-row h-screen">
+        <!-- Coluna Principal (Player de Vídeo ou Placeholder) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col bg-gray-800">
+            <header class="flex items-center justify-between mb-4">
+                <h2 id="current-view-title" class="text-2xl font-bold text-white">Gasometria Arterial</h2>
+            </header>
+            <div id="player-container" class="flex-1 flex flex-col items-center justify-center">
+                 <!-- Placeholder inicial -->
+                <div id="initial-placeholder" class="text-center text-gray-500">
+                    <i data-lucide="play-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h3 class="text-2xl font-semibold">Selecione uma aula na playlist</h3>
+                    <p>O conteúdo será exibido aqui.</p>
+                </div>
+                <!-- Iframe para o vídeo -->
+                <div id="lesson-view" class="hidden w-full h-full flex flex-col">
+                    <h1 id="lesson-view-title" class="text-xl lg:text-2xl font-bold mb-4 text-center"></h1>
+                    <div class="relative w-full max-w-5xl mx-auto aspect-video bg-black rounded-lg shadow-2xl">
+                        <iframe id="lesson-view-iframe" class="w-full h-full rounded-lg" src="" allow="autoplay; fullscreen" frameborder="0"></iframe>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Coluna da Direita (Playlist) -->
+        <aside id="playlist-container" class="w-full lg:w-96 bg-gray-900 p-4 flex-shrink-0 flex flex-col overflow-y-auto">
+            <div id="course-playlist-content" class="space-y-4">
+                <!-- O conteúdo da playlist será gerado aqui pelo JavaScript -->
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        const courseData = [
+            {
+                moduleTitle: "Gasometria Arterial",
+                lessons: [
+                    {
+                        title: "Gasometria Arterial",
+                        resources: [
+                            { type: 'video', title: "Gasometria Arterial: Procedimento", src: "https://drive.google.com/file/d/1UxOjpTBQYbmdhAMiNvAHftVlE2KIwLTr/view?usp=sharing" },
+                            { type: 'video', title: "Gasometria Arterial: Dicas", src: "https://drive.google.com/file/d/12HwV_jLKakscSxHOJhuHNAmgdjEgiDCe/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Distúrbios Ácido-Base",
+                        resources: [
+                            { type: 'video', title: "Distúrbios Ácido-Base: Entendendo o Básico", src: "https://drive.google.com/file/d/1beKEfrI4yjf7cGfYQyvKAHSaPlKWw51o/view?usp=sharing" },
+                            { type: 'video', title: "Distúrbios Ácido-Base: Causas dos Principais Distúrbios", src: "https://drive.google.com/file/d/1oArtqtVStb_iS7Vy9P-sEkHJlc5bpkxw/view?usp=sharing" },
+                            { type: 'video', title: "Distúrbios Ácido-Base: Distúrbios Mistos", src: "https://drive.google.com/file/d/1nYzIcE5tPzLdplLI9uudJ6SXm_T4onma/view?usp=sharing" },
+                            { type: 'video', title: "Distúrbios Ácido-Base: Anion Gap", src: "https://drive.google.com/file/d/1zu3Ob3DcLrPKFB-Bevuwk6z20EaBm9Gs/view?usp=sharing" },
+                            { type: 'video', title: "Distúrbios Ácido-Base: Gap Osmolar", src: "https://drive.google.com/file/d/1dRTNHaIaetfPzbIQmiB_kfwyiL6n41ta/view?usp=sharing" },
+                            { type: 'video', title: "Distúrbios Ácido-Base: Delta-Delta", src: "https://drive.google.com/file/d/1O8mjgSfX-INfy0BA5_b42eGHD9bcjWEL/view?usp=sharing" }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const playlistContainer = document.getElementById('course-playlist-content');
+            const initialPlaceholder = document.getElementById('initial-placeholder');
+            const lessonView = document.getElementById('lesson-view');
+            const lessonViewTitle = document.getElementById('lesson-view-title');
+            const lessonViewIframe = document.getElementById('lesson-view-iframe');
+            let activeResourceItem = null;
+
+            const openResourceView = (resource, resourceElement) => {
+                initialPlaceholder.classList.add('hidden');
+                
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                }
+                
+                if (resourceElement) {
+                    resourceElement.classList.add('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = resourceElement;
+                }
+
+                if (resource.type === 'video') {
+                    lessonViewTitle.textContent = resource.title;
+                    lessonViewIframe.src = resource.src ? resource.src.replace(/\/view(\?usp=sharing)?$/, '/preview') : 'about:blank';
+                    lessonView.classList.remove('hidden');
+                } else {
+                    lessonView.classList.add('hidden');
+                    initialPlaceholder.classList.remove('hidden');
+                    initialPlaceholder.querySelector('h3').textContent = "Recurso Indisponível";
+                    initialPlaceholder.querySelector('p').textContent = `O conteúdo para "${resource.title}" não é um vídeo ou não está disponível.`;
+                }
+            };
+
+            playlistContainer.innerHTML = courseData.map((module, moduleIdx) => `
+                <div>
+                    <h3 class="font-bold text-lg px-2 pt-4 pb-2 text-pink-400">${module.moduleTitle}</h3>
+                    <div class="space-y-2">
+                        ${module.lessons.map((lesson, lessonIdx) => `
+                            <div class="lesson-group bg-gray-800 rounded-lg">
+                                <button class="accordion-header w-full flex justify-between items-center p-3 text-left font-semibold text-gray-300 hover:bg-gray-700/50 transition-colors">
+                                    <span class="truncate">${lesson.title}</span>
+                                    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform flex-shrink-0 ml-2"></i>
+                                </button>
+                                <div class="accordion-content" style="max-height: 0px;">
+                                    <div class="p-2 space-y-1 border-t border-gray-700">
+                                        ${lesson.resources.map((resource, resourceIdx) => {
+                                            const icon = 'play-circle';
+                                            return `
+                                            <div class="resource-item flex justify-between items-center p-3 rounded-md text-sm hover:bg-pink-600/20 cursor-pointer transition-colors" 
+                                                 data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}" data-resource-idx="${resourceIdx}">
+                                                <div class="flex items-center overflow-hidden">
+                                                    <i data-lucide="${icon}" class="w-5 h-5 mr-3 text-gray-400 flex-shrink-0"></i>
+                                                    <p class="truncate">${resource.title}</p>
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const { moduleIdx, lessonIdx, resourceIdx } = item.dataset;
+                    const resource = courseData[moduleIdx].lessons[lessonIdx].resources[resourceIdx];
+                    openResourceView(resource, item);
+                });
+            });
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i[data-lucide]');
+                    const isExpanded = content.style.maxHeight !== '0px';
+
+                    document.querySelectorAll('.accordion-content').forEach(otherContent => {
+                        if (otherContent !== content) {
+                            otherContent.style.maxHeight = '0px';
+                            otherContent.previousElementSibling.querySelector('i[data-lucide]').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">MEDReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_bases', title: 'BASES', content: [
+                { type: 'group', video: { title: 'Aula 01 - Embriologia', link: 'https://drive.google.com/file/d/1Hew8V87igknTIO3k4L2LdddayZre6n70/view?usp=sharing' }, materials: [{ title: 'E-Book - Embriologia', link: 'https://drive.google.com/file/d/1YV3BOM64BnudEQziK1Fge-w6JjQe6elh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Anatomia Ginecológica', link: 'https://drive.google.com/file/d/1NilPqyOk4Y5GN3LW4Ji09xjF3CzbkFW0/view?usp=sharing' }, materials: [{ title: 'E-Book - Anatomia Ginecológica', link: 'https://drive.google.com/file/d/11LeK5M5rMAZi9nJMmuuSYhDxS1dOz_BG/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Ciclo Menstrual', link: 'https://drive.google.com/file/d/1sooMacNOfuSepQWviyFEL1401Mq5ZEmT/view?usp=sharing' }, materials: [{ title: 'E-Book - Ciclo Menstrual', link: 'https://drive.google.com/file/d/1i0ix3P-DnXJ8AieYILtsYtE4VbBXEexE/view?usp=sharing' }] },
+            ]},
+            { id: 'module_amenorreias', title: 'AMENORREIAS', content: [
+                { type: 'group', video: { title: 'Aula 01 - Amenorreia Primária', link: 'https://drive.google.com/file/d/1pSAyStLg-yuQgoSDgOmHsAoEYHZfwsUN/view?usp=sharing' }, materials: [{ title: 'E-Book - Amenorreia Primária', link: 'https://drive.google.com/file/d/1BryF9Ld1ENk0pa7Ud9SISTsPLgUU_Hq0/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Amenorreia Secundária', link: 'https://drive.google.com/file/d/1H3-CrXKAK6QbXn0R0AjgKpO_gsYoj3Dv/view?usp=sharing' }, materials: [{ title: 'E-Book - Amenorreia Secundária', link: 'https://drive.google.com/file/d/1douu-lzd7WdBsYeKoDPT5lQaj76NRNGY/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Síndromes Hiperandrogênicas: Parte I - SOP', link: 'https://drive.google.com/file/d/16PTuAeevArKR2ylrhcc58zfm4GzXmnwQ/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndromes Hiperandrogênicas: Parte I - SOP', link: 'https://drive.google.com/file/d/1AcO3cZs9dcZ61K_jDSZNZCW6MXSbnTS_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Síndromes Hiperandrogênicas: Parte II', link: 'https://drive.google.com/file/d/1YjpC5ca9i0iNlwaf8yKqRL8tva00XUZY/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndromes Hiperandrogênicas: Parte II', link: 'https://drive.google.com/file/d/1pFp3p6jl9jz0J37yIcT_Z-1SBbFJY9pC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Climatério e Menopausa', link: 'https://drive.google.com/file/d/1Jc0doSQ-FgQQ_2oJjeKNImCYcghWNfVU/view?usp=sharing' }, materials: [{ title: 'E-Book - Climatério', link: 'https://drive.google.com/file/d/1RX6d79c8dF4D1xnpukamWxSpmLJo23MS/view?usp=sharing' }] },
+            ]},
+            { id: 'module_planejamento_familiar', title: 'PLANEJAMENTO FAMILIAR', content: [
+                { type: 'group', video: { title: 'Aula 01 - Métodos Contraceptivos: Parte I', link: 'https://drive.google.com/file/d/1p705MtyGPx9enPujMfw2zd-QuxLjoPql/view?usp=sharing' }, materials: [{ title: 'E-Book - Métodos Contraceptivos: Parte I', link: 'https://drive.google.com/file/d/1eESS8hpo4QKFvDdeCWXXZeu738T7P3uA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Métodos Contraceptivos: Parte II', link: 'https://drive.google.com/file/d/1YCU4p_I0V5pNEkSXIeHo3Cl7wKBLvDa7/view?usp=sharing' }, materials: [{ title: 'E-Book - Métodos Contraceptivos: Parte II', link: 'https://drive.google.com/file/d/18jygWbmE7buS1kpaXExQghIj50qEqxIf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Métodos Contraceptivos: Parte III', link: 'https://drive.google.com/file/d/1y5_Vh8NbFQ0PdxksJL9QgwlpeiHUdw3U/view?usp=sharing' }, materials: [{ title: 'E-Book - Métodos Contraceptivos: Parte III', link: 'https://drive.google.com/file/d/18xuvegiuOWFJV2TccDsnT8t5Plmc2mlU/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Infertilidade', link: 'https://drive.google.com/file/d/1ltQcir5uVs17LLuontWdWsh0kmMzGID7/view?usp=sharing' }, materials: [{ title: 'E-Book - Infertilidade', link: 'https://drive.google.com/file/d/18XlUsb8UAW0d-Pfxk5GmEzj6vpEYTUIw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Violência Sexual', link: 'https://drive.google.com/file/d/1lD2kRN0lRPZI808fxdP2Sdpy8wz3LpTl/view?usp=sharing' }, materials: [{ title: 'E-Book - Violência Sexual', link: 'https://drive.google.com/file/d/1gzgIve5Eg07zSxwOhJoJm-paXw_C4Tpb/view?usp=sharing' }] },
+            ]},
+            { id: 'module_ginecologia_geral', title: 'GINECOLOGIA GERAL', content: [
+                { type: 'group', video: { title: 'Aula 01 - Sangramento Uterino Anormal (SUA - PALM)', link: 'https://drive.google.com/file/d/1F0D7xSsQmUjFsBqm5uTkjN_x9KH-CC4H/view?usp=sharing' }, materials: [{ title: 'E-Book - Sangramento Uterino Anormal: SUA - PALM', link: 'https://drive.google.com/file/d/1F_-OwWTtS92YqEEnbvar6K5I1PJtBx7C/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Sangramento Uterino Anormal (SUA - COEIN)', link: 'https://drive.google.com/file/d/1Nd7I2GEzggsuyqia7Sdv8LIeSZyLUoq8/view?usp=sharing' }, materials: [{ title: 'E-Book - Sangramento Uterino Anormal: SUA - COEIN', link: 'https://drive.google.com/file/d/1P1cZGx2jTy1DXOvmcNdSFSIY-stmmkN8/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Vulvovaginites', link: 'https://drive.google.com/file/d/1-MnN_Q7BePhdcsGEYsVepvj_6J_gLIrI/view?usp=sharing' }, materials: [{ title: 'E-Book - Vulvovaginites', link: 'https://drive.google.com/file/d/1QErdnEpBH9zXPZ58YdGTTacLH0I_Mjge/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Úlceras Genitais e Condiloma', link: 'https://drive.google.com/file/d/1gnTrW6hf9XO0fDIgN96a2dgaHO22sqiX/view?usp=sharing' }, materials: [{ title: 'E-Book - Úlceras Genitais e Condiloma', link: 'https://drive.google.com/file/d/14IaM6Y6qsMXJmJOBf_UvlQssOpcW9brx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Cervicites e DIP', link: 'https://drive.google.com/file/d/1ICtV-Tby6uoTEI5E2rPbZeh7OGpFHlzo/view?usp=sharing' }, materials: [{ title: 'E-Book - Cervicites e DIP', link: 'https://drive.google.com/file/d/1t0zyx-LQYxbqoFabNhvVsn7gifQphqYs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Dor Pélvica', link: 'https://drive.google.com/file/d/1XkTuP2UEAAtG84Ch7P-1yY3COYm5zoO-/view?usp=sharing' }, materials: [{ title: 'E-Book - Dor Pélvica', link: 'https://drive.google.com/file/d/1aExuhktuix7ygImqnDIcJi4oS5d3qPmK/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Sexualidade', link: 'https://drive.google.com/file/d/1FGF5dOWbK0dcG97uE7Vo_EiSiMxKadKR/view?usp=sharing' }, materials: [{ title: 'E-Book - Sexualidade', link: 'https://drive.google.com/file/d/1cVDR_wzPB6b1E83HMnQ43khiXFp0cHtR/view?usp=sharing' }] },
+            ]},
+            { id: 'module_oncologia_ginecologica', title: 'ONCOLOGIA GINECOLÓGICA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Câncer de Colo Uterino: Parte I', link: 'https://drive.google.com/file/d/1GxJbsbd_2kCd98rT0A1yf2LZHc6fvVz-/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Colo Uterino: Parte I', link: 'https://drive.google.com/file/d/1T2V-xiIkkQkhsuFkOOHd73yCF3iNmCp7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Câncer de Colo Uterino: Parte II', link: 'https://drive.google.com/file/d/1fD7p_0lUTIo9rD-1CzceH2UK9Lyldz6o/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Colo Uterino: Parte II', link: 'https://drive.google.com/file/d/1VOcmj8nsfCdlCAqFLj7Ve6zTAOFWmN8Y/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Câncer de Endométrio', link: 'https://drive.google.com/file/d/1pHt7s9BuXMy2XMEj5H3clX1bk7E-OO7J/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Endométrio', link: 'https://drive.google.com/file/d/13cF35WvUAAYScVmNPtw9EHXpAWdUd48j/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Tumores Anexiais e Câncer de Ovário', link: 'https://drive.google.com/file/d/1nnczDdY7DJiC8S-t_nFjK2EQaPL7P269/view?usp=sharing' }, materials: [{ title: 'E-Book - Tumores Anexiais e Câncer de Ovário', link: 'https://drive.google.com/file/d/1YjStZcXOU1HhhqsZtQjYsxRbW1I8W2R_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Câncer de Vulva e Vagina', link: 'https://drive.google.com/file/d/1-vSv5P8lVLEasXc3HCf15kRlBinT7d7Y/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Vulva e Vagina', link: 'https://drive.google.com/file/d/1YEwkQuw1_DeQxg9fVWezyyXsa4105udQ/view?usp=sharing' }] },
+            ]},
+            { id: 'module_mastologia', title: 'MASTOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Câncer de Mama', link: 'https://drive.google.com/file/d/1l_MljinSreJc0pf7Ch8xfR8JiqEFpb1O/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Mama', link: 'https://drive.google.com/file/d/1WIVxQi_TAW-0t1s2z-AcU0Of9J4SjV44/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Afecções Benignas da Mama', link: 'https://drive.google.com/file/d/1X0T_HMOMyNkCM5rrveI7jS-NOZJLsTnb/view?usp=sharing' }, materials: [{ title: 'E-Book - Afecções Benignas da Mama', link: 'https://drive.google.com/file/d/1QelBObkyESF1bSVJa6CDyg3G1-6rl7KY/view?usp=sharing' }] },
+            ]},
+            { id: 'module_uroginecologia', title: 'UROGINECOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Incontinência Urinária + Fístulas Genitais', link: 'https://drive.google.com/file/d/1kmgSUZj81rdD66CTE_fTywehg1G4GFAg/view?usp=sharing' }, materials: [{ title: 'E-Book - Incontinência Urinária + Fístulas Genitais', link: 'https://drive.google.com/file/d/1rQUzIpTT_70jAwms3bLGTbeOgJMumGLP/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Prolapso de Órgãos Pélvicos', link: '#' }, materials: [{ title: 'E-Book - Prolapso de Órgãos Pélvicos', link: 'https://drive.google.com/file/d/1id3csUC5QojL0pi-EQ4gZ73-rr0nLaMp/view?usp=sharing' }] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') {
+                const titleElement = document.getElementById('itemTitle');
+                if (itemTitle) {
+                    titleElement.textContent = itemTitle;
+                }
+                return;
+            }
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials && selectedGroup.materials.length > 0) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            } else {
+                materialsContainer.innerHTML = '<p class="text-gray-400">Nenhum material de apoio para esta aula.</p>';
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[0].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[0].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
+

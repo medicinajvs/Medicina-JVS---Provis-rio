@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula ou material selecionado */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+
+        /* Estilos para os menus suspensos de materiais */
+        .material-category-details {
+            background-color: #2d3748; /* bg-gray-800 um pouco mais claro */
+            border-radius: 0.375rem; /* rounded-lg */
+            margin-bottom: 0.75rem; /* space-y-3 */
+            overflow: hidden; /* Garante que os cantos arredondados funcionem bem */
+        }
+        .material-category-summary {
+            padding: 0.75rem 1rem; /* p-3 */
+            background-color: #2d3748; /* Mesma cor para fundo consistente */
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #e2e8f0;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .material-category-summary:hover {
+            background-color: #4a5568; /* hover:bg-gray-700 */
+        }
+        .material-category-summary::-webkit-details-marker {
+            display: none; /* Esconde o triângulo padrão do Chrome */
+        }
+        .material-category-summary::marker {
+            display: none; /* Esconde o triângulo padrão do Firefox */
+        }
+        .material-category-summary .icon {
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease-in-out;
+        }
+        .material-category-details[open] .material-category-summary .icon {
+            transform: rotate(90deg); /* Gira o ícone quando aberto */
+        }
+        .material-items-container {
+            padding: 0.5rem 1rem 0.75rem; /* Ajusta o padding interno para os itens */
+            background-color: #2d3748; /* Mesma cor para fundo consistente */
+            border-top: 1px solid #4a5568; /* Linha divisória */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Pós-Graduação em Paciente Grave</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src="https://drive.google.com/file/d/1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU/preview"
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Aula 01 - Raciocínio Clínico Aplicado ao Paciente Grave: Parte I</h2>
+            </div>
+
+            <!-- Materiais de Estudo agora com menus suspensos -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript como menus suspensos -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado (Aulas de Vídeo) -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Função para gerar links de placeholder (mantida para módulos não fornecidos)
+        function generatePlaceholderLink(type, index) {
+            const base = "https://drive.google.com/file/d/";
+            const placeholderIds = {
+                video: [
+                    "1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU", "1DIQ9gDU0kflXgjCgms_c9l14oW8I6Ro1",
+                    "1rr8BGu84thiRCpEjt-wmJ51YR3HHB8jy", "1Vyc5jc-R5CkFghZ7yDS1h3zx4WSVuXut",
+                    "1o_9JisvpmFxJ5K9Uks9xJuMrQlNRO26T", "1rNCbs9XkzD-Z4sLvkfVoT3p8yXgtDCKJ"
+                ],
+                pdf: [
+                    "1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco", "1rb8u_G9Ul9FxrTIOwzSAr0C0Ko0PhM_z",
+                    "1io8JSYvpCVLMNLsV9EiFqlMS_eWJVYor", "1zskJLDvlQmkAbpRm6oJ_MC18eagIGwx-",
+                    "1uvevO5WxgbZwVj7X48UtS6rKDK3xue5Q", "121RF9ZPpArw_HGlxwhA-t-2wM5hfKJos",
+                    "1Xruk3O3fCARmjReQuPMEYot_5TjCcIYx", "1QZkplUe8_diFY0mdrBgi4-gAIXzaKIT2"
+                ]
+            };
+            const ids = placeholderIds[type];
+            if (!ids || ids.length === 0) return base + "GENERIC_ID/preview";
+            const id = ids[index % ids.length];
+            return `${base}${id}/preview`;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // Módulo: Boas-Vindas
+        modulesData.push({
+            id: 'module_boas_vindas',
+            title: 'Módulo - Boas-Vindas',
+            path: 'Início / Boas-Vindas',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bTke0D1mlfPdUDzcFcyaktyEuykBBzp0/view?usp=drive_link'), title: 'Aula 01 - Boas-Vindas', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Atendimento Inicial ao Paciente Grave
+        modulesData.push({
+            id: 'module_atendimento_inicial',
+            title: 'Módulo - Atendimento Inicial ao Paciente Grave',
+            path: 'Início / Atendimento Inicial ao Paciente Grave',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gNKblS3e-0yq7_J6OMM9Evu9n_0CvPdU/view?usp=sharing'), title: 'Aula 01 - Raciocínio Clínico Aplicado ao Paciente Grave: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DIQ9gDU0kflXgjCgms_c9l14oW8I6Ro1/view?usp=sharing'), title: 'Aula 02 - Raciocínio Clínico Aplicado ao Paciente Grave: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rr8BGu84thiRCpEjt-wmJ51YR3HHB8jy/view?usp=sharing'), title: 'Aula 03 - Raciocínio Clínico Aplicado ao Paciente Grave: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Vyc5jc-R5CkFghZ7yDS1h3zx4WSVuXut/view?usp=sharing'), title: 'Aula 04 - Overview: Atendimento Inicial ao Paciente Grave - Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o_9JisvpmFxJ5K9Uks9xJuMrQlNRO26T/view?usp=sharing'), title: 'Aula 05 - Overview: Atendimento Inicial ao Paciente Grave - Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rNCbs9XkzD-Z4sLvkfVoT3p8yXgtDCKJ/view?usp=sharing'), title: 'Aula 06 - Check Point: Atendimento Inicial', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Aula Geral - Raciocínio Clínico',
+                    items: [
+                        { title: 'Aula Geral - Raciocínio Clínico', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco/view?usp=drive_link' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Pneumologia Aplicada à Medicina de Emergência
+        modulesData.push({
+            id: 'module_pneumo_emergencia',
+            title: 'Módulo - Pneumologia Aplicada à Medicina de Emergência',
+            path: 'Início / Pneumologia de Emergência',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17VP0T_tl_y8DhXJVwHcASvWPpq3SKNuW/view?usp=sharing'), title: 'Aula 01 - Tromboembolismo Pulmonar: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RxKMqWthGTJjZrZ2meivlN8W9HAm6lKN/view?usp=sharing'), title: 'Aula 02 - Tromboembolismo Pulmonar: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/191veWRNV_O0fIoJBpUzza_ogd6BRpXfg/view?usp=sharing'), title: 'Aula 03 - Tromboembolismo Pulmonar: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-XrJrRwOYRWe3-ZJE1W4tVvrhz5uXGgu/view?usp=sharing'), title: 'Aula 04 - Check Point: TEP', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1YTdoNFgLrVzWsDalPV7QWbfnAJIIpF59/view?usp=sharing'), title: 'Aula 05 - Crise Asmática', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aQ2tBFwD-_-3Wq4FbYN_AJeUZWaSQar5/view?usp=sharing'), title: 'Aula 06 - Doença Pulmonar Obstrutiva Crônica (DPOC)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K7W10iF8nKvW5kNzxKbg5HUPJ1Duef5N/view?usp=sharing'), title: 'Aula 07 - Check Point: Asma e DPOC (14/08)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VJW1tL7pC6dI1vg7P7MIZr6lOUdior0O/view?usp=sharing'), title: 'Aula 08 - Derrame Pleural', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Aw3JngjWufxV3hpU5iMEIbDSPmW0ZJpt/view?usp=sharing'), title: 'Aula 09 - Hemoptise', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uMZjlS0CZlN1u03nETzZV0UDH3aMRa0q/view?usp=sharing'), title: 'Aula 10 - Check Point: Derrame Pleural - Hemoptise (21/08)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hERSHirRPARtJOM4XluM1M0N9_GkKEAn/view?usp=sharing'), title: 'Aula 11 - Abordagem de Dispneia no PS', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cQiPdZW9nkfxlExsRK5Ig--5XHNADMDg/view?usp=sharing'), title: 'Aula 12 - Pneumonia Adquirida na Comunidade', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: '2019 ESC Guidelines For The Diagnosis And Management Of Acute Pulmonary Embolism Developed In Collaboration With The European Respiratory Society (ERS)',
+                    items: [
+                        { title: '2019 ESC Guidelines For The Diagnosis And Management Of Acute Pulmonary Embolism Developed In Collaboration With The European Respiratory Society (ERS)', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1rb8u_G9Ul9FxrTIOwzSAr0C0Ko0PhM_z/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'A Pocket Guide For Health Professionals Updated - 2019',
+                    items: [
+                        { title: 'A Pocket Guide For Health Professionals Updated - 2019', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1DIrkTSxWVqPXQ134OpDl8l_MGJC7uvyF/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Acute Exacerbations Of Asthma In Adults - Emergency Department And Inpatient Management',
+                    items: [
+                        { title: 'Acute Exacerbations Of Asthma In Adults - Emergency Department And Inpatient Management', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1JNweLGnfYvhCJ_hymkOHOCAO9MXQbFM0/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Approach To Adult Patients With Acute Dyspnea',
+                    items: [
+                        { title: 'Approach To Adult Patients With Acute Dyspnea', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Zg_pwK9K3Fii63AugEyAZVcXV2Ks2CS1/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Approach To The Adult With Dyspnea In The Emergency Department',
+                    items: [
+                        { title: 'Approach To The Adult With Dyspnea In The Emergency Department', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1io8JSYvpCVLMNLsV9EiFqlMS_eWJVYor/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Asthma Exacerbations - Pathogenesis, Prevention And Treatment',
+                    items: [
+                        { title: 'Asthma Exacerbations - Pathogenesis, Prevention And Treatment', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1slbi7LR6UD_c-a9l3N42zFfx-jBzqMVo/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Avaliação e Manejo da Hemoptise com Risco de Vida',
+                    items: [
+                        { title: 'Avaliação e Manejo da Hemoptise com Risco de Vida', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1y6neSbYuQddEEweqa2Hw-iOZedExYyYL/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Blue Protocol Ultrasonography In Emergency Department Patients Presenting With Acute Dyspnea',
+                    items: [
+                        { title: 'Blue Protocol Ultrasonography In Emergency Department Patients Presenting With Acute Dyspnea', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1jeYBDmJFGeYqcVvcmVmPr9muUtE6WAQi/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Critérios para Identificação de Derrames Pleurais Exsudativos',
+                    items: [
+                        { title: 'Critérios para Identificação de Derrames Pleurais Exsudativos', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1slFfJosAFdIat72HMJ7C7hfTExjZ1lY5/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Diagnosis And Treatment Of Adults With Community-Acquired Pneumonia',
+                    items: [
+                        { title: 'Diagnosis And Treatment Of Adults With Community-Acquired Pneumonia', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1fzDUF27jatO6QHj2pr-DrOWOrw2Mni28/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Diretrizes da Sociedade Brasileira de Pneumologia e Tisiologia para o Manejo da Asma - 2012',
+                    items: [
+                        { title: 'Diretrizes da Sociedade Brasileira de Pneumologia e Tisiologia para o Manejo da Asma - 2012', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1zskJLDvlQmkAbpRm6oJ_MC18eagIGwx-/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Doença Pulmonar Obstrutiva Crônica - Exacerbação Aguda na Sala de Urgência',
+                    items: [
+                        { title: 'Doença Pulmonar Obstrutiva Crônica - Exacerbação Aguda na Sala de Urgência', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1i3MN-Cw8Def-FbRhLclAnIAqddObIg9D/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Evaluation Of Nonlife-Threatening Hemoptysis In Adults',
+                    items: [
+                        { title: 'Evaluation Of Nonlife-Threatening Hemoptysis In Adults', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1sM1HaRuazE6iOfmC54b2R_v-C1yUVCFZ/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Exacerbações da DPOC - Gerenciamento',
+                    items: [
+                        { title: 'Exacerbações da DPOC - Gerenciamento', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1uvevO5WxgbZwVj7X48UtS6rKDK3xue5Q/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - Derrame Pleural',
+                    items: [
+                        { title: 'Fluxograma - Derrame Pleural', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1EJvKUQo4eBup_-JJXPXSs9J0tIsUS_wm/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Hemoptise',
+                    items: [
+                        { title: 'Hemoptise', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1xoO6GVhey3keVyuLll6-4_TJ7iU5fQD5/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Abordagem Dispneia no PS',
+                    items: [
+                        { title: 'Pos - Abordagem Dispneia no PS', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1zjzUiqHvX39mZpk9WfI1BaN84ArV1cVq/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Asma',
+                    items: [
+                        { title: 'Pos - Asma', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/121RF9ZPpArw_HGlxwhA-t-2wM5hfKJos/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - DPOC',
+                    items: [
+                        { title: 'Pos - DPOC', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1EJDLVNdyVUfhZWu0pS8TgUFAw-ToXcWF/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Hemoptise',
+                    items: [
+                        { title: 'Pos - Hemoptise', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1S7dqkogYjfkcUrbjcqgq168Be2paurSY/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - PAC',
+                    items: [
+                        { title: 'Pos - PAC', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1vGEc_22heaIkg8cSv_BQA2O2DGuHPdkM/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Prints: Asma',
+                    items: [
+                        { title: 'Pos - Prints: Asma', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1UghPRLpVdqlvSBZ8Bo5oG_k7JN_7bPqK/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Prints: DPOC',
+                    items: [
+                        { title: 'Pos - Prints: DPOC', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Xruk3O3fCARmjReQuPMEYot_5TjCcIYx/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Prints: TEP',
+                    items: [
+                        { title: 'Pos - Prints: TEP', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1XxtxRVJgJNX9fwxCy4QN-PJ8rw7OokCl/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - TEP',
+                    items: [
+                        { title: 'Pos - TEP', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1M1MXplOjoOeaRmtaL8zwUrGt_HvJqC1F/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Principais Causas de Derrame Pleural',
+                    items: [
+                        { title: 'Principais Causas de Derrame Pleural', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1QRwI-DkQQR-KsEK_1HCD0d1gATHBdcsc/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Protocolo Embolia Pulmonar - Suspeita Clínica e Tratamento',
+                    items: [
+                        { title: 'Protocolo Embolia Pulmonar - Suspeita Clínica e Tratamento', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1QZkplUe8_diFY0mdrBgi4-gAIXzaKIT2/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Recomendações para o Manejo da Pneumonia Adquirida na Comunidade - 2018',
+                    items: [
+                        { title: 'Recomendações para o Manejo da Pneumonia Adquirida na Comunidade - 2018', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1ai9JL6zOCCuXXG3O5j3lqjE61TrifPba/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'The Diagnosis and Treatment of Hemoptysis',
+                    items: [
+                        { title: 'The Diagnosis and Treatment of Hemoptysis', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/15kXviAAgjP23vogynXtKugjZDFqCOqDT/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Tratamento, Prognóstico e Acompanhamento da Embolia Pulmonar Aguda em Adultos',
+                    items: [
+                        { title: 'Tratamento, Prognóstico e Acompanhamento da Embolia Pulmonar Aguda em Adultos', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1pnIh3WcZSFdIWEU-3oPLe6u6Q-y_7V3T/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                },
+                {
+                    categoryTitle: 'Visão Geral da Pneumonia Adquirida na Comunidade em Adultos',
+                    items: [
+                        { title: 'Visão Geral da Pneumonia Adquirida na Comunidade em Adultos', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1k3C0uYuon8W8syBQFZeudhZK7ug5Dy_t/view?usp=sharing' } // Placeholder for actual link
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Pneumologia Aplicada à Medicina Intensiva
+        modulesData.push({
+            id: 'module_pneumo_intensiva',
+            title: 'Módulo - Pneumologia Aplicada à Medicina Intensiva',
+            path: 'Início / Pneumologia Intensiva',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Zo1KmQ5fYTnD_m1xHaR-Z4h1N3Wn2cdq/view?usp=sharing'), title: 'Aula 01 - Síndrome do Desconforto Respiratório Agudo (SDRA): Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MRZTP-zMkIyNPMmMUoFFtqeD1wsW-2jh/view?usp=sharing'), title: 'Aula 02 - Síndrome do Desconforto Respiratório Agudo (SDRA): Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_q7e-hNVjc3gZm3lc_TTONmiV8WcfOeJ/view?usp=sharing'), title: 'Aula 03 - Síndrome do Desconforto Respiratório Agudo (SDRA): Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RHADZqXX4J4M0jLUAcaR_Vpwt71LyFvr/view?usp=sharing'), title: 'Aula 04 - Atualização: Síndrome do Desconforto Respiratório Agudo (SDRA)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tyJt4ghhyC2VuMOF6o0HL3BKl6G3gQyG/view?usp=sharing'), title: 'Aula 05 - Check Point: SDRA', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10035qONIbHiLZqkYEFixhEbNsWdCi_84/view?usp=sharing'), title: 'Aula 06 - Doenças Obstrutivas: DPOC', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uT11wADbFhuA2bmrDcmGUk6ZPCIbzzj-/view?usp=sharing'), title: 'Aula 07 - Doenças Obstrutivas: Asma', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MusYZRcLVPM-GHPbNuVTUwRM6SWdVcGV/view?usp=sharing'), title: 'Aula 08 - Check Point: Doenças Obstrutivas', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Advances In Mechanical Ventilation',
+                    items: [
+                        { title: 'Advances In Mechanical Ventilation', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1faayNYOsxeQrAedCBMJ6YEh25dkMtMGV/view?usp=drive_link' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Clinical Outcomes Of Patients Requiring Ventilatory Support In Brazilian Intensive Care Units: A Multicenter, Prospective, Cohort Study',
+                    items: [
+                        { title: 'Clinical Outcomes Of Patients Requiring Ventilatory Support In Brazilian Intensive Care Units: A Multicenter, Prospective, Cohort Study', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1lkr01yhk39zuqNf7-CCcRP0OSkKNhhZn/view?usp=drive_link' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Comparison Of Two Fluid-management Strategies In Acute Lung Injury',
+                    items: [
+                        { title: 'Comparison Of Two Fluid-management Strategies In Acute Lung Injury', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Y4s3eo4HODhx9iVG1rUq4LO3UY5InWW3/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Functional Disability 5 Years After Acute Respiratory Distress Syndrome',
+                    items: [
+                        { title: 'Functional Disability 5 Years After Acute Respiratory Distress Syndrome', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1rLu875KtGe2uteIgFn9ioLfegjGuf7BW/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pós - Asma',
+                    items: [
+                        { title: 'Pós - Asma', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/11-QnadVIFJmEKcYBirCbpSVDf0m8ovy6/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pós - DPOC',
+                    items: [
+                        { title: 'Pós - DPOC', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Q_pR8Fji2VyWy4eW4tDOv1cNNu1dSPK5/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Reversibility Of Lung Collapse And Hypoxemia In Early Acute Respiratory Distress Syndrome',
+                    items: [
+                        { title: 'Reversibility Of Lung Collapse And Hypoxemia In Early Acute Respiratory Distress Syndrome', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1LCb3wQEPeSo3ZZ_V7PsNjQLZlQK5BPVi/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Slides - SDRA',
+                    items: [
+                        { title: 'Slides - SDRA', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/17Y6ILCze4_2pSgNQ8w_1AOPys0D9Juta/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'The Acute Respiratory Distress Syndrome',
+                    items: [
+                        { title: 'The Acute Respiratory Distress Syndrome', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1bs8q9yWB2NwohGM0FFL-kgru0ecqqlVh/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Ventilator-Associated Lung Injury',
+                    items: [
+                        { title: 'Ventilator-Associated Lung Injury', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Pq5sT--NER-UZDEB4H5JKv47zKUZz14G/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Generate Audio Overview',
+                    items: [
+                        { title: 'Generate Audio Overview', description: '', icon: 'fas fa-file-audio', link: generatePlaceholderLink('pdf', 0) } // Placeholder for actual audio link
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Cardiologia Aplicada à Medicina de Emergência
+        modulesData.push({
+            id: 'module_cardio_emergencia',
+            title: 'Módulo - Cardiologia Aplicada à Medicina de Emergência',
+            path: 'Início / Cardiologia de Emergência',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PD-RkKeLaiyJ2imQdyHEQjXeGWloL9uq/view?usp=sharing'), title: 'Aula 01 - Síndrome Coronariana Aguda com Supra de ST: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1951Mi09bh67c_Kh5dZgvsu9uzQePiwmV/view?usp=sharing'), title: 'Aula 02 - Síndrome Coronariana Aguda com Supra de ST: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lPViGtxuoBaC_WV2AppUuHYt_qymd3ZF/view?usp=sharing'), title: 'Aula 03 - Síndrome Coronariana Aguda com Supra de ST: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BTeqqPVu8Ld_4ntbC2X52fiEZ8Be0LDI/view?usp=sharing'), title: 'Aula 04 - Insuficiência Cardíaca Aguda Descompensada: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NLUwC19h7vd2nfPxlRh-KfWt9NNmgKg_/view?usp=sharing'), title: 'Aula 05 - Insuficiência Cardíaca Aguda Descompensada: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1auH6XtP4o8_2hRD9HJEV420lkDKgZBZs/view?usp=sharing'), title: 'Aula 06 - Bradiarritmias: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1E55-yIcHNmJOe55hhzIbDinCWyCRAB2r/view?usp=sharing'), title: 'Aula 07 - Bradiarritmias: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1P-keBa7mzXn6R0kV1H_68Nv3f3IG12bk/view?usp=sharing'), title: 'Aula 08 - Taquiarritmias', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ArjHRrdis4WOkMP9n_7fq7amgeIjvZVX/view?usp=sharing'), title: 'Aula 09 - Check Point: Taquiarritmias e Bradicardias', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Zu_uefcmLIGq_xuBzylcbd4PEExQQwLf/view?usp=sharing'), title: 'Aula 10 - Crise Hipertensiva: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zJB5zyxHvIgAkdgl3pxWMDe23aYNAzIS/view?usp=sharing'), title: 'Aula 11 - Crise Hipertensiva: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mqzOzj3HBKsgFlu0aWxH7GtHiVSfo6z3/view?usp=sharing'), title: 'Aula 12 - Check Point: Crise Hipertensiva e PCR', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1v2GHwZCc4qQ0TO6nLUzBeNtwnfKhDRw3/view?usp=sharing'), title: 'Aula 13 - PCR: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DQpueIS3XIbAS3VJQw84dw2lsluJ8EVn/view?usp=sharing'), title: 'Aula 14 - PCR: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GmXXzhd41JZpLYJlIfsjrRXR6gi_CZJn/view?usp=sharing'), title: 'Aula 15 - PCR: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KhSMZybX293VtF9UujWTxys7KzT1RDSy/view?usp=sharing'), title: 'Aula 16 - Check Point: PCR', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: '2017 ESC Guidelines for The Management Of Acute Myocardial Infarction In Patients Presenting With St-Segment Elevation',
+                    items: [
+                        { title: '2017 ESC Guidelines for The Management Of Acute Myocardial Infarction In Patients Presenting With St-Segment Elevation', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1tmYecHcD86SKvhdrua79w9M2OrqmKKBC/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: '2018 ACC/AHA/HRS Guideline On The Evaluation And Management Of Patients With Bradycardias And Cardiac Conduction Delay',
+                    items: [
+                        { title: '2018 ACC/AHA/HRS Guideline On The Evaluation And Management Of Patients With Bradycardias And Cardiac Conduction Delay', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1tJ6n2_nDCiyhGJ2_dtcxeNeGvYWpzLig/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: '2018 ESC Guidelines For The Diagnosis And Management of Syncope',
+                    items: [
+                        { title: '2018 ESC Guidelines For The Diagnosis And Management of Syncope', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/17Hd86A1KjTROtOiQlKWdLynr-Ni0j7qW/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: '2018 ESC/EACTS Guidelines On Myocardial Revascularization',
+                    items: [
+                        { title: '2018 ESC/EACTS Guidelines On Myocardial Revascularization', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1QS2OM1120QfEbL5q4nxOk-j2b7Zp3pFC/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: '2020 ESC Guidelines For The Management Of Acute Coronary Syndromes In Patients Presenting Without Persistent ST-Segment Elevation',
+                    items: [
+                        { title: '2020 ESC Guidelines For The Management Of Acute Coronary Syndromes In Patients Presenting Without Persistent ST-Segment Elevation', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1MU8Yq-HXwDF45Xx3HbdwmKt-6ZrbTc8W/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: '2021 AHA/ACC/ASE/CHEST/HFSA/RSNA/SCCT/SCMR Guideline For The Evaluation And Diagnosis Of Chest Pain',
+                    items: [
+                        { title: '2021 AHA/ACC/ASE/CHEST/HFSA/RSNA/SCCT/SCMR Guideline For The Evaluation And Diagnosis Of Chest Pain', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1BgU1T5fxqdXFtaTZUkjP9lfOSu8IWqnG/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Acute Heart Failure (AHF) - How To Evaluate The Hemodynamic Profile And When To Hospitalize',
+                    items: [
+                        { title: 'Acute Heart Failure (AHF) - How To Evaluate The Hemodynamic Profile And When To Hospitalize', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1_H2nhYxhEFxf_9FlPhPerccHWsMQ30ye/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Atualização da Diretriz de Ressuscitação Cardiopulmonar e Cuidados Cardiovasculares de Emergência da Sociedade Brasileira de Cardiologia - 2019',
+                    items: [
+                        { title: 'Atualização da Diretriz de Ressuscitação Cardiopulmonar e Cuidados Cardiovasculares de Emergência da Sociedade Brasileira de Cardiologia - 2019', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Nr9mI1Dwb1HG_W9G6HeRMCZ0ruqxVr4g/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Bradiarritmias',
+                    items: [
+                        { title: 'Bradiarritmias', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1I3QK2swIKxsqgZwymX6Ddn5IAtLjhEmb/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Cardiovascular Magnetic Resonance - Applications And Practical Considerations For The General Cardiologist',
+                    items: [
+                        { title: 'Cardiovascular Magnetic Resonance - Applications And Practical Considerations For The General Cardiologist', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FcqcDUb0Z6xRbPUcv_9WAGIxjGFJytmb/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Clopidogrel Plus Aspirin In Patients With Acute Myocardial Infarction Treated With Fibrinolytic Therapy - CLARITY-TIMI 28',
+                    items: [
+                        { title: 'Clopidogrel Plus Aspirin In Patients With Acute Myocardial Infarction Treated With Fibrinolytic Therapy - CLARITY-TIMI 28', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1VKOwH5GzI29q5yuZjyOl9j1H__X_oDPC/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Diretriz Brasileira da Insuficiência Cardíaca Crônica e Aguda',
+                    items: [
+                        { title: 'Diretriz Brasileira da Insuficiência Cardíaca Crônica e Aguda', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1yuTp3Iq8sMEOBilxGPKWyIahCulkjgIK/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Diretrizes da Sociedade Brasileira de Cardiologia Sobre Angina Instável e Infarto Agudo do Miocárdio sem Supradesnivelamento do Segmento ST (II Edição, 2007) - Atualização 2013/2014',
+                    items: [
+                        { title: 'Diretrizes da Sociedade Brasileira de Cardiologia Sobre Angina Instável e Infarto Agudo do Miocárdio sem Supradesnivelamento do Segmento ST (II Edição, 2007) - Atualização 2013/2014', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1odMG8262FisvCx7kqs73c1_mvObhqcXw/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Echocardiography And Lung Ultrasonography For The Assessment And Management Of Acute Heart Failure',
+                    items: [
+                        { title: 'Echocardiography And Lung Ultrasonography For The Assessment And Management Of Acute Heart Failure', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1UDF3Yv0FspgpHwJV1RuZ070-ChdRsjUX/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Evaluating And Managing Bradycardia',
+                    items: [
+                        { title: 'Evaluating And Managing Bradycardia', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1kIZsjPmBVdy2W0nw0pZ1CneEFPnqjPu1/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fourth Universal Definition Of Myocardial Infarction (2018)',
+                    items: [
+                        { title: 'Fourth Universal Definition Of Myocardial Infarction (2018)', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1cp0Y88S7Y6dx6lSKhN7QR_FfDDGgCCPB/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Improved Neurological Outcomes With Continuous Chest Compressions Compared With 30:2 Compressions - To Ventilations Cardiopulmonary Resuscitation In a Realistic Swine Model Of Out - Of - Hospital Cardiac Arrest',
+                    items: [
+                        { title: 'Improved Neurological Outcomes With Continuous Chest Compressions Compared With 30:2 Compressions - To Ventilations Cardiopulmonary Resuscitation In a Realistic Swine Model Of Out - Of - Hospital Cardiac Arrest', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/16PINEkPyAGh38Y8MZkuIUOa715F6XESa/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'In-Hospital Cardiac Arrest - A Review',
+                    items: [
+                        { title: 'In-Hospital Cardiac Arrest - A Review', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1P4Y1Z-LOlryDxZ9kPxOHYSHhwTEnluYB/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Mapa - SCA',
+                    items: [
+                        { title: 'Mapa - SCA', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/16kE1U1OiBHU0k5F25CvlcoeOpkgUwFUU/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Marca-passo Cardíaco - Indicações',
+                    items: [
+                        { title: 'Marca-passo Cardíaco - Indicações', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1PDHLC7gUTZsUPH6II01AGaEviqnmncah/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Multimodality Imaging In Ischemic Heart Failure',
+                    items: [
+                        { title: 'Multimodality Imaging In Ischemic Heart Failure', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1XvjjZGTkd_VdDqJssWpbW7cZCmV7XuE2/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Non-ST-Segment Acute Coronary Syndromes',
+                    items: [
+                        { title: 'Non-ST-Segment Acute Coronary Syndromes', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1esnmrpsYPEq-RYDawtt2u2Xyr1O1jqKS/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Optimal Pharmacological Therapy In ST-Elevation Myocardial Infarction - A Review',
+                    items: [
+                        { title: 'Optimal Pharmacological Therapy In ST-Elevation Myocardial Infarction - A Review', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1qmaT0Mnnk34wX5jukpcoZzBbIaOxpaV_/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Part 4 - Basic Adult Basic Life Support And Cardiopulmonary Resuscitation Quality 2015 American Heart Association Guidelines Update For Cardiopulmonary Resuscitation And Emergency Cardiovascular Care',
+                    items: [
+                        { title: 'Part 4 - Basic Adult Basic Life Support And Cardiopulmonary Resuscitation Quality 2015 American Heart Association Guidelines Update For Cardiopulmonary Resuscitation And Emergency Cardiovascular Care', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1MEwin3EiTdtUX4uXXW1DuInb_dt-AGCq/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Part 7 - Adult Advanced Cardiovascular Life Support 2015 American Heart Association Guidelines Update For Cardiopulmonary Resuscitation And Emergency Cardiovascular Care',
+                    items: [
+                        { title: 'Part 7 - Adult Advanced Cardiovascular Life Support 2015 American Heart Association Guidelines Update For Cardiopulmonary Resuscitation And Emergency Cardiovascular Care', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Tl_Wa6qImH9oDCa4TigIUIbElYX6ByZQ/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Population Trends In The Incidence And Outcomes Of Acute Myocardial Infarction',
+                    items: [
+                        { title: 'Population Trends In The Incidence And Outcomes Of Acute Myocardial Infarction', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1IYZVA0KA6dUQhNPKaBx5qEtPYhkawWsv/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Bradiarritmias',
+                    items: [
+                        { title: 'Pos - Bradiarritmias', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1drIAVotPwbITZgjbp6i8mW-jcZjuHFFj/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Crise Hipertensiva',
+                    items: [
+                        { title: 'Pos - Crise Hipertensiva', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1yKxPiIsHmMWaOPVdutKcAfWJ5yVxwpDU/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - ICAD',
+                    items: [
+                        { title: 'Pos - ICAD', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/11cJh5k2dWtEWCgunNXGbpF_gazhX9u90/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - PCR',
+                    items: [
+                        { title: 'Pos - PCR', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1TrpQo-Gz2Rq-Kmt7u8tf2txWjwhuY75B/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - SCA com Supra',
+                    items: [
+                        { title: 'Pos - SCA com Supra', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/16SptpjDscaUI8Eb4J_s7QI1lnwriIHnr/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - SCA sem Supra',
+                    items: [
+                        { title: 'Pos - SCA sem Supra', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1rCkuNNs-M-xrnp5EWvEFQxo7fesuP9X8/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Pos - Taquiarritmias',
+                    items: [
+                        { title: 'Pos - Taquiarritmias', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1Mp0sn7Q2TktJkaCh5_pm-_NmXAxv3jKU/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Protocolo Clínico - Síndromes Coronárias Agudas',
+                    items: [
+                        { title: 'Protocolo Clínico - Síndromes Coronárias Agudas', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1E46hgYYSnmXLvEyJ6ZKwpULqO51TyVJi/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Síncope',
+                    items: [
+                        { title: 'Síncope', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/19ntfLiLfbFiUsHLnl3Kv6_6-RdvAsJ6s/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Síndromes Neuralmente Mediadas',
+                    items: [
+                        { title: 'Síndromes Neuralmente Mediadas', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1fxhY_wTm0iUFisi9KEMrQVIJcDWpED3T/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'ST-Elevation Myocardial Infarction - Thrombolysis In Any Location With Available Medication',
+                    items: [
+                        { title: 'ST-Elevation Myocardial Infarction - Thrombolysis In Any Location With Available Medication', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/185lBa4hDrBF7L5kPMDVW1adjWGnt4rv5/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Syncope - A Review Of Emergency Department Management And Disposition',
+                    items: [
+                        { title: 'Syncope - A Review Of Emergency Department Management And Disposition', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1-QKd7HTtYpPsEYpAg2O3Dlc1by-v0JK9/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Taquiarritmias na Sala de Urgência',
+                    items: [
+                        { title: 'Taquiarritmias na Sala de Urgência', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1BSvAzfOnqhoDTmy3bqDXPa-cVUepErHB/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'The Global Survival Rate Among Adult Out-Of-Hospital Cardiac Arrest Patients Who Received Cardiopulmonary Resuscitation - A Systematic Review And Meta-Analysis',
+                    items: [
+                        { title: 'The Global Survival Rate Among Adult Out-Of-Hospital Cardiac Arrest Patients Who Received Cardiopulmonary Resuscitation - A Systematic Review And Meta-Analysis', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1PphMTnraDfdOL3QlT5fZZnmIDnw4xWES/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Troponin Testing For Clinicians',
+                    items: [
+                        { title: 'Troponin Testing For Clinicians', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1FMgcvEYmR9X0iFEsDmFX4J4b5nLzwJpt/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Underlying Causes And Long-Term Survival In Patients With Initially Unexplained Cardiomyopathy',
+                    items: [
+                        { title: 'Underlying Causes And Long-Term Survival In Patients With Initially Unexplained Cardiomyopathy', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1GzfH7qA9JisuvNt8Nlnyvp5ANpFEuTWN/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Unstable Angina And Non-ST-Elevation Myocardial Infarction - Treatment And Prognosis',
+                    items: [
+                        { title: 'Unstable Angina And Non-ST-Elevation Myocardial Infarction - Treatment And Prognosis', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1mH7SZoFTO_qDv8MmFqjtRAE_-xkTlNrb/view?usp=sharing' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Cardiologia Aplicada à Medicina Intensiva
+        modulesData.push({
+            id: 'module_cardio_intensiva',
+            title: 'Módulo - Cardiologia Aplicada à Medicina Intensiva',
+            path: 'Início / Cardiologia Intensiva',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gNizzMV2V7xAl1uAbcEr4WXc88udOsz3/view?usp=sharing'), title: 'Aula 01 - Fisiologia Cardiovascular e Monitorização Hemodinâmica Básica', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xE5vi5LWhAl3jloc9TXPqBhvZX1Jt5CB/view?usp=sharing'), title: 'Aula 02 - Perfusão Tecidual e Choque: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11A-J4wGL4d1FwEfRK_NgMa43LDUgtzRi/view?usp=sharing'), title: 'Aula 03 - Fluidos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FBM2F9SNWiKcaGac-SBlftdRiX6GIJ4s/view?usp=sharing'), title: 'Aula 04 - Perfusão Tecidual e Choque: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MD3IcHYt7hJPfvr4ZuBFALh_Wc7tMnwK/view?usp=sharing'), title: 'Aula 05 - Vasopressores e Inotrópicos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10QCG-KMt7FzJE3Rt19HZSefQGbP9jpmD/view?usp=sharing'), title: 'Aula 06 - Choque Cardiogênico', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16Pch3zajxkH1vLB_Z3J7JYyQ7yH1777L/view?usp=sharing'), title: 'Aula 07 - Disfunção do Ventrículo Direito', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1r7wPzQifSaprrHY63iYJ2F9DKsdAm7qg/view?usp=sharing'), title: 'Aula 08 - Monitorização Hemodinâmica Avançada e Futuras Perspectivas', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lD5gv5Aj3A0SSdqk-Q_H4vGnFlKJRQRT/view?usp=sharing'), title: 'Aula 09 - Check Point: Choque Cardiogênico, Drogas Vasoativas e Disfunção do Ventrículo Direito', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Y2zYucGoQnymq5fXo2xBhC-X2AoyV0QQ/view?usp=sharing'), title: 'Aula 01 - Otimização Hemodinâmica', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PJ-khimuCX-tGD5NAzmfe1M5NjFuZeZO/view?usp=sharing'), title: 'Aula 02 - Janelas Ecocardiográficas na UTI', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_qron3cCxMA-6GzLjSmK1ch40uFD5r-t/view?usp=sharing'), title: 'Aula 03 - Complicações Cardíacas no Pós-Operatório de Cirurgia Cardíaca', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XBRsCV38R2yNwWFmVP5fmEZkQQ2ri7xT/view?usp=sharing'), title: 'Aula 04 - Pós-Operatório de Cirurgia Cardíaca: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VigwXujZMXO0_j2aw-gTZnKoxtC4scu8/view?usp=sharing'), title: 'Aula 05 - Pós-Operatório de Cirurgia Cardíaca: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jyy7Ze6LAeptL0rhOGbT7noZ1TItFQK4/view?usp=sharing'), title: 'Aula 06 - Pós-Operatório de Cirurgia Cardíaca: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GKxYX2CbVw4DndU6S6y8dV9ssJpq8L_b/view?usp=sharing'), title: 'Aula 07 - Valvopatias na UTI', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Nefrologia Aplicada à Medicina de Emergência
+        modulesData.push({
+            id: 'module_nefro_emergencia',
+            title: 'Módulo - Nefrologia Aplicada à Medicina de Emergência',
+            path: 'Início / Nefrologia de Emergência',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JYSAVMGgdyAgkvgbPT4T06j3q0O0jwoq/view?usp=sharing'), title: 'Aula 01 - Injúria Renal Aguda no Pronto Socorro', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iIeJijxr2yizxJIvcrJE_t0XeoN-KNFo/view?usp=sharing'), title: 'Aula 02 - Distúrbios Ácido-Básico', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1u4lvORN8xUf2lSTpORM-VrG0lpysFze7/view?usp=sharing'), title: 'Aula 03 - Check Point: Injúria Renal Aguda', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/191LC0HFHoafrYqyyxieqAYHCJ3ID1hKS/view?usp=sharing'), title: 'Aula 04 - Distúrbios do Sódio: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WeWg0zBl6X4itw7gupHWdCEEgVH6l64f/view?usp=sharing'), title: 'Aula 05 - Distúrbios do Sódio: Parte II', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Composição de Líquidos Corporais',
+                    items: [
+                        { title: 'Composição de Líquidos Corporais', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1DG5qcNX4S8uMB1NaGtOkmpta2WKIwrFr/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - Distúrbios do Sódio',
+                    items: [
+                        { title: 'Fluxograma - Distúrbios do Sódio', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1368zXaBrFRD4JOhU1SDoubtcqYb26wpC/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - IRA',
+                    items: [
+                        { title: 'Fluxograma - IRA', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1lpnNNNYgXVbx_yUpDiyLQ0BKgUHYcoWa/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'IRA',
+                    items: [
+                        { title: 'IRA', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/14NfbazrUew53f_3OJ7Njjta75DRS2UMQ/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Principais Causas de Hipernatremia',
+                    items: [
+                        { title: 'Principais Causas de Hipernatremia', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1erzU8oavTiJMmgJ2V0jmQat0xJxrhFaP/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Tabela de Conteúdo de Sódio das Bebidas Comuns',
+                    items: [
+                        { title: 'Tabela de Conteúdo de Sódio das Bebidas Comuns', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/13PpLdxTiFoKUqZHbEzxuV3HKNIyZq0Fj/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 01 - IRA no PS',
+                    items: [
+                        { title: 'Aula 01 - IRA no PS', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/12uaRLAcpNl681fUkzMpA77BXrgC5-JX-/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 03 - Distúrbios do Sódio',
+                    items: [
+                        { title: 'Aula 03 - Distúrbios do Sódio', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1BzFlZZ5acwrhdWptpEkWGLwV2yyT9AuW/view?usp=sharing' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Nefrologia Aplicada à Medicina Intensiva
+        modulesData.push({
+            id: 'module_nefro_intensiva',
+            title: 'Módulo - Nefrologia Aplicada à Medicina Intensiva',
+            path: 'Início / Nefrologia Intensiva',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1g5NQLZjnQltAzVlTArLHH3wJX7xKathz/view?usp=sharing'), title: 'Aula 01 - Distúrbios do Potássio', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N3nUSN8mLA4Ev1u39aNiMYBzJwWeEOZC/view?usp=sharing'), title: 'Aula 02 - Insuficiência Renal Aguda na UTI', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ngoUv3ohFfS5QT_V_t7apCMas3zpazGs/view?usp=sharing'), title: 'Aula 03 - Tratamento Conservador e Manejo Volêmico na Insuficiência Renal Aguda na UTI', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JaTKGI_0Ua5wIWfjK1YQDW4h163ZiIQb/view?usp=sharing'), title: 'Aula 04 - Distúrbios Hidroeletrolíticos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17mMc7IgBBmuScVHWPE7KJGmSJOJMhbt2/view?usp=sharing'), title: 'Aula 05 - Tratamento Dialítico da Injúria Renal Aguda', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_OcTLm44aUwL2DyojED9MN3umSVmlyht/view?usp=sharing'), title: 'Aula 06 - Nefropatia por Contraste', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WwRBbYbQHr4gnM56Zamw5mHBl2O_SftB/view?usp=sharing'), title: 'Aula 07 - Rabdomiólise', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GBXrPz3f7LZDz2nhtmSqXC0fGNUPyovg/view?usp=sharing'), title: 'Aula 08 - Check Point: Hemodiálise na UTI', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Estratégias de Prevenção da Nefropatia Induzida por Contraste em Pacientes Submetidos à Intervenção Coronária Percutânea - Uma Revisão Integrativa da Literatura',
+                    items: [
+                        { title: 'Estratégias de Prevenção da Nefropatia Induzida por Contraste em Pacientes Submetidos à Intervenção Coronária Percutânea - Uma Revisão Integrativa da Literatura', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/18i7G8zkac4WHOA-rgCkKM9liKTRUozZc/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fatores que Contribuem para Hipercalemia',
+                    items: [
+                        { title: 'Fatores que Contribuem para Hipercalemia', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1cvs9Xs4qiraP-sd_TOyuB5Bb_Nqb0G4N/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - Distúrbios do Potássio',
+                    items: [
+                        { title: 'Fluxograma - Distúrbios do Potássio', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1M2ps5m2xCVOzqAXqqj922ClNSLTYq5mF/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - IRA',
+                    items: [
+                        { title: 'Fluxograma - IRA', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1qC4EE7Ip_2S3zvFnQ1l6HhditkOMP996/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - Nefropatia Induzida por Contraste',
+                    items: [
+                        { title: 'Fluxograma - Nefropatia Induzida por Contraste', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1aSh-HU1DgsRfK3t0p7am0QK4YE_5SP1h/edit?usp=drive_link&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Fluxograma - Rabdomiólise',
+                    items: [
+                        { title: 'Fluxograma - Rabdomiólise', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1S7BhT52A8W2mBtJrtTWt3ptxlhTMxXED/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Injúria Renal Aguda e Métodos de Suporte Padronização da Nomenclatura',
+                    items: [
+                        { title: 'Injúria Renal Aguda e Métodos de Suporte Padronização da Nomenclatura', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1ERIporrSz2l4shF72n3fM-Du_fNuySxD/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Nefropatia Induzida por Contraste - Podemos Prevenir?',
+                    items: [
+                        { title: 'Nefropatia Induzida por Contraste - Podemos Prevenir?', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1D4_hzJ4-Kw66epPya4GVYabhSQg6jMH4/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Padrões ECG nos Distúrbios do Potássio',
+                    items: [
+                        { title: 'Padrões ECG nos Distúrbios do Potássio', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1YC_Dn9j6EravWGHkIbtxcMyu2asonVZW/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Rabdomiólise',
+                    items: [
+                        { title: 'Rabdomiólise', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1spgu1vNYa4LOhwzh0_mmgF6yitsTKU7N/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 04 - Distúrbios do Potássio',
+                    items: [
+                        { title: 'Aula 04 - Distúrbios do Potássio', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/17mF-gPkU9AFNr-jXtYTVfhG494EDVToh/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 05 - IRA na UTI',
+                    items: [
+                        { title: 'Aula 05 - IRA na UTI', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1gJflgh11DNvXJvomRv2sXqMwNPvi-3Ic/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 06 - Distúrbios Hidroeletroliticos',
+                    items: [
+                        { title: 'Aula 06 - Distúrbios Hidroeletroliticos', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1RBLcKRfL-ZVTHQ2AEom6QVIDBj77RLPB/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 07 - Tratamento Conservador e Manejo Volêmico na IRA em UTI',
+                    items: [
+                        { title: 'Aula 07 - Tratamento Conservador e Manejo Volêmico na IRA em UTI', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1gAOFDCiOfyFwd6W1Z6DnMlrk4VhWFmSp/view?usp=sharing' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 09 - Nefropatia por Contraste',
+                    items: [
+                        { title: 'Aula 09 - Nefropatia por Contraste', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1Hb56l7xUL2yUuu46Wzbm9PuE8czBA5Lu/edit?usp=drive_link&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Aula 10 - Rabdomiólise',
+                    items: [
+                        { title: 'Aula 10 - Rabdomiólise', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1wOTLM_hlR8qTuR9AoTPSSqOjlEYz1OB4/view?usp=drive_link' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Toxicologia
+        modulesData.push({
+            id: 'module_toxicologia',
+            title: 'Módulo - Toxicologia',
+            path: 'Início / Toxicologia',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uS6baowba3Thqn081ivyYQ3E5G03sbEq/view?usp=sharing'), title: 'Aula 01 - Toxissíndromes', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19mLGC4z4gFKkFCunTRgiB68GAk4l0haP/view?usp=sharing'), title: 'Aula 02 - Intoxicação por Drogas de Abuso', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-glFggz-FHsSN1DVHg37qLEf50q27ggk/view?usp=sharing'), title: 'Aula 03 - Anticolinesterásicos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WcYDhP9UWvagW5wmBuFjuQH3DZ3b1K6L/view?usp=sharing'), title: 'Aula 04 - Intoxicação por Antidepressivos Tricíclicos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vaXOqhsgYbNM8cQ0RSuVjtHKFTCFMahF/view?usp=sharing'), title: 'Aula 05 - APH: Regulação, Cena e Particularidades na Intoxicação Exógena', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XOf1zGncCbkDGNPjVimj2M6TpOntlSng/view?usp=sharing'), title: 'Aula 06 - Check Point: Toxissíndromes', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13upX3yZWAn19IwA8q82_r39DD8gnflBq/view?usp=sharing'), title: 'Aula 07 - Check Point: Q&A', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Drogas de Abuso',
+                    items: [
+                        { title: 'Depressoras - Identificação e Manejo', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1X2WgNiYZz6LlWAW5bGInDFpT9GZvS-__/view?usp=sharing' },
+                        { title: 'Drogas de Abuso', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1afFz2NCW-CBfF2qjsVnc113nLOt126BO/view?usp=sharing' },
+                        { title: 'Estimulantes - Identificação e Manejo', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/10Dhg9bgze5OwFVn_excDPM9vvAviuSFW/view?usp=sharing' },
+                        { title: 'Perturbadoras - Identificação e Manejo', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1K5aTU-k3YNKLkN0NpwufUlnL-JnwCJRx/view?usp=sharing' },
+                        { title: 'Slides - Drogas de Abuso', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1ddcdaNdx1jLCJHCUgn8sO-shHvQR-pgr/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                },
+                {
+                    categoryTitle: 'Toxissindromes',
+                    items: [
+                        { title: 'Fluxograma - Síndrome Colinérgica', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1PS6n6vB3MXO1g4ZJfBpf2odKypvJOseC/view?usp=sharing' },
+                        { title: 'Fluxograma - Toxicidade Anticolinérgica', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1eRVyhoCi_SBLBRdcJRqpXYfezC2bzINb/view?usp=sharing' },
+                        { title: 'Toxissindromes - Fluxograma: Definição', description: '', icon: 'fas fa-file-pdf', link: 'https://drive.google.com/file/d/1PtfNQiGUGZ_z7W2tMtr2sfNr9opG5Mq0/view?usp=sharing' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Ventilação Mecânica Aplicada à Medicina de Emergência
+        modulesData.push({
+            id: 'module_vm_emergencia',
+            title: 'Módulo - Ventilação Mecânica Aplicada à Medicina de Emergência',
+            path: 'Início / Ventilação Mecânica de Emergência',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fp6W2ANXoPV_LuInvcYnHj7cA13iDoZv/view?usp=sharing'), title: 'Aula 01 - Ventilação Mecânica', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TjD74e9Fc7j4xyDjIzaEFAzFA0My0Y46/view?usp=sharing'), title: 'Aula 02 - Conceitos e Modos Básicos de AVM: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1a72d3cPdymZbj7V_7e982VxOSYuUmoaB/view?usp=sharing'), title: 'Aula 03 - Conceitos e Modos Básicos de AVM: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ks1Axzh45cWqUm_1pRSslXSJfFTkQaWB/view?usp=sharing'), title: 'Aula 04 - Conceitos e Modos Básicos de AVM: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15_EkHOm0VKP82ZeWW45zkrqsfbU4Nqrp/view?usp=sharing'), title: 'Aula 05 - Já Entubei, e Agora?', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19cwSVbDJjWZ3c-f9V4kib2wWtf6zcDLX/view?usp=sharing'), title: 'Aula 06 - Ventilação Não-Invasiva', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1r8PPzWkq_tgJVVlNXxbovy2uZHjIvmeF/view?usp=sharing'), title: 'Aula 07 - Hiperóxia e Hipóxia', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PLBGYh3wXnGqJQMqXNK9bP0UZKx_mDg8/view?usp=sharing'), title: 'Aula 08 - Hiper e Hipocapnia', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1nWKmf8su9gaARc2J0TtSC9s7xtHdoioW/view?usp=sharing'), title: 'Aula 09 - Desmame', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17YuFdwORn2w_SdlEfUAhruwaOPHVsD0w/view?usp=sharing'), title: 'Aula 10 - Assincronia', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XQbVDrK-t3e6FrY8A5mzM1f8qaBl8hWK/view?usp=sharing'), title: 'Aula 11 - Check Point: Ventilação Mecânica (21/08)', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Neurologia Aplicada à Medicina de Emergência
+        modulesData.push({
+            id: 'module_neuro_emergencia',
+            title: 'Módulo - Neurologia Aplicada à Medicina de Emergência',
+            path: 'Início / Neurologia de Emergência',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IsN-lrL8SYl8Scu463vvW_XZbuFdz7lu/view?usp=sharing'), title: 'Aula 01 - AVC Isquêmico', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/18h0w5zP4b_4Gi9OelhA4u9rXMJOEmldg/view?usp=sharing'), title: 'Aula 02 - Hemorragia Subaracnoidea', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1--1_ySWi3H5WjJ9qXPIKcCeEHwdcX3je/view?usp=sharing'), title: 'Aula 03 - Traumatismo Cranioencefálico (TCE)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FQbL_NiNU3IDJr55SEvweRy3w98N6drU/view?usp=sharing'), title: 'Aula 04 - Parada Cardiorrespiratória (PCR)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ixjYjKmgXXhb4nQE8fvBDZv9_Smcuwl5/view?usp=sharing'), title: 'Aula 05 - Meningite e Encefalite', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Apoio',
+                    items: [
+                        { title: 'AVCI 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1kbF3zAr0Sfw6ZgZAz7u-eJmM3piecuXA/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Brain 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1ACzeHaPKopQyU0Sa_CVRuWG4UND8Y1lg/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Hemorragia Subaracnóide', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1oXJfog6SUcW6ilzeNYZsERh3vioLdhDL/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'HIC 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/11w2lExO9LeU3TFzaPTO0TJ5UwyjpKtqA/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Manejo Após Parada Cardiorrespiratória - Diretrizes Recentes, Manejo Crítico, Controle de Temperatura e Prognóstico', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1rwIh1P7yXfS4JoDcM1HpdPb8dSxJecqG/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Manejo da Hemorragia Intracerebral', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1hHH4Ow7Eo4uGHmW8dBwM4rrvXbuK_Jsc/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Meningite e Encefalite', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1MQ72XNOR3VTcgOF0kxQe_8mR8M2KDx4a/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Status 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1paMWs7hlKuSSG4faJwMOCwX6uhu1YSPw/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Traumatismo Cranioencefálico', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/11MIsyPEJ-kJSBtaV6ATEmhDE3Hkq0ntL/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: Check Points
+        modulesData.push({
+            id: 'module_check_points',
+            title: 'Módulo - Check-Points',
+            path: 'Início / Check Points',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BNPGu228bzx6ThJKNRGAm_u8OgxvOpvt/view?usp=sharing'), title: 'Aula 01 - Check Point: Ventilação Mecânica + Pneumologia na MI (28/08)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1udjI_aiNHB2jw9-ZvdT5699Q7X5QHxq0/view?usp=sharing'), title: 'Aula 02 - Check Point: Cardiologia (T1) + Assincronia e AVE Isquêmico (T2) (04/09)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KdF-2aFUvT3nIweBpcCqX8rsSvkJwtq_/view?usp=sharing'), title: 'Aula 03 - Check Point: Crise Hipertensiva, Síncope e Bradicardia (11/09)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dTMRy-B1BSX98Dxj6kCiZvcgcfTD0g5c/view?usp=sharing'), title: 'Aula 04 - Check Point: Taquiarritmias + SCA (18/09)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GuWWZIpcYqU0BQt7Pyjt2pqZV0AMSIAS/view?usp=sharing'), title: 'Aula 05 - Check Point: Ventilação Mecânica (25/09)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wM-SrnIFb6FD86t199v8eVeJCSQB1dHO/view?usp=sharing'), title: 'Aula 06 - Check Point: (21/08)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CwVEWglgcBeyNmrTKt8O2DWQH3_4zF__/view?usp=sharing'), title: 'Aula 07 - Check Point: Ventilação Mecânica (02/10)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1g7Ea-PeqDjRYNBIgRadq9BkXJi1WA-Bn/view?usp=sharing'), title: 'Aula 08 - Check Point: (09/10)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VSD6Wuki55M71n0hlkDv2n7AdE3L97hz/view?usp=sharing'), title: 'Aula 09 - Check Point: (16/10)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NCJDnzLrvfSbOoY_tkXLoJBe9ir4O4u6/view?usp=sharing'), title: 'Aula 10 - Check Point: (23/10)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hYpdcRwdaIrRbAyrr29glGCT4xNcEhSK/view?usp=sharing'), title: 'Aula 11 - Check Point: (06/11)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1m8FqBvNlP0DH44XwSnzbcJUMZcRiLD7T/view?usp=sharing'), title: 'Aula 12 - Check Point: (30/10)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NYjycaTR9fj-GynRdV8BanwnP40WNhAE/view?usp=sharing'), title: 'Aula 13 - Check Point: (11/11)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uvXvvC_o2fYSPK6kLL5niml1kN2SkwCM/view?usp=sharing'), title: 'Aula 14 - Check Point: Resolução de Questões (19/11)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L0jgHkx32hTX_7pf3bhj1hOBqJuJ9yEu/view?usp=sharing'), title: 'Aula 15 - Check Point: (04/12)', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uOGfvtHII1l2Rs6RS_ojE5Kve6l-KpQz/view?usp=sharing'), title: 'Aula 16 - Check Point: (27/11)', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Ventilação Mecânica Aplicada à Medicina Intensiva
+        modulesData.push({
+            id: 'module_vm_intensiva',
+            title: 'Módulo - Ventilação Mecânica Aplicada à Medicina Intensiva',
+            path: 'Início / Ventilação Mecânica Intensiva',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/12gsDAOxuu7A0aq0NczMPnI3LMtH8tYYs/view?usp=sharing'), title: 'Aula 01 - Hiperóxia e Hipóxia', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10NLfIoMLsgMKIhieCoCHUoIWy79NdHHD/view?usp=sharing'), title: 'Aula 02 - Hiper e Hipocapnia', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jFq4GtaOzCxvDMkNdK2iZjOpgH7f2NBh/view?usp=sharing'), title: 'Aula 03 - Desmame', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16NTnKl_jhglUCI-anpGotqqtutihBjgQ/view?usp=sharing'), title: 'Aula 04 - Assincronia', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xPjxsIxINO9Wg2aaIO60Q2pmJTAbf73G/view?usp=sharing'), title: 'Aula 05 - Check Point: Ventilação Mecânica (21/08)', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Neurologia Aplicada à Medicina Intensiva
+        modulesData.push({
+            id: 'module_neuro_intensiva',
+            title: 'Módulo - Neurologia Aplicada à Medicina Intensiva',
+            path: 'Início / Neurologia Intensiva',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VbI3gnJ3fHVVaVb3UlGNgkBGH25sNF5J/view?usp=sharing'), title: 'Aula 01 - Hipertensão Intracraniana', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CzbWoHjsTuB4CexOLbMQkaG0NS3D41Hp/view?usp=sharing'), title: 'Aula 02 - Diagnóstico de Morte Encefálica', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/184elsJ9GEvnuWBFfdFiFF6Odp6ggqCsd/view?usp=sharing'), title: 'Aula 03 - Eletroencefalograma', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1w3seIRkqBGyZrBTn3QAqYx4oNdEqFOCQ/view?usp=sharing'), title: 'Aula 04 - Hemorragia Intracerebral', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_sG9LA-bSW-hm6PnpnF537Vt6ClDqppS/view?usp=sharing'), title: 'Aula 05 - Delirium Encefalopatia', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Apoio',
+                    items: [
+                        { title: 'AVCI 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1LSmg1IBGR_rcLFA8FzQ9q0hYs-h4bB8J/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Brain 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1avWioJaZU-FYUo09YtNZbVkWsLCxVgga/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Hemorragia Subaracnóide', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1HDo6h44urteovsFPPlZhsbtlsvSX4OtF/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'HIC 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1fuh3HJX2HRM8Td261fqnWJ-EHAaqECcv/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Manejo Após Parada Cardiorrespiratória - Diretrizes Recentes, Manejo Crítico, Controle de Temperatura e Prognóstico', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1SSUIq5LRWrNyOR-nzHxZM2bKuJ1qlthM/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Manejo da Hemorragia Intracerebral', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/14ZEtahcOdIj9yZBx_z6Vw8lY17tvmrbx/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Meningite e Encefalite', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1PvWedqf-RNmtfj-jhb1zYjji2O4Kb-Sd/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Status 2024', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1IaCYeVNu5fVbL9Uo1tKjHsw045Q1qaLH/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' },
+                        { title: 'Traumatismo Cranioencefálico', description: '', icon: 'fas fa-file-pdf', link: 'https://docs.google.com/presentation/d/1V1YeB8QUeLS9FFEjihi4EmD_k_lyVa-c/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true' }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo: ATLS
+        modulesData.push({
+            id: 'module_atls',
+            title: 'Módulo - ATLS',
+            path: 'Início / ATLS',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13agIjEcySRe77Tv62tlz0X20UF1mAPoF/view?usp=sharing'), title: 'Aula 01 - Manejo Farmacológico', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1j5OWjJYitAmN0ttxr3sLNq4dSfPCff7G/view?usp=sharing'), title: 'Aula 02 - Paciente Queimado Grave', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Eletrocardiograma
+        modulesData.push({
+            id: 'module_eletrocardiograma',
+            title: 'Módulo - Eletrocardiograma',
+            path: 'Início / Eletrocardiograma',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bQ3NZK9pu_FMIFe7N1QJBg59wdILo-J3/view?usp=sharing'), title: 'Aula 01 - ECG Normal e Artefatos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LcRzQ6o0r47CGchxavNJfhbMqdpyc3fF/view?usp=sharing'), title: 'Aula 02 - Oclusão Coronária Aguda', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/12UJeL9xfH0xAjO_m1cr9A0tHasa_G8sa/view?usp=sharing'), title: 'Aula 03 - Oclusão Coronariana Aguda e Síndromes com Supra', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fjYWI0fv8ySEnaLpKjVWdNCjklmRGp6T/view?usp=sharing'), title: 'Aula 04 - Ausência de Oclusão Coronária Aguda', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GTZDH_t9AX-tj1Oj8FpiPj1ou9KB1VkB/view?usp=sharing'), title: 'Aula 05 - Taquicardias de QRS Estreito', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14cMJRU-BsEwedMaip581K0onVUqOuIT2/view?usp=sharing'), title: 'Aula 06 - Taquicardias de QRS Largo', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XF-w4K0DEEFYgtHbFyFgoQoaKZ28QTpF/view?usp=sharing'), title: 'Aula 07 - Bradi-Arritmias', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10ThVtkmQ6_xJdY5X0n3nLc9eBkwKmYic/view?usp=sharing'), title: 'Aula 08 - ECG em Dispositivos Eletrônicos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tfEw4NUTBKgAZY2d95PC53ocWIVxXehd/view?usp=sharing'), title: 'Aula 09 - ECG em Cenários Clínicos', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DM_ok19jo3AIdSayzqbfvbreCK68ngLI/view?usp=sharing'), title: 'Aula 10 - Aplicando a MBE no Pronto Socorro', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Gastroenterologia
+        modulesData.push({
+            id: 'module_gastroenterologia',
+            title: 'Módulo - Gastroenterologia',
+            path: 'Início / Gastroenterologia',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1frFgv6nZpibqL7rD-NM95_KAz5vWDS1S/view?usp=sharing'), title: 'Aula 01 - Hemorragia Digestiva Alta Varicosa', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kR3sr6LZ5ooQ9PXuiyaMOOVXcCLJHKhW/view?usp=sharing'), title: 'Aula 02 - Peritonite Bacteriana Espontânea', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/128PSPCjlcvRHPMkDDt-EW6FgEIoRODOg/view?usp=sharing'), title: 'Aula 03 - Síndrome Hepatorrenal no Departamento de Emergência', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1qcgls1IpBhbyz2WcXO2aSknGnpL9DYPC/view?usp=sharing'), title: 'Aula 04 - Encefalopatia Hepática no Departamento de Emergência', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fTJVoJYIG2Mn1tXPMNg_2XxjHGikQBaK/view?usp=sharing'), title: 'Aula 05 - Diarreia Aguda no Departamento de Emergência', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1I-ZV5HLxsJEVnhInIw01HzWgblO98qZ5/view?usp=sharing'), title: 'Aula 06 - Náusea e Vômito', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xtkRxe6L7mF1_3UntrUI5YcygBKZP3NC/view?usp=sharing'), title: 'Aula 07 - Hemorragia Digestiva Alta', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Hematologia e Endocrinologia
+        modulesData.push({
+            id: 'module_hematologia_endocrinologia',
+            title: 'Módulo - Hematologia e Endocrinologia',
+            path: 'Início / Hematologia e Endocrinologia',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10I3TiD6CWrEQoKiIKnuya4h2hGrPUa-3/view?usp=sharing'), title: 'Aula 01 - Insuficiência Adrenal no Paciente Grave', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lvoinpDhgxJqdyRbYJOguXqBNI-7sfwG/view?usp=sharing'), title: 'Aula 02 - Hipocalcemias', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FfGTaW3bKswFOyWT-g2NcTBKoLx6B6o_/view?usp=sharing'), title: 'Aula 03 - Estado Mixedematoso no Departamento de Emergência', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iespWqp3Dcq25MKCDFMgvx3aKFU2-wyL/view?usp=sharing'), title: 'Aula 04 - Crise Tireotóxica', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Dermatologia + Oftalmologia + Reumatologia
+        modulesData.push({
+            id: 'module_dermato_oftalmo_reumato',
+            title: 'Módulo - Dermatologia + Oftalmologia + Reumatologia',
+            path: 'Início / Dermatologia, Oftalmologia, Reumatologia',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hhbsavfnmb9eUyZh1DWyNwLMNsARF1Pk/view?usp=sharing'), title: 'Aula 01 - Artrite Séptica no Pronto Socorro', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jamK5UkxMpaTLVn0jbwrqytFsX6AKegY/view?usp=sharing'), title: 'Aula 02 - Farmacodemia no Departamento de Emergência', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        // Módulo: Radiologia
+        modulesData.push({
+            id: 'module_radiologia',
+            title: 'Módulo - Radiologia',
+            path: 'Início / Radiologia',
+            videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1V6F5Hig4u1hWk6JPmsuIfJ3234-iMRR2/view?usp=sharing'), title: 'Aula 01 - Neurorradiologia: Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cCCGbZe72tQLdLPY6yYqYuV5AUtkjuBj/view?usp=sharing'), title: 'Aula 02 - Neurorradiologia: Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K9wE8xVkU7KPoBzuhoQQZwGgMJrFbzYB/view?usp=sharing'), title: 'Aula 03 - Neurorradiologia: Parte III', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IyKtjbeKG8V_lHTSJosawvRqgw2QXFXf/view?usp=sharing'), title: 'Aula 04 - Neurorradiologia: Trauma - Parte I', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1YuuM_daZ19LEiYPxCDOtcbR5Jc5ghIYa/view?usp=sharing'), title: 'Aula 05 - Neurorradiologia: Trauma - Parte II', description: '', icon: 'fas fa-play-circle' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1r9kmNTyjtnd15Lx104O33O6ZyYSDagRV/view?usp=sharing'), title: 'Aula 06 - Neurorradiologia: Miscelânea Emergência', description: '', icon: 'fas fa-play-circle' }
+            ],
+            materials: []
+        });
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/edit?usp=drive_link&ouid=116952115189052058854&rtpof=true&sd=true', '/preview'); // Adicionado substituição para links de apresentação também
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * Os materiais são renderizados como menus suspensos (detalhes/sumário).
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+            const contentPlayer = document.getElementById('contentPlayer');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement || !contentPlayer) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstContentItem = null; // Para carregar o primeiro item (vídeo ou material)
+
+            // Renderiza os vídeos
+            module.videos.forEach(item => {
+                const itemDescription = item.description || '';
+                // Define o primeiro vídeo como o item a ser carregado inicialmente no player
+                if (firstContentItem === null) {
+                    firstContentItem = { type: 'video', id: item.id, title: item.title };
+                }
+
+                videosHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadVideo('${item.id}', '${item.title}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            videosContainer.innerHTML = videosHtml;
+
+
+            // Renderiza os materiais como menus suspensos (details/summary)
+            materialsContainer.innerHTML = ''; // Limpa o container antes de adicionar os novos
+            module.materials.forEach(category => {
+                let categoryItemsHtml = '';
+                category.items.forEach(item => {
+                    const itemDescription = item.description || '';
+                    // Se não houver vídeos e este for o primeiro material do primeiro módulo, defina-o como o primeiro item de conteúdo
+                    if (firstContentItem === null && module.videos.length === 0) { // Prioriza vídeos, mas se não houver, usa o primeiro material
+                        firstContentItem = { type: 'material', link: item.link, title: item.title };
+                    }
+                    categoryItemsHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] my-2"
+                             onclick="loadMaterial('${item.link}', '${item.title}')" data-id="${item.link}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                materialsHtml += `
+                    <details class="material-category-details">
+                        <summary class="material-category-summary">
+                            <span>${category.categoryTitle}</span>
+                            <i class="fas fa-chevron-right icon"></i>
+                        </summary>
+                        <div class="material-items-container">
+                            ${categoryItemsHtml}
+                        </div>
+                    </details>
+                `;
+            });
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstContentItem) {
+                if (firstContentItem.type === 'video') {
+                    loadVideo(firstContentItem.id, firstContentItem.title);
+                } else if (firstContentItem.type === 'material') {
+                    loadMaterial(firstContentItem.link, firstContentItem.title);
+                }
+            } else {
+                contentPlayer.src = '';
+                lessonTitleElement.textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+
+            // Certifica-se de que a primeira categoria de materiais seja aberta por padrão, se houver
+            const firstMaterialDetails = materialsContainer.querySelector('details');
+            if (firstMaterialDetails) {
+                firstMaterialDetails.open = true;
+            }
+        }
+
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[18].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[18].id);
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

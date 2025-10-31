@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estratégia MED - Cirurgia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos gerais e específicos */
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; } /* Define a fonte padrão e a cor de fundo */
+
+        /* Estilos para o cabeçalho de cada item principal do menu */
+        .menu-item-header {
+            border: 1px solid #e2e8f0; /* Borda cinza claro */
+            padding: 0.75rem 1rem; /* Espaçamento interno */
+            border-radius: 0.375rem; /* Cantos arredondados */
+            background-color: white; /* Fundo branco */
+            cursor: pointer; /* Cursor de ponteiro */
+            transition: background-color 0.2s ease-in-out; /* Transição suave da cor de fundo */
+            display: flex; /* Layout flexível */
+            justify-content: space-between; /* Espaço entre o conteúdo e o ícone */
+            align-items: center; /* Alinha itens verticalmente */
+            margin-bottom: 0; /* Remove margem inferior padrão */
+            text-align: left; /* Alinha texto à esquerda */
+            width: 100%; /* Largura total */
+        }
+        .menu-item-header:hover { background-color: #f8fafc; } /* Cor de fundo ao passar o mouse */
+
+        /* Estilos para o conteúdo expansível de cada item principal */
+        .menu-item-content {
+            padding: 0.5rem 1rem 1rem 1rem; /* Espaçamento interno */
+            background-color: white; /* Fundo branco */
+            border-left: 1px solid #e2e8f0; /* Borda esquerda */
+            border-right: 1px solid #e2e8f0; /* Borda direita */
+            border-bottom: 1px solid #e2e8f0; /* Borda inferior */
+            border-bottom-left-radius: 0.375rem; /* Canto inferior esquerdo arredondado */
+            border-bottom-right-radius: 0.375rem; /* Canto inferior direito arredondado */
+            margin-bottom: 0.75rem; /* Margem inferior entre itens principais */
+        }
+
+        /* Estilos para o cabeçalho dos subitens (acordeão aninhado) */
+        .sub-accordion-header {
+            padding: 0.75rem 0.5rem; /* Espaçamento interno */
+            border-radius: 0.375rem; /* Cantos arredondados */
+            margin-top: 0.5rem; /* Margem superior */
+            background-color: #f8fafc; /* Fundo cinza muito claro */
+            display: flex; /* Layout flexível */
+            justify-content: space-between; /* Espaço entre o título e o ícone */
+            align-items: center; /* Alinha itens verticalmente */
+            cursor: pointer; /* Cursor de ponteiro */
+            width: 100%; /* Largura total */
+            text-align: left; /* Alinha texto à esquerda */
+            transition: background-color 0.2s ease-in-out; /* Transição suave */
+        }
+        .sub-accordion-header:hover { background-color: #f1f5f9; } /* Cor de fundo ao passar o mouse */
+        .sub-accordion-header:disabled { cursor: default; opacity: 0.6; } /* Estilo para cabeçalho desabilitado */
+
+        /* Estilos para o conteúdo dos subitens */
+        .sub-accordion-content {
+            padding-left: 1rem; /* Recuo à esquerda */
+            margin-top: 0.25rem; /* Margem superior */
+        }
+
+        /* Estilos para os detalhes de cada subitem (vídeo, pdf, etc.) */
+        .sub-item-details {
+            padding: 0.75rem 0.5rem 0.75rem 1rem; /* Espaçamento interno */
+            border-radius: 0.375rem; /* Cantos arredondados */
+            margin-top: 0.25rem; /* Margem superior */
+            background-color: #e2e8f0; /* Fundo cinza claro */
+            display: flex; /* Layout flexível */
+            justify-content: space-between; /* Espaço entre conteúdo e link de download */
+            align-items: center; /* Alinha itens verticalmente */
+            transition: background-color 0.2s ease-in-out; /* Transição suave */
+        }
+        /* Cursor pointer apenas para itens clicáveis (vídeo ou PDF/download que pode ser visualizado) */
+        .sub-item-details[data-drive-video-url],
+        .sub-item-details[data-download-url] { cursor: pointer; }
+        .sub-item-details[data-drive-video-url]:hover,
+        .sub-item-details[data-download-url]:hover { background-color: #cbd5e1; } /* Cor de fundo ao passar o mouse em itens clicáveis */
+
+        /* Estilo para item ativo (o que está sendo visualizado) */
+        .sub-item-details.is-active { background-color: #bfdbfe; } /* Fundo azul claro */
+        .sub-item-details.is-active .item-icon { color: #3b82f6; } /* Cor do ícone ativo (azul) - aplicado apenas ao ícone */
+
+        /* Container para o conteúdo do detalhe (ícone + texto) */
+        .item-details-content {
+            display: flex; /* Layout flexível */
+            align-items: center; /* Alinha itens verticalmente */
+            flex-grow: 1; /* Ocupa o espaço disponível */
+            margin-right: 0.5rem; /* Margem direita para separar do botão de download */
+            overflow: hidden; /* Esconde texto que transborda */
+        }
+        /* Ajuste de margem quando o ícone está presente */
+        .item-details-content .item-icon + .overflow-hidden { margin-left: 0.75rem; } /* Adiciona margem se o ícone existir antes do texto */
+
+        /* Estilo para o link/ícone de download */
+        .download-link {
+            display: inline-flex; /* Layout flexível */
+            align-items: center; /* Alinha ícone verticalmente */
+            color: #6b7280; /* Cor cinza */
+            transition: color 0.2s ease-in-out; /* Transição suave */
+            flex-shrink: 0; /* Não encolhe */
+        }
+        .download-link:hover { color: #1f2937; } /* Cor mais escura ao passar o mouse */
+
+        /* Estilo para o botão de marcar/desmarcar como concluído */
+        .status-toggle {
+            cursor: pointer; /* Cursor de ponteiro */
+            display: flex; /* Layout flexível */
+            align-items: center; /* Alinha itens verticalmente */
+            gap: 0.25rem; /* Espaço entre texto e ícone */
+            padding: 0.25rem; /* Espaçamento interno */
+            border-radius: 0.25rem; /* Cantos arredondados */
+            transition: background-color 0.2s ease-in-out; /* Transição suave */
+        }
+        .status-toggle:hover { background-color: #e5e7eb; } /* Fundo cinza claro ao passar o mouse */
+        .status-toggle .icon-completed { display: none; } /* Ícone de concluído escondido por padrão */
+        .status-toggle .icon-not-completed { display: inline-block; } /* Ícone de não concluído visível por padrão */
+        .status-toggle.is-completed .icon-completed { display: inline-block; } /* Mostra ícone de concluído */
+        .status-toggle.is-completed .icon-not-completed { display: none; } /* Esconde ícone de não concluído */
+
+        /* Container do vídeo/iframe responsivo (proporção 16:9) */
+        .video-container-yt {
+            position: relative; /* Necessário para posicionamento absoluto do iframe */
+            padding-bottom: 56.25%; /* Proporção 16:9 (9 / 16 * 100) */
+            height: 0; /* Altura zero, padding-bottom define a altura */
+            overflow: hidden; /* Esconde conteúdo que transborda */
+            max-width: 100%; /* Largura máxima */
+            background: #ccc; /* Fundo cinza enquanto carrega */
+            border-radius: 0.5rem; /* Cantos arredondados */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* Sombra */
+            margin-bottom: 1rem; /* Margem inferior */
+        }
+        .video-container-yt iframe {
+            position: absolute; /* Posicionamento absoluto dentro do container */
+            top: 0;
+            left: 0;
+            width: 100%; /* Largura total */
+            height: 100%; /* Altura total */
+            border: 0; /* Remove borda padrão do iframe */
+        }
+
+        /* Container do menu lateral com barra de rolagem */
+        .menu-container {
+            flex-shrink: 0; /* Não encolhe */
+            max-height: calc(100vh - 150px); /* Altura máxima calculada (altura da viewport - espaço estimado para header/padding) */
+            overflow-y: auto; /* Adiciona barra de rolagem vertical se necessário */
+        }
+        /* Estilização da barra de rolagem (apenas WebKit - Chrome, Safari) */
+        .menu-container::-webkit-scrollbar { width: 6px; }
+        .menu-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb:hover { background: #aaaaaa; }
+
+        /* Classe utilitária para esconder elementos */
+        .hidden { display: none; }
+
+        /* Classe utilitária para rotacionar ícones (chevron) */
+        .rotate-180 { transform: rotate(180deg); }
+        .transition-transform { transition: transform 0.2s ease-in-out; } /* Transição suave da rotação */
+
+        /* Estilos para o botão de like/curtir */
+        .like-button .heart-outline { display: inline-block; } /* Ícone de coração vazio visível por padrão */
+        .like-button .heart-filled { display: none; } /* Ícone de coração preenchido escondido por padrão */
+        .like-button.is-liked .heart-outline { display: none; } /* Esconde coração vazio quando curtido */
+        .like-button.is-liked .heart-filled { display: inline-block; color: #ef4444; /* Cor vermelha (red-500) */ } /* Mostra coração preenchido quando curtido */
+
+        /* Animação simples de "pulso" ao curtir */
+        .like-button.is-liked .heart-filled {
+            animation: pulse 0.3s ease-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white shadow-md py-3 px-4 md:px-8 sticky top-0 z-10">
+        <div class="container mx-auto max-w-full flex justify-between items-center">
+            <div class="flex items-center gap-4 flex-wrap">
+                <a href="estrategiamed.html" class="flex items-center text-sm text-gray-600 hover:text-gray-900">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Voltar
+                </a>
+                <h1 class="text-lg font-semibold text-gray-700">Cirurgia</h1>
+                <div class="relative inline-block text-left">
+                    <button type="button" class="inline-flex justify-center items-center w-full rounded-md border border-gray-300 shadow-sm px-3 py-1 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                        2025
+                        <svg class="-mr-1 ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="like-button" class="like-button text-gray-500 hover:text-red-500 transition-colors duration-200">
+                    <svg class="heart-outline w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <svg class="heart-filled w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto max-w-full p-4 md:p-8">
+        <div class="flex flex-row flex-wrap gap-6 md:gap-8">
+            <div class="w-full md:flex-1 min-w-[300px]">
+                <div class="video-container-yt">
+                   <iframe
+                       id="content-viewer" src="" title="Visualizador de Conteúdo"
+                       frameBorder="0"
+                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                       referrerpolicy="strict-origin-when-cross-origin"
+                       allowfullscreen>
+                   </iframe>
+                </div>
+                <p id="content-description" class="mt-4 text-gray-600 text-sm md:text-base">
+                    Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar.
+                </p>
+            </div>
+
+            <div class="w-full md:w-[350px] menu-container mt-6 md:mt-0 pr-2">
+                <template id="subitem-details-template">
+                    <div class="sub-item-details">
+                        <div class="item-details-content">
+                            <div class="overflow-hidden">
+                                <div class="item-title text-sm font-medium text-gray-800 truncate">Placeholder Title</div>
+                                <div class="item-subtitle text-xs text-gray-500">Estratégia Educacional</div>
+                            </div>
+                        </div>
+                        <a href="#" class="download-link flex-shrink-0" title="Baixar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </a>
+                    </div>
+                </template>
+
+                <div id="menu-items-list">
+                    </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Dados e Configurações ---
+        // Dados dos módulos (serão atualizados com títulos e subitens)
+        // URLs e títulos específicos dos subitens são placeholders e precisam ser preenchidos
+        const menuItemsData = [
+            // Módulo 1: Trauma - Avaliação Inicial, Vias Aéreas e Trauma Torácico (Contagem Atualizada)
+            {
+                "title": "Trauma - Avaliação Inicial, Vias Aéreas e Trauma Torácico",
+                "description": "Aula sobre Avaliação Inicial, Vias Aéreas e Trauma Torácico.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Avaliação Inicial - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1mWUADqKM0C6I-i7RyzX8ItrhShDYFHMF/preview?usp=drive_link", "downloadUrl": "#dl-trauma1-v1" },
+                        { "title": "Vias Aéreas no Trauma", "driveVideoUrl": "https://drive.google.com/file/d/14wialSmeYsJXkHN8sEVXPmbda4Eb5qDT/preview?usp=drive_link", "downloadUrl": "#dl-trauma1-v2" },
+                        { "title": "Trauma Torácico - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1rSZrHImxN13hzGXRTOCUSR-JC360mNOV/preview?usp=drive_link", "downloadUrl": "#dl-trauma1-v3" },
+                        { "title": "Trauma Torácico - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1fcYtyAC4blW4beSPdYzFn7w61Ozv3Ybf/preview?usp=drive_link", "downloadUrl": "#dl-trauma1-v4" },
+                        { "title": "Aula Resumo: ATLS - Atendimento Inicial e Vias Aéreas", "driveVideoUrl": "https://drive.google.com/file/d/1fmf0JiBYy7fq5KrznjHzecKupoq6gLjr/preview?usp=sharing", "downloadUrl": "https://drive.google.com/file/d/1fmf0JiBYy7fq5KrznjHzecKupoq6gLjr/preview?usp=sharing" },
+                        { "title": "Aula Resumo: ATLS - Trauma Torácico", "driveVideoUrl": "https://drive.google.com/file/d/1efaMcGFkV87Uy-lm6hBRbdgBOkzvoySB/preview?usp=sharing", "downloadUrl": "https://drive.google.com/file/d/1efaMcGFkV87Uy-lm6hBRbdgBOkzvoySB/preview?usp=sharing" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD 1 - Trauma: Avaliação Inicial, Vias Aéreas e Trauma Torácico", "downloadUrl": "https://drive.google.com/file/d/1UnwPuxtu5NF9NvO6jJ5EbHkV2Mm7R4lz/preview?usp=sharing" },
+                        { "title": "LD 2 - Trauma: Avaliação Inicial, Vias Aéreas e Trauma Torácico", "downloadUrl": "https://drive.google.com/file/d/1Ecj2rYuSOK8mq0wss7_-p7Cm1REkAssl/preview?usp=sharing" },
+                        { "title": "Flashcard 1 - Trauma: Avaliação Inicial, Vias Aéreas e Trauma Torácico", "downloadUrl": "https://drive.google.com/file/d/1nGia8pqC5XHt81JyS30eNIrGbIipOV-N/preview?usp=sharing" },
+                        { "title": "Flashcard 2 - Trauma: Avaliação Inicial, Vias Aéreas e Trauma Torácico", "downloadUrl": "https://drive.google.com/file/d/18k0yvB2SRPofsoEWuX25UtA2PE2uInxU/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Trauma: Avaliação Inicial, Vias Aéreas e Trauma Torácico", "downloadUrl": "https://drive.google.com/file/d/1FcRcoH2Yn0PI5lpcs6X81bGLcKpFZykQ/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Trauma: Avaliação Inicial (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1ty7aE2VIiQe5sTZnh0vb-yOyogvDM-IW/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma: Avaliação Inicial (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1ort1BGNa3Xoci0rkWklvn11CXSRZYew9/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Trauma: Avaliação Inicial, Vias Aéreas e Trauma Torácico", "downloadUrl": "https://drive.google.com/file/d/13mbsci1v-8JHHzqCRFULt9hheV9gmuUO/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Trauma - Choque",
+                "description": "Aula sobre Choque no Trauma.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Choque no Trauma - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/127ldFcUEowuMEMnbNjoVT_dT6EtwIDCY/preview?usp=drive_link", "downloadUrl": "#dl-choque-v1" },
+                        { "title": "Choque no Trauma - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1pI7HxEqm9IxAbkB6g2zJ5cNDUskeieBz/preview?usp=drive_link", "downloadUrl": "#dl-choque-v2" },
+                        { "title": "Choque no Trauma - Parte III", "driveVideoUrl": "https://drive.google.com/file/d/1uBe0YUtWeclsLlhLQrSAkYfradlVXUlu/preview?usp=drive_link", "downloadUrl": "#dl-choque-v3" },
+                        { "title": "Choque no Trauma - Parte IV", "driveVideoUrl": "https://drive.google.com/file/d/1yTPKzlqH1XFjUKLxJJxFf0ZjjkO_aA-1/preview?usp=drive_link", "downloadUrl": "#dl-choque-v4" },
+                        { "title": "Choque no Trauma - Parte V", "driveVideoUrl": "https://drive.google.com/file/d/1j0iK1ZtJ7RmJ5W67gCItMKM0Bvnm5Amv/preview?usp=drive_link", "downloadUrl": "#dl-choque-v5" },
+                        { "title": "Aula Resumo: ATLS - Choque", "driveVideoUrl": "https://drive.google.com/file/d/1J3LcJCjZoRH72cssp00fkcU3o_8f67Ya/preview?usp=sharing", "downloadUrl": "https://drive.google.com/file/d/1J3LcJCjZoRH72cssp00fkcU3o_8f67Ya/preview?usp=sharing" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Trauma: Choque", "downloadUrl": "https://drive.google.com/file/d/1S5f87lieshO-_9dvP17J5rEyp8cojHmj/preview?usp=sharing" },
+                        { "title": "Flashcard - Trauma: Choque", "downloadUrl": "https://drive.google.com/file/d/1_Xv_SeZWu0jqh3ygVragQ_wUqGGbSTLl/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Trauma: Choque", "downloadUrl": "https://drive.google.com/file/d/1aJRloxlDF3rH-Znrsoq0xPAtTlUm9m3f/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Trauma: Choque (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1-vAgeElDVvbI9z5GmMhh21CVXaJl68bI/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma: Choque (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1ThU2iionOLYbO5mokTUxzwlL6Qr_PilM/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma: Choque (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1xD7Gn_ws7TpYMcMPDZV2-Q7aE2Ugkc_C/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma: Choque (Parte 4)", "downloadUrl": "https://drive.google.com/file/d/1AzMMZd42rIb44A-xQnHt-1OCNzGS5Ezw/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma: Choque (Parte 5)", "downloadUrl": "https://drive.google.com/file/d/1MPP8qXQMyZtqlRcUOBp9FCSvn4Fdxi4-/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Trauma: Choque", "downloadUrl": "https://drive.google.com/file/d/1iZYVz4S9TMv1pG72N9ASBuZHxq2Bw4BF/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Trauma Abdominal e Pélvico",
+                "description": "Aula sobre Trauma Abdominal e Pélvico.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Trauma Abdominal - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1bp9tCKBAsEaNKykkLtSkWnbRTcjAwE6K/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v1" },
+                        { "title": "Trauma Abdominal - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1m1A9IWTElB6sEMFeq6-juYw0lxsgu09s/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v2" },
+                        { "title": "Trauma Abdominal - Parte III", "driveVideoUrl": "https://drive.google.com/file/d/1VXAz4OUg6mzg0yYw80f1HV5aBLMMpq74/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v3" },
+                        { "title": "Trauma Abdominal - Parte IV", "driveVideoUrl": "https://drive.google.com/file/d/1tgA0QlHINZrTlfhApObq-mvHyWL8Y2DL/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v4" },
+                        { "title": "Trauma Abdominal - Parte V", "driveVideoUrl": "https://drive.google.com/file/d/1GdEa-fzEUteoWjPFP-xfC67oCGIhCC_n/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v5" },
+                        { "title": "Trauma Abdominal - Parte VI", "driveVideoUrl": "https://drive.google.com/file/d/1i4VkyhPVnfHZt6AH-oWk6hCvezReUt9i/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v6" },
+                        { "title": "Trauma Abdominal - Parte VII", "driveVideoUrl": "https://drive.google.com/file/d/1_xdoCNn4Gb61N9gu3rXVc4DqyIBSOmlE/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v7" },
+                        { "title": "Trauma Abdominal - Parte VIII", "driveVideoUrl": "https://drive.google.com/file/d/1uorib5XxaLMoGB6HPrEiSLHJ__IjNdff/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v8" },
+                        { "title": "Trauma Abdominal - Parte IX", "driveVideoUrl": "https://drive.google.com/file/d/11XG8VCeA1v4ZSNI9F9HsJyQVYwWc06Xm/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v9" },
+                        { "title": "Trauma Pélvico - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1i1SiHR45y4TxkcDzwNWbiCPl12rvAFnX/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v10" },
+                        { "title": "Trauma Pélvico - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1gLJPpkkP3c-2lnKug72odAZW263uHiuo/preview?usp=drive_link", "downloadUrl": "#dl-trabdom-v11" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Trauma Abdominal e Pélvico", "downloadUrl": "https://drive.google.com/file/d/1P5PKAAHY7XutS5kJvyvLaTovvPHMvT9V/preview?usp=sharing" },
+                        { "title": "Flashcard - Trauma Abdominal e Pélvico", "downloadUrl": "https://drive.google.com/file/d/1Y5OLutLH2iF3mQcZng8-HhwpYZq1hTbW/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Trauma Abdominal e Pélvico", "downloadUrl": "https://drive.google.com/file/d/1eBjmGSBdcNNRIpHKhuUhjKpLcT3Hqjap/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Trauma Abdominal (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1ELP0uUEFOrMpjyPzwdKulwBYwBkdbEVc/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma Abdominal (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1x_vwfJjBE-AF0GDMuwUEvDKoak5CMFgL/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma Abdominal (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1cBSgL1Er1lPdR_rNUHFZoHdwZKan_Z8L/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma Abdominal (Parte 4)", "downloadUrl": "https://drive.google.com/file/d/1u8EEspc545xemgbIrNsYxJHOTO0X7JEC/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Trauma Abdominal e Pélvico", "downloadUrl": "https://drive.google.com/file/d/1crK057lG7t_SWoDGnUEmm9qYKnp2Hsl_/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Trauma de Face e Cervical",
+                "description": "Aula sobre Trauma de Face e Cervical.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Trauma de Face - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1ccF0uSbo4M8vcSexNlVQvlPSq1Q5mdMB/preview?usp=drive_link", "downloadUrl": "#dl-facecerv-v1" },
+                        { "title": "Trauma de Face - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/16XdejgTWhccYrNLnhdHI-CJRumY9nrNl/preview?usp=drive_link", "downloadUrl": "#dl-facecerv-v2" },
+                        { "title": "Trauma Cervical - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1Q-6RlE0ndcRPn_hIxnCyXVT-Ua_p5Igb/preview?usp=drive_link", "downloadUrl": "#dl-facecerv-v3" },
+                        { "title": "Trauma Cervical - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1aXzGhVlFnWe7mk1c83n4OyC08abRrUhj/preview?usp=drive_link", "downloadUrl": "#dl-facecerv-v4" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Trauma de Face e Cervical", "downloadUrl": "https://drive.google.com/file/d/1JDCwNOXpVul1LDW98QH-JxIIO9HDNvWL/preview?usp=sharing" },
+                        { "title": "Flashcard - Trauma de Face e Cervical", "downloadUrl": "https://drive.google.com/file/d/1B8Z8HAVh5r_UPyhZ504ha5a2yxHvEJd4/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Trauma de Face e Cervical", "downloadUrl": "https://drive.google.com/file/d/1NCrQT4-yCXMTKX6vuphvyK2CHcZRlQ33/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Trauma de Face", "downloadUrl": "https://drive.google.com/file/d/16JEr0o89Q5UMUm-ar03sGYGhfY-9QQWd/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma Cervical", "downloadUrl": "https://drive.google.com/file/d/1hifhoOUsYSL_se7UsxsP0llpN2QSBE_7/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Trauma de Face e Cervical", "downloadUrl": "https://drive.google.com/file/d/1--xcHdUIaJh3BYwI8bI2Fw7TyTaCcDPG/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Trauma Vascular de Extremidades e Musculoesquelético",
+                "description": "Aula sobre Trauma Vascular de Extremidades e Musculoesquelético.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Trauma Vascular Ext. - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1Osz67JUljKNNVBl3LJFETbkw6LmvekL0/preview?usp=drive_link", "downloadUrl": "#dl-vascmsk-v1" },
+                        { "title": "Trauma Vascular Ext. - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1ihGyRMb7L6l6Xuy_AVbEJ8gtEhHnuZq5/preview?usp=drive_link", "downloadUrl": "#dl-vascmsk-v1b" },
+                        { "title": "Trauma Musculoesquelético", "driveVideoUrl": "https://drive.google.com/file/d/1VX9EAIqtd0D66Hxj--UoZlhFQI7GRf52/preview?usp=drive_link", "downloadUrl": "#dl-vascmsk-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Trauma Vascular de Extremidades e Musculoesquelético", "downloadUrl": "https://drive.google.com/file/d/1DR2RNiUNvdczKFDuuJzAvgYiMz_qe8Of/preview?usp=sharing" },
+                        { "title": "Flashcard - Trauma Vascular de Extremidades e Musculoesquelético", "downloadUrl": "https://drive.google.com/file/d/1i-id6RpRT-CjaVEBvM3vyRj48YEMZilo/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Trauma Vascular de Extremidades e Musculoesquelético", "downloadUrl": "https://drive.google.com/file/d/1Fqsq_GBcNfxI34SOTgPfNAPPN9m62mV3/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Trauma Vascular de Extremidades e Musculoesquelético", "downloadUrl": "https://drive.google.com/file/d/1pQ1SB0bhFsXfYgHE4iPFW6MTL2jbEzgv/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Trauma Ext/MSK", "downloadUrl": "https://drive.google.com/file/d/1fuQQ5kMg2Tu0O_UQYECZd9SlZT2Bb_5A/preview?usp=drive_link" }
+                    ]
+                }
+            },
+            {
+                "title": "Trauma - Populações Especiais (Pediátrico, Gestante e Idosos)",
+                "description": "Aula sobre Trauma em Populações Especiais.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Trauma Pediátrico", "driveVideoUrl": "https://drive.google.com/file/d/1kSPWLaD0uG1iUj4OsXHq4PCmUrkjkyYD/preview?usp=drive_link", "downloadUrl": "#dl-popesp-v1" },
+                        { "title": "Trauma na Gestante", "driveVideoUrl": "https://drive.google.com/file/d/1TR2FF2Wga3rjpQ6tkbCaEeNqJZEBDTLX/preview?usp=drive_link", "downloadUrl": "#dl-popesp-v2" },
+                        { "title": "Trauma no Idoso", "driveVideoUrl": "https://drive.google.com/file/d/132-S8CFWCv9CXNwC2jgKZo4Kd6M4iV7r/preview?usp=drive_link", "downloadUrl": "#dl-popesp-v3" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Trauma: Populações Especiais", "downloadUrl": "https://drive.google.com/file/d/1QTmj8_DvJ9DPKPerAHaGI4TaQw4jovhp/preview?usp=sharing" },
+                        { "title": "Flashcard - Trauma: Populações Especiais", "downloadUrl": "https://drive.google.com/file/d/1lL8Z9l2JXWydeAE8Fj9nHKfp2Wdkyz6m/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Trauma: Populações Especiais", "downloadUrl": "https://drive.google.com/file/d/102rcw41FDb68aJJs3SOH3ySDKbGTX13a/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Trauma: Populações Especiais", "downloadUrl": "https://drive.google.com/file/d/1smrc5w100meVRneWXJBgExTg-2UwWq0k/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Trauma: Populações Especiais", "downloadUrl": "https://drive.google.com/file/d/1HnY5ZaNeMlB8si2CQaODEV7KkI3isd33/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Queimaduras e Trauma Elétrico",
+                "description": "Aula sobre Queimaduras e Trauma Elétrico.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Queimaduras - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1H-9pQlcm_uRKZ_RStIV_JTCk9Gnr4X0N/preview?usp=drive_link", "downloadUrl": "#dl-queim-v1" },
+                        { "title": "Queimaduras - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1IrwhC57mLpZqs3PECNSZIN_EkWoVBrkY/preview?usp=drive_link", "downloadUrl": "#dl-queim-v2" },
+                        { "title": "Queimaduras - Parte III", "driveVideoUrl": "https://drive.google.com/file/d/1nZUVL1ysc0RF5n_JaOSygehkYU5eB3RC/preview?usp=drive_link", "downloadUrl": "#dl-queim-v3" },
+                        { "title": "Queimaduras - Parte IV", "driveVideoUrl": "https://drive.google.com/file/d/1zDvzEQ2-WLFqg-lf9qy_2ql-l39pVito/preview?usp=drive_link", "downloadUrl": "#dl-queim-v4" },
+                        { "title": "Queimaduras - Parte V", "driveVideoUrl": "https://drive.google.com/file/d/1i83uVrXorpPmutQnitcwo4rikvzsXRxA/preview?usp=drive_link", "downloadUrl": "#dl-queim-v5" },
+                        { "title": "Trauma Elétrico", "driveVideoUrl": "https://drive.google.com/file/d/1HvjnsBddArUepSel4MNDpQj5j-zOI-il/preview?usp=drive_link", "downloadUrl": "#dl-queim-v6" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Queimaduras e Trauma Elétrico", "downloadUrl": "https://drive.google.com/file/d/14RBqV1DI9Ql0LQIZ8KO_JwCcHnrK0-X6/preview?usp=sharing" },
+                        { "title": "Flashcard - Queimaduras e Trauma Elétrico", "downloadUrl": "https://drive.google.com/file/d/1n4AakXFE9cv927djd7oApTDXB_2u58ta/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Queimaduras e Trauma Elétrico", "downloadUrl": "https://drive.google.com/file/d/1CI7t-VveXKY21MQoOevk4PBnH594ew5n/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Queimaduras", "downloadUrl": "https://drive.google.com/file/d/1MpAQ9i8aeZlI4_eN-PwYECquz0r9ER0e/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Trauma Elétrico", "downloadUrl": "https://drive.google.com/file/d/1IffZqNhleFMEQbzG-p_52tBRjnpuVvVl/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Queimaduras e Trauma Elétrico", "downloadUrl": "https://drive.google.com/file/d/1qd5QwhctP8cwhkiuHFrBYXZubmv38sLZ/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Resposta Endócrino-Metabólica ao Trauma",
+                "description": "Aula sobre Resposta Endócrino-Metabólica ao Trauma.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Resposta Metabólica - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1uNYBABkvpoByY_ZwOGfzoZweM3l25VxT/preview?usp=drive_link", "downloadUrl": "#dl-respmetab-v1" },
+                        { "title": "Resposta Metabólica - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1nsdUoSNwtZrikUwPZvVNhQEyB11nO402/preview?usp=drive_link", "downloadUrl": "#dl-respmetab-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Resposta Endócrino-Metabólica ao Trauma", "downloadUrl": "https://drive.google.com/file/d/14oz_NAOzboTJddtmDVfm-h4mOyK4Kzz5/preview?usp=sharing" },
+                        { "title": "Flashcard - Resposta Endócrino-Metabólica ao Trauma", "downloadUrl": "https://drive.google.com/file/d/1mwt4O10RxkV8NVSs-g6F96aZuDvfSw0p/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Resposta Endócrino-Metabólica ao Trauma", "downloadUrl": "https://drive.google.com/file/d/16UvJq1HHkIuVO4OwtrfJccB33Tr372by/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Resposta Endócrino-Metabólica ao Trauma", "downloadUrl": "https://drive.google.com/file/d/1y_Ogfj5aqM5JDHGIKNyDMRQ_jMnxcK6Y/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Resposta Endócrino-Metabólica ao Trauma", "downloadUrl": "https://drive.google.com/file/d/1zSEp7H8YHtgR2gQxrUmjpVi0uQ3w30ht/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Urgências Abdominais - Abdome Agudo",
+                "description": "Aula sobre Abdome Agudo.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Abdome Agudo - Avaliação", "driveVideoUrl": "https://drive.google.com/file/d/1IHT6_T7ph3pwJApM7jCp1K70ZNJw021X/preview?usp=drive_link", "downloadUrl": "#dl-abdagu-v1" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Urgências Abdominais: Abdome Agudo", "downloadUrl": "https://drive.google.com/file/d/1WfbGesUx4F8MH8ocbKBV16cZUjuFbDti/preview?usp=sharing" },
+                        { "title": "Flashcard - Urgências Abdominais: Abdome Agudo", "downloadUrl": "https://drive.google.com/file/d/1ka2lSVth26pO_xHrRLC3e1St_LYk3gJx/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Urgências Abdominais: Abdome Agudo", "downloadUrl": "https://drive.google.com/file/d/1E4cXFPfRu8PZDeeHJCdxfH7zf1sTsd2V/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Urgências Abdominais: Abdome Agudo", "downloadUrl": "https://drive.google.com/file/d/1gkeBSGj51QoAaB2K_L6LCMEw9AsjVPrX/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Urgências Abdominais: Abdome Agudo", "downloadUrl": "https://drive.google.com/file/d/1IDtiN4wM1Stx5bFAnhufmgTwZhJjpyv1/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Inflamatório - Apendicite Aguda",
+                "description": "Aula sobre Apendicite Aguda.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Apendicite Aguda - Diagnóstico", "driveVideoUrl": "https://drive.google.com/file/d/1VxbYkx1YTYyL6f2v1WwUjjBl89CIO8tK/preview?usp=drive_link", "downloadUrl": "#dl-apendicite-v1" },
+                        { "title": "Apendicite Aguda - Tratamento", "driveVideoUrl": "https://drive.google.com/file/d/1FAo-aGZedz4BeRMTfKBy3o9DHm_3FPzx/preview?usp=drive_link", "downloadUrl": "#dl-apendicite-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo Inflamatório: Apendicite Aguda", "downloadUrl": "https://drive.google.com/file/d/1eF6jn_BbMiJmwObCFpyf92Ddxf2iIaTc/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo Inflamatório: Apendicite Aguda", "downloadUrl": "https://drive.google.com/file/d/13NL9RVNAFsCZ6f81p_QQytfzspNvunuW/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo Inflamatório: Apendicite Aguda", "downloadUrl": "https://drive.google.com/file/d/1Ii_WBkr7wWom7jUzlaUciY85jLpZzdYO/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Apendicite Aguda (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1OfAJ8kbAKRu20vB78pyCOL4TssBFCtpK/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Apendicite Aguda (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1smJ-R3wUM__2APcLBhz1jRGFccgw-vjE/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo Inflamatório: Apendicite Aguda", "downloadUrl": "https://drive.google.com/file/d/1cLs1X93gG5DJ96KComFAuxfCJY5Lw-aw/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Inflamatório - Colecistite e Colangite Aguda",
+                "description": "Aula sobre Colecistite e Colangite Aguda.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Colecistite Aguda - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1dpJr19HYDZyq19ejgr0C6yrjhkl2gtre/preview?usp=drive_link", "downloadUrl": "#dl-colecolan-v1" },
+                        { "title": "Colecistite Aguda - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1pUvLkEkyiRKUxuNGK0kue3LqzAU1C0uS/preview?usp=drive_link", "downloadUrl": "#dl-colecolan-v2" },
+                        { "title": "Colangite Aguda - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/18PQqf92M8DtQ-isDFsH8q50cGq1CJEku/preview?usp=drive_link", "downloadUrl": "#dl-colecolan-v3" },
+                        { "title": "Colangite Aguda - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1wsXS6UuodljU7eb2X4iqtm2PzM_Ol9JZ/preview?usp=drive_link", "downloadUrl": "#dl-colecolan-v4" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo: Colecistite e Colangite Aguda", "downloadUrl": "https://drive.google.com/file/d/1ULa3xFuY8GOgKJmianJnvqtzs_APScJZ/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo: Colecistite e Colangite Aguda", "downloadUrl": "https://drive.google.com/file/d/1XGFy6QQch9NdVezpvRkGgsxTwvtxHlu8/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo: Colecistite e Colangite Aguda", "downloadUrl": "https://drive.google.com/file/d/1PRkALSTvbspjnLHzSuqUNFHJp1t6BjUb/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Colecistite e Colangite (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1dzpKyIeMWGMUdLUTmf-0ns3uDSZuGaoW/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Colecistite e Colangite (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1CrKw4zXMxWwCbKJJNd6bEyWUXHKivd_c/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo: Colecistite e Colangite Aguda", "downloadUrl": "https://drive.google.com/file/d/11zxIAI6l3EE_NeMH1SygMUOI3BAAdios/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Inflamatório - Diverticulite Aguda",
+                "description": "Aula sobre Diverticulite Aguda.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Diverticulite Aguda - Diagnóstico", "driveVideoUrl": "https://drive.google.com/file/d/1t1GmSvy0I9Qz3ZGCiaAvR8BoUIFzkKZY/preview?usp=drive_link", "downloadUrl": "#dl-divert-v1" },
+                        { "title": "Diverticulite Aguda - Tratamento", "driveVideoUrl": "https://drive.google.com/file/d/13232XzgIQNWPEz0sOQuFcFCWlvahgcvw/preview?usp=drive_link", "downloadUrl": "#dl-divert-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo: Diverticulite Aguda", "downloadUrl": "https://drive.google.com/file/d/1xPueOkofj63KUKjPkBZsOlxAJnt4G05_/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo: Diverticulite Aguda", "downloadUrl": "https://drive.google.com/file/d/1rw9AAwkbopFefsY6FqvBoJK9OjtULhHm/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo: Diverticulite Aguda", "downloadUrl": "https://drive.google.com/file/d/1Spm51eDKevOuqtFVCSAdTs94Lh6UpIfQ/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Abdome Agudo: Diverticulite Aguda", "downloadUrl": "https://drive.google.com/file/d/1tdS_5Y3cJx7-5QBMt8a2Vx3DmuF-LYZQ/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo: Diverticulite Aguda", "downloadUrl": "https://drive.google.com/file/d/1zHMKLK6jNOIizyt1fg73ls0IZdFcai7u/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Vascular",
+                "description": "Aula sobre Abdome Agudo Vascular.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Isquemia Mesentérica Aguda", "driveVideoUrl": "https://drive.google.com/file/d/1L5_x8VfRIgSTtsewb83g4HZx5kdx1TV6/preview?usp=drive_link", "downloadUrl": "#dl-abdvasc-v1" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo Vascular", "downloadUrl": "https://drive.google.com/file/d/1fzxyhbKE3ReSwVrCxXqEV9fmaMHuhbdM/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo Vascular", "downloadUrl": "https://drive.google.com/file/d/1giT_hAs20QdN-AMfCrxuuidVLau8JtPN/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo Vascular", "downloadUrl": "https://drive.google.com/file/d/1ioGilMe4kBWAkc5tRP1ulFuLMtaK4wxf/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Abdome Agudo Vascular", "downloadUrl": "https://drive.google.com/file/d/1xmWXPZY2_CefMnR5ytOLl30SvgkX8zFL/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo Vascular", "downloadUrl": "https://drive.google.com/file/d/1_Ro_NDbXDdDpBJHBVuUqdPypxdhvh5KZ/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Hemorrágico",
+                "description": "Aula sobre Abdome Agudo Hemorrágico.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Abdome Agudo Hemorrágico", "driveVideoUrl": "https://drive.google.com/file/d/1fdbtKb3bSoWr06yGju99uADkeM_zfNNp/preview?usp=drive_link", "downloadUrl": "#dl-abdhem-v1" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo Hemorrágico", "downloadUrl": "https://drive.google.com/file/d/12IuxgO5LDaCuCtY_bUaguzqlCZv0ua50/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo Hemorrágico", "downloadUrl": "https://drive.google.com/file/d/1gtppeSKl4_tf6kS1wVob3qk4mDZcbZG0/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo Hemorrágico", "downloadUrl": "https://drive.google.com/file/d/1AjyARhbgYRhZx1XxF9G6Xjlc5eK-bSKP/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Abdome Agudo Hemorrágico", "downloadUrl": "https://drive.google.com/file/d/1aPaaQ1LH8aT1fMEx2u6HnU3daaV-hEXw/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo Hemorrágico", "downloadUrl": "https://drive.google.com/file/d/1uZLgAJLn0RUOmPGqD-nYEI-WonzkbCxz/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Perfurativo",
+                "description": "Aula sobre Abdome Agudo Perfurativo.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Abdome Agudo Perfurativo - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1R4zhz9PySd9pobZBaPLTo1Pe-mrpcEZR/preview?usp=drive_link", "downloadUrl": "#dl-abdperf-v1" },
+                        { "title": "Abdome Agudo Perfurativo - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1X0hWySM871C2UUimeoK4CFAI5irmL1MV/preview?usp=drive_link", "downloadUrl": "#dl-abdperf-v2" },
+                        { "title": "Abdome Agudo Perfurativo - Parte III", "driveVideoUrl": "https://drive.google.com/file/d/1QGcjd2inGxwwSpqj4Y-XvIB3odCRV5--/preview?usp=drive_link", "downloadUrl": "#dl-abdperf-v3" },
+                        { "title": "Abdome Agudo Perfurativo - Parte IV", "driveVideoUrl": "https://drive.google.com/file/d/1mSSDlizgwQJNQ-ncq-6H_NDTrmOqsH7i/preview?usp=drive_link", "downloadUrl": "#dl-abdperf-v4" },
+                        { "title": "Abdome Agudo Perfurativo - Parte V", "driveVideoUrl": "https://drive.google.com/file/d/1LtCcir9DHJ9sjBZo1S5GUZX8TH9HjIfy/preview?usp=drive_link", "downloadUrl": "#dl-abdperf-v5" },
+                        { "title": "Abdome Agudo Perfurativo - Parte VI", "driveVideoUrl": "https://drive.google.com/file/d/1e72WhYHa7bPuwUNgRbi4sLGfzDSCGHLr/preview?usp=drive_link", "downloadUrl": "#dl-abdperf-v6" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo Perfurativo", "downloadUrl": "https://drive.google.com/file/d/1imnCdLJjYzs2FTXY2rWfr7wgEk1WOKRf/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo Perfurativo", "downloadUrl": "https://drive.google.com/file/d/1OHMFhOwVXcLkkkHQ8vCy_O3gaUcYE_3r/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo Perfurativo", "downloadUrl": "https://drive.google.com/file/d/100ujLSsgpN28rmSfKCPAGKaPuUxuT9eG/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Abdome Agudo Perfurativo", "downloadUrl": "https://drive.google.com/file/d/1ShcKMa84GFYV1eRC4pSGT8DkyXUbrAa_/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo Perfurativo", "downloadUrl": "https://drive.google.com/file/d/1o0UpEQOcZgQnqkB9WRqmc150Xs9_oQyL/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Abdome Agudo Obstrutivo",
+                "description": "Aula sobre Abdome Agudo Obstrutivo.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Obstrução Intestinal - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1n4RRTi3T-Hb4BUwdcYI0FilbIkl6Rwti/preview?usp=drive_link", "downloadUrl": "#dl-abdobst-v1" },
+                        { "title": "Obstrução Intestinal - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1ZXj9gF9Ye6g88sBTPADdM8-f5rfRX9Si/preview?usp=drive_link", "downloadUrl": "#dl-abdobst-v2" },
+                        { "title": "Obstrução Intestinal - Parte III", "driveVideoUrl": "https://drive.google.com/file/d/1W36gEuYI9H646j8r0euolX1QrqfdAZ8X/preview?usp=drive_link", "downloadUrl": "#dl-abdobst-v3" },
+                        { "title": "Obstrução Intestinal - Parte IV", "driveVideoUrl": "https://drive.google.com/file/d/1P-8qJKU_dL6KzWgPI4jJpn_jDFf2TWcZ/preview?usp=drive_link", "downloadUrl": "#dl-abdobst-v4" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Abdome Agudo Obstrutivo", "downloadUrl": "https://drive.google.com/file/d/1Qm9LWI_R29aO_WDPuOWDmOOFqZdf2Lge/preview?usp=sharing" },
+                        { "title": "Flashcard - Abdome Agudo Obstrutivo", "downloadUrl": "https://drive.google.com/file/d/11DBW70cajtc0x8twW6wg4WRfuIjGctnL/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Abdome Agudo Obstrutivo", "downloadUrl": "https://drive.google.com/file/d/1qxcY3XUaQX3Zrgnx50xUOb1X4a4enC6_/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Obstrução (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1OECAtQkh8S7ZkjJ3_4pWFGZKTJI0MxlQ/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Obstrução (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/17MXw2Fr-1-SZNshhkBiWqridiyvdyuqP/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Obstrução (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1y6xvZoT0Gkl3A0XuoGlWillIpyiIdT07/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Abdome Agudo Obstrutivo", "downloadUrl": "https://drive.google.com/file/d/1VeInQNBK6gtaILYKM4IQIBN6GHKqACjS/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Vesícula e Vias Biliares",
+                "description": "Aula sobre Doenças da Vesícula e Vias Biliares.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Litíase Biliar", "driveVideoUrl": "https://drive.google.com/file/d/1fbJ35Lz8V0d7WAg5hoBb_uO7As3CTxBv/preview?usp=drive_link", "downloadUrl": "#dl-vesicula-v1" },
+                        { "title": "Complicações da Litíase - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1BTy20UeNlxLLtfCKwJR61x1Rbm49SZFl/preview?usp=drive_link", "downloadUrl": "#dl-vesicula-v2" },
+                        { "title": "Complicações da Litíase - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1uS4D9DRLHRaJtlkfPZvuWfMwKhIOaVEd/preview?usp=drive_link", "downloadUrl": "#dl-vesicula-v3" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Vesícula e Vias Biliares", "downloadUrl": "https://drive.google.com/file/d/1TvahQ1jeua16nJJ8wFxH5KclsFHqHrwF/preview?usp=sharing" },
+                        { "title": "Flashcard - Vesícula e Vias Biliares", "downloadUrl": "https://drive.google.com/file/d/1A3z2-XHwbFqPHoLJn99lWBr8yWtVFQpd/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Vesícula e Vias Biliares", "downloadUrl": "https://drive.google.com/file/d/1nGA-djTWHjqcFmyhRYqxGDbehjJGjLwb/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Vesícula e Vias Biliares (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1B_fQa2fhMxnSYnS9RDCZMSlp0EA6I5cl/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Vesícula e Vias Biliares (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1v6VcMwjNnQQKmWP10hWhnw52ptLpUgdz/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Vesícula e Vias Biliares (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1bHAvJVv9XGWGATZ0viKJ2CJolMJP3GOm/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Vesícula e Vias Biliares", "downloadUrl": "https://drive.google.com/file/d/1wHcd_c42Wsl9T44UbMk72k_ZcgA_ZQpj/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Complicações Pós-Operatórias",
+                "description": "Aula sobre Complicações Pós-Operatórias.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Complicações Gerais - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1vMpKaX-HBxbzRNjAw-QXtP4mLgOh275e/preview?usp=drive_link", "downloadUrl": "#dl-compop-v1" },
+                        { "title": "Complicações Gerais - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1RqYxkgEy_J7XGmQldad5RRYBRVUvFf2J/preview?usp=drive_link", "downloadUrl": "#dl-compop-v2" },
+                        { "title": "Complicações Específicas", "driveVideoUrl": "https://drive.google.com/file/d/16YvY3FnABvjO3n8jcXoj_TdmDrjjD1xb/preview?usp=drive_link", "downloadUrl": "#dl-compop-v3" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Complicações Pós-Operatórias", "downloadUrl": "https://drive.google.com/file/d/1JEKlvVo6NGIMghjcXUPmuxT-CgSxl7fZ/preview?usp=sharing" },
+                        { "title": "Flashcard - Complicações Pós-Operatórias", "downloadUrl": "https://drive.google.com/file/d/1jDP_NUpxY_PtNLvb9braD8-vJmdviOGn/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Complicações Pós-Operatórias", "downloadUrl": "https://drive.google.com/file/d/12kyKEwUWYXzfqAH1gQqzi2-NZNOEf7pU/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Complicações Pós-Operatórias", "downloadUrl": "https://drive.google.com/file/d/1aWjT4B_0boNqICeuBF4ANdnhLkr_L2A2/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Complicações Pós-Operatórias", "downloadUrl": "https://drive.google.com/file/d/16TRC3pOXQk_9s8iiEndgt9ihRLcUP3CS/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Hérnias da Parede Abdominal",
+                "description": "Aula sobre Hérnias da Parede Abdominal.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Hérnia Inguinal - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1z829mG99ZNobEO481RwUqp5gcC2Vb5Dm/preview?usp=drive_link", "downloadUrl": "#dl-hernia-v1" },
+                        { "title": "Hérnia Inguinal - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1bjmd72g3s4M6eAD7nOG7yR9GvAm-MJcJ/preview?usp=drive_link", "downloadUrl": "#dl-hernia-v2" },
+                        { "title": "Hérnia Femoral", "driveVideoUrl": "https://drive.google.com/file/d/1r6cJzOHgchUayd6uCI0YbogUBHt7cR7j/preview?usp=drive_link", "downloadUrl": "#dl-hernia-v3" },
+                        { "title": "Hérnias Ventrais - Parte I", "driveVideoUrl": "https://drive.google.com/file/d/1_pUZ5XlFbf-YBsSVQoMf-waLyaljvOA2/preview?usp=drive_link", "downloadUrl": "#dl-hernia-v4" },
+                        { "title": "Hérnias Ventrais - Parte II", "driveVideoUrl": "https://drive.google.com/file/d/1V5CPxL4qctr4L1XeokzyHkXhWSkVQGw8/preview?usp=drive_link", "downloadUrl": "#dl-hernia-v5" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Hérnias da Parede Abdominal", "downloadUrl": "https://drive.google.com/file/d/1hd9utGdm6DuZE4D3LVlL2wsT8Px4yOZF/preview?usp=sharing" },
+                        { "title": "Flashcard - Hérnias da Parede Abdominal", "downloadUrl": "https://drive.google.com/file/d/1bSOXB6tdKjwC7AUnL_vAF_VPgtjDV9pI/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Hérnias da Parede Abdominal", "downloadUrl": "https://drive.google.com/file/d/1lCxBUbKb1YCX31zGbAA-tK9UklwyTx9P/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Hérnias (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/12mDi010wtwhmEZWztri9bxLH1w92F5QR/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Hérnias (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1IzyhTassI0HKsBzzKXn0i9YtfdbpJKSO/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Hérnias da Parede Abdominal", "downloadUrl": "https://drive.google.com/file/d/1ougqGbdmGqcfcjc4NXlqcEE_UEWs9QUH/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Vascular",
+                "description": "Aula sobre Cirurgia Vascular.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Doença Arterial Obstrutiva Periférica - P1", "driveVideoUrl": "https://drive.google.com/file/d/1ylWOjyOxVrPfFDqkDRX_df3cIsUHKU8K/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v1" },
+                        { "title": "Doença Arterial Obstrutiva Periférica - P2", "driveVideoUrl": "https://drive.google.com/file/d/1eYiBguwWWfcpYFZDIvHhGIMiIUp957kj/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v2" },
+                        { "title": "Doença Arterial Obstrutiva Periférica - P3", "driveVideoUrl": "https://drive.google.com/file/d/1DsK1jrdZVYKy7WZXSRttpeiUrfeqktgP/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v3" },
+                        { "title": "Aneurismas - P1", "driveVideoUrl": "https://drive.google.com/file/d/1YXF8AVee0SNXbFnvKcGvpmBhGKeRNRj-/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v4" },
+                        { "title": "Aneurismas - P2", "driveVideoUrl": "https://drive.google.com/file/d/1KMOSSfMA15bCCpN4xA1i84OOQuzxCE3y/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v5" },
+                        { "title": "Aneurismas - P3", "driveVideoUrl": "https://drive.google.com/file/d/1iZnXGmerkHIt9JlYVaxxkmCw-Kc-FOAG/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v6" },
+                        { "title": "Doença Venosa Crônica - P1", "driveVideoUrl": "https://drive.google.com/file/d/1jyeGRaxR26w_IqjtCVEZEW3AAZDwTvAY/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v7" },
+                        { "title": "Doença Venosa Crônica - P2", "driveVideoUrl": "https://drive.google.com/file/d/1L6ir6O8RriqBMKT4Kzyg_02jMRgYdhBs/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v8" },
+                        { "title": "Trombose Venosa Profunda - P1", "driveVideoUrl": "https://drive.google.com/file/d/154LhhcZbtamu79kUCPWv_Y6lgf8wbRDh/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v9" },
+                        { "title": "Trombose Venosa Profunda - P2", "driveVideoUrl": "https://drive.google.com/file/d/1Ec-OOZEJMvVJaE0FjAZ_e0v47e5fr0qG/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v10" },
+                        { "title": "Doença Carotídea", "driveVideoUrl": "https://drive.google.com/file/d/15jd1IBk1lI8hD_tIb9iw_7ExhjKWDffZ/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v11" },
+                        { "title": "Pé Diabético", "driveVideoUrl": "https://drive.google.com/file/d/1_OB7iyx5YnD_h3DRApR7xdkhQgVG6fP8/preview?usp=drive_link", "downloadUrl": "#dl-cirvasc-v12" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Vascular", "downloadUrl": "https://drive.google.com/file/d/1CRiVQJN9Ac5wzo4kufshyGLuNsq6EgOd/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Vascular", "downloadUrl": "https://drive.google.com/file/d/1TdMTmwTKxh9dT9oepGAzNHVmPF1AIgx1/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Cirurgia Vascular", "downloadUrl": "https://drive.google.com/file/d/1WKL_8J5deEDutPlKVbB051UbvqMHpCmY/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Vascular", "downloadUrl": "https://drive.google.com/file/d/1d7bPoOcCCiiOPbfAMVYm6g2_m7jFpt7B/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Torácica",
+                "description": "Aula sobre Cirurgia Torácica.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Cirurgia Torácica", "driveVideoUrl": "https://drive.google.com/file/d/1xc-ByH581R9o4hui2RU4k2YtgmOi5nw6/preview?usp=drive_link", "downloadUrl": "#dl-cirtorac-v1" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Torácica", "downloadUrl": "https://drive.google.com/file/d/1f9g9tHArGNMEWjpn-rFotGSKv7SZ88JC/preview?usp=sharing" },
+                        { "title": "Flashcard - Cirurgia Torácica", "downloadUrl": "https://drive.google.com/file/d/1DZ8SC4Rm_KThSfSR5Z1KAvL32CtygxJ0/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Torácica", "downloadUrl": "https://drive.google.com/file/d/1OpNBlfSGM7mAPU3XTuSQTls3SVLogIgt/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Cirurgia Torácica", "downloadUrl": "https://drive.google.com/file/d/1TcPTJofwK7CfWnd_-t3PPP8h2SVLyoDC/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Torácica", "downloadUrl": "https://drive.google.com/file/d/1p8RrLAvOfyHusNiHWHh-NV08K1e0ORuz/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Plástica",
+                "description": "Aula sobre Cirurgia Plástica.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Princípios de Cirurgia Plástica - P1", "driveVideoUrl": "https://drive.google.com/file/d/1RMc7MJt65jVOTXOsIjpWIJHRiBJ0CDIw/preview?usp=drive_link", "downloadUrl": "#dl-cirplast-v1" },
+                        { "title": "Princípios de Cirurgia Plástica - P2", "driveVideoUrl": "https://drive.google.com/file/d/1YIA_GvQwFtJ5Ny6t5ZSb-kl4lixyjBmn/preview?usp=drive_link", "downloadUrl": "#dl-cirplast-v2" },
+                        { "title": "Retalhos e Enxertos - P1", "driveVideoUrl": "https://drive.google.com/file/d/16r1_sH9Us_U30yOlWJkEoOyv08fzBxvg/preview?usp=drive_link", "downloadUrl": "#dl-cirplast-v3" },
+                        { "title": "Retalhos e Enxertos - P2", "driveVideoUrl": "https://drive.google.com/file/d/1V5Q1Y7va63xOHzybRxRzNuiJtYTCh_ie/preview?usp=drive_link", "downloadUrl": "#dl-cirplast-v4" },
+                        { "title": "Cirurgia Reparadora", "driveVideoUrl": "https://drive.google.com/file/d/1wvEaJxLPlZ6QWIObXug8yVRCMJib0b5Z/preview?usp=drive_link", "downloadUrl": "#dl-cirplast-v5" },
+                        { "title": "Cirurgia Estética", "driveVideoUrl": "https://drive.google.com/file/d/1l66O-3noyTW6giaeNZ0jC4xobRD077j1/preview?usp=drive_link", "downloadUrl": "#dl-cirplast-v6" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Plástica", "downloadUrl": "https://drive.google.com/file/d/1myjO8NTptOO1ftyOeH5Bsr57afbftjXh/preview?usp=sharing" },
+                        { "title": "Flashcard - Cirurgia Plástica", "downloadUrl": "https://drive.google.com/file/d/1HUZIPihYAIPx1X6ACO3APclaDougzkEv/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Plástica", "downloadUrl": "https://drive.google.com/file/d/1cMK1jhsIMwOtCL35S7qTOyC-3wvAxFVr/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Cirurgia Plástica", "downloadUrl": "https://drive.google.com/file/d/1uuzZbwKlIsDxi6gzfJE0Q1EESb4-BNY-/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Plástica", "downloadUrl": "https://drive.google.com/file/d/1Yva1Kxwc5qiEO-TgRZaFuO137GmqA5ze/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Urologia",
+                "description": "Aula sobre Urologia.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Litíase Urinária - P1", "driveVideoUrl": "https://drive.google.com/file/d/1Y-A2aDWAY0uz_pqUyf3I8I-3nkNnkqLx/preview?usp=drive_link", "downloadUrl": "#dl-urol-v1" },
+                        { "title": "Litíase Urinária - P2", "driveVideoUrl": "https://drive.google.com/file/d/1buGTJPOxJppLAkOLJPNRBmhkfxNslsv3/preview?usp=drive_link", "downloadUrl": "#dl-urol-v2" },
+                        { "title": "Hiperplasia Prostática Benigna - P1", "driveVideoUrl": "https://drive.google.com/file/d/1LQE9G1-9khB1b6C6R_LC69-NFAbOC3KC/preview?usp=drive_link", "downloadUrl": "#dl-urol-v3" },
+                        { "title": "Hiperplasia Prostática Benigna - P2", "driveVideoUrl": "https://drive.google.com/file/d/15hIKb8wp27c3ZcGXVp3KFwrmNAcVRx8z/preview?usp=drive_link", "downloadUrl": "#dl-urol-v4" },
+                        { "title": "Câncer de Próstata - P1", "driveVideoUrl": "https://drive.google.com/file/d/1CmD3UvsIQIqNezbBul9Omet9S9-SztcF/preview?usp=drive_link", "downloadUrl": "#dl-urol-v5" },
+                        { "title": "Câncer de Próstata - P2", "driveVideoUrl": "https://drive.google.com/file/d/1Cxfqtgw04jOWUSdm4-ZrmfGF8CuGj2e7/preview?usp=drive_link", "downloadUrl": "#dl-urol-v6" },
+                        { "title": "Infecção do Trato Urinário", "driveVideoUrl": "https://drive.google.com/file/d/1rQYnV6c5nklBD9IAzwwNoTk-HVEGOQc3/preview?usp=drive_link", "downloadUrl": "#dl-urol-v7" },
+                        { "title": "Incontinência Urinária", "driveVideoUrl": "https://drive.google.com/file/d/1K8O1PALz8aGkDjGZClvJSYFwm4x2145L/preview?usp=drive_link", "downloadUrl": "#dl-urol-v8" },
+                        { "title": "Disfunção Erétil", "driveVideoUrl": "https://drive.google.com/file/d/1K0l1iYS-ZsRIxxTiA1_wOkqckVmqEARO/preview?usp=drive_link", "downloadUrl": "#dl-urol-v9" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Urologia", "downloadUrl": "https://drive.google.com/file/d/10dRSzN6YxN9fL3EetDvpiBuxVru0wOKK/preview?usp=sharing" },
+                        { "title": "Flashcard - Urologia", "downloadUrl": "https://drive.google.com/file/d/1M_qD41EG78ds1S2hLKCRTekaImpzp5xB/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Urologia", "downloadUrl": "https://drive.google.com/file/d/1hDYabubbqOwCM-gWa8K3jkiFP4itaFvX/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Urologia", "downloadUrl": "https://drive.google.com/file/d/1CDQWCt_oui13WnDW_EIHIJBFvwXwdfTS/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Urologia", "downloadUrl": "https://drive.google.com/file/d/1A8RLEiU00B4iv9mYFdaqa_mQ5SUwMu51/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Infantil - Parte I",
+                "description": "Aula sobre Cirurgia Infantil - Parte I.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Cirurgia Infantil P1 - V1", "driveVideoUrl": "https://drive.google.com/file/d/1TiadyO9BGUlRBfo5G2QOx26jltISNoj6/preview?usp=drive_link", "downloadUrl": "#dl-cirinf1-v1" },
+                        { "title": "Cirurgia Infantil P1 - V2", "driveVideoUrl": "https://drive.google.com/file/d/1U7C_Q-qOMbHF7IoWtqdJ8bJc3HEsivpa/preview?usp=drive_link", "downloadUrl": "#dl-cirinf1-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Infantil - Parte I", "downloadUrl": "https://drive.google.com/file/d/1_gYXapMxYKItJne2zXcUr87TJ69INJ7f/preview?usp=sharing" },
+                        { "title": "Flashcard - Cirurgia Infantil - Parte I", "downloadUrl": "https://drive.google.com/file/d/13e_jHGapfUr02JYtbGefzgefQ7DQ7qc-/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Infantil - Parte I", "downloadUrl": "https://drive.google.com/file/d/1AVFTEA7Y60hki26SYBCNk-Fp9pPCKAk-/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Cirurgia Infantil (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/11DsM7LAZFuoupd4KZ4FhaiCQlXNIiCnz/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Cirurgia Infantil (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1bxg7DQQF44ne6xvoamGRfy13y8A6SDCC/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Cirurgia Infantil (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1sML9sjb_KsFpSvtzidxKzPuYEAI3dKbU/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Infantil - Parte I", "downloadUrl": "https://drive.google.com/file/d/1dWczlBxsviPt2gWSxtiQJ10UQ0_pG6el/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Infantil - Parte II",
+                "description": "Aula sobre Cirurgia Infantil - Parte II.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Cirurgia Infantil P2 - V1", "driveVideoUrl": "https://drive.google.com/file/d/1m4qTu688dbHQH0eK1J2h9AloGjIS9KQB/preview?usp=drive_link", "downloadUrl": "#dl-cirinf2-v1" },
+                        { "title": "Cirurgia Infantil P2 - V2", "driveVideoUrl": "https://drive.google.com/file/d/1lGlbiTU1PZHCnZ3Ka0IUyz5DT7jeVaAP/preview?usp=drive_link", "downloadUrl": "#dl-cirinf2-v2" },
+                        { "title": "Cirurgia Infantil P2 - V3", "driveVideoUrl": "https://drive.google.com/file/d/1zv2cIXjcc32tnqEpOhmsXFeUWUKGoTCP/preview?usp=drive_link", "downloadUrl": "#dl-cirinf2-v3" },
+                        { "title": "Cirurgia Infantil P2 - V4", "driveVideoUrl": "https://drive.google.com/file/d/1S-qVccPALCfcZKN7PVKyF9PtGz025Vqh/preview?usp=drive_link", "downloadUrl": "#dl-cirinf2-v4" },
+                        { "title": "Cirurgia Infantil P2 - V5", "driveVideoUrl": "https://drive.google.com/file/d/1YXQtwBRUMeY_Gmszi1I4mxpHAQh47iEW/preview?usp=drive_link", "downloadUrl": "#dl-cirinf2-v5" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Infantil - Parte II", "downloadUrl": "https://drive.google.com/file/d/1MXRys0t66v-AolfG_y1QlRpFTmCx1pVn/preview?usp=sharing" },
+                        { "title": "Flashcard - Cirurgia Infantil - Parte II", "downloadUrl": "https://drive.google.com/file/d/11Dk3Bfghl2pTSxdxkzHahbY8Qt1TbevE/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Infantil - Parte II", "downloadUrl": "https://drive.google.com/file/d/1OS9l8FskILnVkR9GVIC5f98Lg4SZ3rG2/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Cirurgia Infantil (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1BoaU2qEU7IB-QDuyXZIU9-I5DixEEZCc/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Cirurgia Infantil (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1E6FRKHHs81daDPLTabrf0HiL2cYWhlWS/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Cirurgia Infantil (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1kHKP_BAHnGQJ_Yy9wh3GKlTU84vw9Ptp/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Infantil - Parte II", "downloadUrl": "https://drive.google.com/file/d/1pjlEExiFkzLWujYwb8H4_DN9YTDX75ZU/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Infantil - Parte III",
+                "description": "Aula sobre Cirurgia Infantil - Parte III.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Cirurgia Infantil P3 - V1", "driveVideoUrl": "https://drive.google.com/file/d/1Rocfdol3eEdDa6btGtuaQ-aRm-JuPhPz/preview?usp=drive_link", "downloadUrl": "#dl-cirinf3-v1" },
+                        { "title": "Cirurgia Infantil P3 - V2", "driveVideoUrl": "https://drive.google.com/file/d/1e8IH4sBhi0sVfMIjR4ZBGedGFboJ6j8u/preview?usp=drive_link", "downloadUrl": "#dl-cirinf3-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Infantil - Parte III", "downloadUrl": "https://drive.google.com/file/d/1h4FtqVvfef5ddch51GCHB4qIV9C6E7XM/preview?usp=sharing" },
+                        { "title": "Flashcard - Cirurgia Infantil - Parte III", "downloadUrl": "https://drive.google.com/file/d/1r9MrIu3Bz6CULFF7ACPwMr9wc3uavFiU/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Infantil - Parte III", "downloadUrl": "https://drive.google.com/file/d/1jI2SYGlK8pGyttVKlQd6PyqyPEMmlPlZ/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides - Cirurgia Infantil P3 - S1", "downloadUrl": "https://drive.google.com/file/d/1vQ3yzNPCKKNmYgYu8yDA-MPPobH76i_V/preview?usp=drive_link" },
+                        { "title": "Slides - Cirurgia Infantil P3 - S2", "downloadUrl": "https://drive.google.com/file/d/1MWxT-HGtmDaJ9OnxaOhR1ZUwofi8EuYx/preview?usp=drive_link" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Infantil - Parte III", "downloadUrl": "https://drive.google.com/file/d/1Lv2JmSLX9CUYbzRYkW3CM0-jUWMhhC-Z/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Proctologia",
+                "description": "Aula sobre Proctologia.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Proctologia - V1", "driveVideoUrl": "https://drive.google.com/file/d/1DAuJLqn6CIPrApyRO2Bv8Zs0WLP7w8Cg/preview?usp=drive_link", "downloadUrl": "#dl-procto-v1" },
+                        { "title": "Proctologia - V2", "driveVideoUrl": "https://drive.google.com/file/d/1xyqBttIbLTFKMAp0lKZr5SL1-bABd7MZ/preview?usp=drive_link", "downloadUrl": "#dl-procto-v2" },
+                        { "title": "Proctologia - V3", "driveVideoUrl": "https://drive.google.com/file/d/10EU0tQDFmo_ZrtV6GmdhIUy6UZEHj9xb/preview?usp=drive_link", "downloadUrl": "#dl-procto-v3" },
+                        { "title": "Proctologia - V4", "driveVideoUrl": "https://drive.google.com/file/d/15qbO7ZC4AHjJM0HEbaa9vyq6-TOzUQci/preview?usp=drive_link", "downloadUrl": "#dl-procto-v4" },
+                        { "title": "Proctologia - V5", "driveVideoUrl": "https://drive.google.com/file/d/1DJq9_uA-jSS0I9aXeAtZiAoSiVSe66a3/preview?usp=drive_link", "downloadUrl": "#dl-procto-v5" },
+                        { "title": "Proctologia - V6", "driveVideoUrl": "https://drive.google.com/file/d/1Twh1MTvTgB-QePZTvU9rMqYxOI2hpmsU/preview?usp=drive_link", "downloadUrl": "#dl-procto-v6" },
+                        { "title": "Proctologia - V7", "driveVideoUrl": "https://drive.google.com/file/d/16WY7I6zm-xulaZOZuMECcRiwwSKyjigV/preview?usp=drive_link", "downloadUrl": "#dl-procto-v7" },
+                        { "title": "Proctologia - V8", "driveVideoUrl": "https://drive.google.com/file/d/1Dq4IJNToAx-7n_WBtvTh1gL3wRCqlvsS/preview?usp=drive_link", "downloadUrl": "#dl-procto-v8" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Proctologia", "downloadUrl": "https://drive.google.com/file/d/1LepsQysUVEIehuyIIHu_nUP8HqsocCtr/preview?usp=sharing" },
+                        { "title": "Flashcard - Proctologia", "downloadUrl": "https://drive.google.com/file/d/1yPlVhVtlQQWMTn6hXdwL-HarHfxM2ttG/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Proctologia", "downloadUrl": "https://drive.google.com/file/d/1WAIyOk57Dk2f1IUGfqtANetuKgW_9aBV/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Proctologia (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1j0gVdZD4oPOcoVSCpf8C1Y6kxr8trMrA/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Proctologia (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1zNvIr1GS1-f5YNl-PNnOJg7UDyXCLdF7/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Proctologia", "downloadUrl": "https://drive.google.com/file/d/1hRPbHDe6UQ839hqwgcMhgIgyBpYUadiY/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Neoplasias do Apêndice Cecal",
+                "description": "Aula sobre Neoplasias do Apêndice Cecal.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Neoplasias Apêndice - V1", "driveVideoUrl": "https://drive.google.com/file/d/1Bh3H5MA8q4mHT4jD6BnQsTZ-He6Npvlp/preview?usp=drive_link", "downloadUrl": "#dl-neoapend-v1" },
+                        { "title": "Neoplasias Apêndice - V2", "driveVideoUrl": "https://drive.google.com/file/d/1hqyhAqvXPWMXKQpyEBJt9hc9S-4Dnj5W/preview?usp=drive_link", "downloadUrl": "#dl-neoapend-v2" },
+                        { "title": "Neoplasias Apêndice - V3", "driveVideoUrl": "https://drive.google.com/file/d/1XC1gehJKlIgXWnnSUsugyIJHE_9xtp7-/preview?usp=drive_link", "downloadUrl": "#dl-neoapend-v3" },
+                        { "title": "Neoplasias Apêndice - V4", "driveVideoUrl": "https://drive.google.com/file/d/1vIsEAmKDnappCUVNM4UoQD0QPbnOd6aA/preview?usp=drive_link", "downloadUrl": "#dl-neoapend-v4" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Neoplasias do Apêndice Cecal", "downloadUrl": "https://drive.google.com/file/d/1YgzOLpF6rwChCMIR58pVnNcAD6zLSIWK/preview?usp=sharing" },
+                        { "title": "Flashcard - Neoplasias do Apêndice Cecal", "downloadUrl": "https://drive.google.com/file/d/1UElhgEpCZ41bgiBSsh1tbP2xmXliGRPo/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Neoplasias do Apêndice Cecal", "downloadUrl": "https://drive.google.com/file/d/17SyHD4Ms0Xc1OFycszQ4SXD-n5nGzqaP/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Neoplasias do Apêndice Cecal", "downloadUrl": "https://drive.google.com/file/d/1ZmXmji1EmnbEDPgxXcernd0cnVpvuy93/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": []
+                }
+            },
+            {
+                "title": "Nutrição em Cirurgia e Aceleração da Recuperação Pós-Operatória",
+                "description": "Aula sobre Nutrição em Cirurgia e Recuperação.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Nutrição Cirúrgica - P1", "driveVideoUrl": "https://drive.google.com/file/d/1QRS0yvvkxs7nRdZcaRIVaP-OkCq3KFBW/preview?usp=drive_link", "downloadUrl": "#dl-nutricir-v1" },
+                        { "title": "Nutrição Cirúrgica - P2", "driveVideoUrl": "https://drive.google.com/file/d/1tmhS_MyB1rQlfBmlQCXyJJFq3j2N68o0/preview?usp=drive_link", "downloadUrl": "#dl-nutricir-v2" },
+                        { "title": "Nutrição Cirúrgica - P3", "driveVideoUrl": "https://drive.google.com/file/d/1iXqBIjylBaSBs8EpKuUxzCnReGzt1ly0/preview?usp=drive_link", "downloadUrl": "#dl-nutricir-v3" },
+                        { "title": "Aceleração Recuperação - P1", "driveVideoUrl": "https://drive.google.com/file/d/1-w7pgcF2hAOhkARTwe2MHfTg5l-EOSDh/preview?usp=drive_link", "downloadUrl": "#dl-nutricir-v4" },
+                        { "title": "Aceleração Recuperação - P2", "driveVideoUrl": "https://drive.google.com/file/d/1OpGDEr9J5ceSIwUbJqPZ34SIKQfzRF39/preview?usp=drive_link", "downloadUrl": "#dl-nutricir-v5" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Nutrição em Cirurgia e Aceleração da Recuperação Pós-Operatória", "downloadUrl": "https://drive.google.com/file/d/1Fg9kFkOkmVkXo0_TQWPKJUvRggPwlji8/preview?usp=sharing" },
+                        { "title": "Flashcard - Nutrição em Cirurgia e Aceleração da Recuperação Pós-Operatória", "downloadUrl": "https://drive.google.com/file/d/1wtVMDfsVzDg6whXGTJpkiZLYCzBi_-mv/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Nutrição em Cirurgia e Aceleração da Recuperação Pós-Operatória", "downloadUrl": "https://drive.google.com/file/d/1MsCUg0Jo8BzTHA71hy-trcsS4tbxQ0Ht/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Nutrição (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/1t-EUWrLmV3vVYCmy5XQD-lnEB8AzHUED/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Nutrição (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1AoehysqKqQM2YebTkY-oV-M-FC3-Wxhr/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Nutrição em Cirurgia e Aceleração da Recuperação Pós-Operatória", "downloadUrl": "https://drive.google.com/file/d/1mfSTS1tHigb_7M79cS3Zet9tclzE4_ia/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cicatrização de Feridas",
+                "description": "Aula sobre Cicatrização de Feridas.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Cicatrização - P1", "driveVideoUrl": "https://drive.google.com/file/d/1r3W8-omqaXvq1XmKleH3TYlPhwP4XYiX/preview?usp=drive_link", "downloadUrl": "#dl-cicatriz-v1" },
+                        { "title": "Cicatrização - P2", "driveVideoUrl": "https://drive.google.com/file/d/1waYW-58s_pOy0a_3NCR_JcPd8RKpPsTB/preview?usp=drive_link", "downloadUrl": "#dl-cicatriz-v2" },
+                        { "title": "Cicatrização - P3", "driveVideoUrl": "https://drive.google.com/file/d/1aCgOXiX78pK2xCfyi8f_PbNsPYAbU1OU/preview?usp=drive_link", "downloadUrl": "#dl-cicatriz-v3" },
+                        { "title": "Cicatrização - P4", "driveVideoUrl": "https://drive.google.com/file/d/1k-k9QEqf7TUzsQG-KNIPbvRwd72mBSXl/preview?usp=drive_link", "downloadUrl": "#dl-cicatriz-v4" },
+                        { "title": "Cicatrização - P5", "driveVideoUrl": "https://drive.google.com/file/d/1T5tLTGHG84EMq6wnr_uRaXAIXWnPu8un/preview?usp=drive_link", "downloadUrl": "#dl-cicatriz-v5" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cicatrização de Feridas", "downloadUrl": "https://drive.google.com/file/d/1sSnfJfJAZwnu_o_XkqGg2pePcmIXsj__/preview?usp=sharing" },
+                        { "title": "Flashcard - Cicatrização de Feridas", "downloadUrl": "https://drive.google.com/file/d/1hvxzh6VusJJx6DQASELZmFD0ybQQDtLh/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cicatrização de Feridas", "downloadUrl": "https://drive.google.com/file/d/12Fhl_HCLPSDAgj5SSEVWdKHUmJbyPMKe/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Cicatrização de Feridas", "downloadUrl": "https://drive.google.com/file/d/1ow2sVYn6SgJD7jTmh6lRl2VtArduDJbK/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cicatrização de Feridas", "downloadUrl": "https://drive.google.com/file/d/16oUvodQ3l90VPIgB6IGiprecWqVGlbDS/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Cirurgia Bariátrica e Metabólica (Tratamento Cirúrgico da Obesidade)",
+                "description": "Aula sobre Cirurgia Bariátrica e Metabólica.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Cirurgia Bariátrica - P1", "driveVideoUrl": "https://drive.google.com/file/d/16vLUlo-IUoWiFqP-vhOk9DP6g_IfJOxu/preview?usp=drive_link", "downloadUrl": "#dl-bariatrica-v1" },
+                        { "title": "Cirurgia Bariátrica - P2", "driveVideoUrl": "https://drive.google.com/file/d/11NvxQlC5DzTjFls0l_X9X1-5TuLVO-Wf/preview?usp=drive_link", "downloadUrl": "#dl-bariatrica-v2" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Cirurgia Bariátrica e Metabólica", "downloadUrl": "https://drive.google.com/file/d/1AK32xQHhRMHr6OGbHeqKFeXcoKm3Zh92/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Cirurgia Bariátrica e Metabólica", "downloadUrl": "https://drive.google.com/file/d/1EjWwUPmIW8k9QPT_bKq_PdmihRa0B9H7/preview?usp=sharing" }
+                    ],
+                    "Slides": [],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Cirurgia Bariátrica e Metabólica", "downloadUrl": "https://drive.google.com/file/d/1dPREFbhJKBqVXybO1PkYrNTuF6rlD_vq/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                "title": "Temas Gerais em Cirurgia",
+                "description": "Aula sobre Temas Gerais em Cirurgia.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Temas Gerais", "driveVideoUrl": "https://drive.google.com/file/d/1_whIAUv8_WQQY9OU0zddxsch0HTdve6G/preview?usp=drive_link", "downloadUrl": "#dl-temasgerais-v1" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD - Temas Gerais em Cirurgia", "downloadUrl": "https://drive.google.com/file/d/1YjfsVjIv6iCGoYkUy8lnBrvI_RPIhsPy/preview?usp=sharing" },
+                        { "title": "Flashcard - Temas Gerais em Cirurgia", "downloadUrl": "https://drive.google.com/file/d/12slIyDFJs4bvieF_WCRzWdhydapVKlHZ/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Temas Gerais em Cirurgia", "downloadUrl": "https://drive.google.com/file/d/1dm-SSovXBEfDoHXOhTRO1maQToPmNK2Q/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Temas Gerais em Cirurgia", "downloadUrl": "https://drive.google.com/file/d/1YzVTTj7M3n2DE8l4e2mVKGQEwyHR-3Cv/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental - Temas Gerais em Cirurgia", "downloadUrl": "https://drive.google.com/file/d/1pKGWN6YLYYSDm9mcg5ymJZGvQVh_rtW4/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Princípios de Anestesiologia",
+                description: "Aula sobre Princípios de Anestesiologia.",
+                subItems: {
+                    'Videoaulas': [ // 4 Itens
+                        { title: "Anestesiologia - P1", driveVideoUrl: "https://drive.google.com/file/d/1QLMsQny4RSRyCKbnFCXioSL_OOGzckjZ/preview?usp=drive_link", downloadUrl: "#dl-anestesia-v1" }, // Link Atualizado
+                        { title: "Anestesiologia - P2", driveVideoUrl: "https://drive.google.com/file/d/1sx0b0mw166PGbu_VDPwlQnfI1Ryj19MP/preview?usp=drive_link", downloadUrl: "#dl-anestesia-v2" }, // Link Atualizado
+                        { title: "Anestesiologia - P3", driveVideoUrl: "https://drive.google.com/file/d/1qnC2mZYbTYPryAT2nF5yRaLFiIfqsqZq/preview?usp=drive_link", downloadUrl: "#dl-anestesia-v3" }, // Link Atualizado
+                        { title: "Anestesiologia - P4", driveVideoUrl: "https://drive.google.com/file/d/1kFdORU4IgoEdbCRpsX8KkOkSdk242Gvx/preview?usp=drive_link", downloadUrl: "#dl-anestesia-v4" } // Link Atualizado
+                    ],
+                    'Livros digitais': [ // 2 Itens
+                        { title: "Princípios de Anestesiologia", downloadUrl: "https://drive.google.com/file/d/1Gz-PU9eqCMKONeGDma5QmtIfXwoBn73Y/preview?usp=drive_link" }, // Link Atualizado
+                        { title: "Flashcards - Anestesiologia", downloadUrl: "https://drive.google.com/file/d/1ZfcluQe7OaJUhJIJ1ndt-giusH1HKnyd/preview?usp=drive_link" } // Link Atualizado
+                    ],
+                    'Resumos': [ // 1 Item
+                        { title: "Resumo - Anestesiologia", downloadUrl: "https://drive.google.com/file/d/1xLGmgnJGoo_35qmiKXSp911N2hHozrCc/preview?usp=drive_link" } // Link Atualizado
+                    ],
+                    'Slides': [ // 1 Item
+                        { title: "Slides - Anestesiologia", downloadUrl: "https://drive.google.com/file/d/17UFkHrxmg4cRbzK5qgCwrYILG3gH2NGN/preview?usp=drive_link" } // Link Atualizado
+                    ],
+                    'Mapas mentais': [ // 1 Item
+                        { title: "Mapa Mental - Anestesiologia", downloadUrl: "https://drive.google.com/file/d/1G1XXqYQqaIK_wO2Z0jtSMjBfJ9GPNNyB/preview?usp=drive_link" } // Link Atualizado
+                    ]
+                }
+            },
+            {
+                "title": "Medicina Perioperatória",
+                "description": "Aula sobre Medicina Perioperatória.",
+                "subItems": {
+                    "Videoaulas": [
+                        { "title": "Aula Resumo: Medicina Perioperatória", "driveVideoUrl": "https://drive.google.com/file/d/1MjSgdSNZNBGNLblDJxrC0hlH_zOYwX6u/preview?usp=sharing" },
+                        { "title": "Anestésicos Locais: Anestesia do Neuroeixo e Bloqueios Periféricos", "driveVideoUrl": "https://drive.google.com/file/d/1n6MNNh4VcCuCjH2iI2T9IcRW8v5APSAI/preview?usp=sharing" },
+                        { "title": "Monitorização Anestésica e Recuperação Pós-Anestésica", "driveVideoUrl": "https://drive.google.com/file/d/1eDtg8295ULPkyuaItqmK5ktkpT_TS2er/preview?usp=sharing" },
+                        { "title": "Infecção do Sítio Cirúrgico e Manejo do Estado Nutricional", "driveVideoUrl": "https://drive.google.com/file/d/1S7Z6JE3hfI5-xrJNF4JkTWxPiGU8UM4o/preview?usp=sharing" },
+                        { "title": "Avaliação Pré-Anestésica e Manejo do Risco Cardiovascular", "driveVideoUrl": "https://drive.google.com/file/d/1v0-r4tbBxBGTx0DgTY8GLnGxksGUEDfo/preview?usp=sharing" },
+                        { "title": "Agentes Anestésicos", "driveVideoUrl": "https://drive.google.com/file/d/1jDnRQ4qqECxiXfe06QDIxDRZ_P-Kvlx5/preview?usp=sharing" }
+                    ],
+                    "Livros digitais": [
+                        { "title": "LD 1 - Medicina Perioperatória", "downloadUrl": "https://drive.google.com/file/d/1ooANzj-QE8xANxab_XNGIMBHGkFg3gjT/preview?usp=sharing" },
+                        { "title": "LD 2 - Medicina Perioperatória", "downloadUrl": "https://drive.google.com/file/d/12UHTArtYmxakIpDYbZ2stEcIRLMT94yl/preview?usp=sharing" }
+                    ],
+                    "Resumos": [
+                        { "title": "RE - Medicina Perioperatória", "downloadUrl": "https://drive.google.com/file/d/12n6M6p38K6fcc-hguqLBaRxF-Crzpvhr/preview?usp=sharing" }
+                    ],
+                    "Slides": [
+                        { "title": "Slides da Aula - Medicina Perioperatória (Parte 1)", "downloadUrl": "https://drive.google.com/file/d/12nBhTedB4-n12Swx-XyQkoUSApke9j/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Medicina Perioperatória (Parte 2)", "downloadUrl": "https://drive.google.com/file/d/1IzVbg4_u-JU8qSgEtGj8ObwJyDy_uauF/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Medicina Perioperatória (Parte 3)", "downloadUrl": "https://drive.google.com/file/d/1q7ZVeRSqAQyrnl-FPPyQZWHW6TZG84sr/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Medicina Perioperatória (Parte 4)", "downloadUrl": "https://drive.google.com/file/d/1mc_ffKLmAKZ-bozfGNIGziJHFSmzgZaD/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Medicina Perioperatória (Parte 5)", "downloadUrl": "https://drive.google.com/file/d/1sD15hheyvTir8omJ_tlRUdgoEyWhAWJi/preview?usp=sharing" },
+                        { "title": "Slides da Aula - Medicina Perioperatória (Parte 6)", "downloadUrl": "https://drive.google.com/file/d/1jyE91993DAoYiyUnmeMGbw4PfDypzuVf/preview?usp=sharing" }
+                    ],
+                    "Mapas mentais": [
+                        { "title": "Mapa Mental 1 - Medicina Perioperatória", "downloadUrl": "https://drive.google.com/file/d/1SZM_wIWS4jVQwSqEsCZhCL4h-AdNtfk5/preview?usp=sharing" },
+                        { "title": "Mapa Mental 2 - Medicina Perioperatória", "downloadUrl": "https://drive.google.com/file/d/1zKR6MjRUMcYest-0zC8DB0xw0E-SnVuh/preview?usp=sharing" }
+                    ]
+                }
+            }
+            // --- FIM DOS MÓDULOS ATUALIZADOS ---
+        ];
+
+        // Configuração dos ícones (agora com ícone genérico para documentos)
+        const subItemIcons = {
+            'Videoaulas': 'M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z', // Play
+            'Livros digitais': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', // Livro
+            'Resumos': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', // Documento
+            'Slides': 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', // Apresentação
+            'Mapas mentais': 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M12 12a3 3 0 100-6 3 3 0 000 6z' // Mapa
+        };
+        const subItemOrder = ['Videoaulas', 'Livros digitais', 'Resumos', 'Slides', 'Mapas mentais'];
+
+        // Referências aos elementos do DOM
+        const menuListContainer = document.getElementById('menu-items-list');
+        const detailsTemplate = document.getElementById('subitem-details-template');
+        const contentViewer = document.getElementById('content-viewer');
+        const contentDescription = document.getElementById('content-description');
+        const likeButton = document.getElementById('like-button');
+
+        // --- Funções Auxiliares ---
+        function romanize(num) {
+             if (isNaN(num) || num < 1) return num; // Retorna o próprio número se inválido ou menor que 1
+             var digits = String(+num).split(""),
+                 key = ["","I","II","III","IV","V","VI","VII","VIII","IX", // Unidades
+                        "","X","XX","XXX","XL","L","LX","LXX","LXXX","XC", // Dezenas
+                        "","C","CC","CCC","CD","D","DC","DCC","DCCC","CM"], // Centenas
+                 roman = "",
+                 i = 3;
+             while (i--)
+                 roman = (key[+digits.pop() + (i * 10)] || "") + roman;
+             return Array(+digits.join("") + 1).join("M") + roman; // Milhares
+        }
+
+        function createSubItemDetail(subItemType, detailData, mainTitle, videoIndex, totalVideos) {
+             if (!detailsTemplate || !detailData) return null;
+             const detailNode = detailsTemplate.content.cloneNode(true);
+             const detailDiv = detailNode.querySelector('.sub-item-details');
+             const itemDetailsContent = detailNode.querySelector('.item-details-content');
+             const titleEl = detailNode.querySelector('.item-title');
+             const downloadLink = detailNode.querySelector('.download-link');
+             const iconPathData = subItemIcons[subItemType]; // Pega o path do ícone
+
+             // Adiciona o ícone apropriado
+             if (iconPathData) {
+                  const iconContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                  const iconSizeClass = (subItemType === 'Videoaulas') ? 'w-8 h-8 mr-3' : 'w-6 h-6 mr-2';
+                  iconContainer.setAttribute('class', `item-icon ${iconSizeClass} text-gray-600 flex-shrink-0`);
+                  if (subItemType === 'Videoaulas') {
+                       iconContainer.setAttribute('fill', 'currentColor');
+                       iconContainer.setAttribute('viewBox', '0 0 20 20');
+                  } else {
+                       iconContainer.setAttribute('fill', 'none');
+                       iconContainer.setAttribute('stroke', 'currentColor');
+                       iconContainer.setAttribute('viewBox', '0 0 24 24');
+                  }
+                  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                  path.setAttribute('d', iconPathData);
+                  if (subItemType === 'Videoaulas') {
+                       path.setAttribute('fill-rule', 'evenodd');
+                       path.setAttribute('clip-rule', 'evenodd');
+                  } else {
+                       path.setAttribute('stroke-linecap', 'round');
+                       path.setAttribute('stroke-linejoin', 'round');
+                       path.setAttribute('stroke-width', '1.5');
+                  }
+                  iconContainer.appendChild(path);
+                  itemDetailsContent.insertBefore(iconContainer, itemDetailsContent.firstChild);
+             } else {
+                  titleEl.closest('.overflow-hidden').style.marginLeft = '0';
+             }
+
+             // Define o título
+             if (titleEl) {
+                 if (subItemType === 'Videoaulas') {
+                     if (totalVideos === 1) {
+                         titleEl.textContent = mainTitle; // Usa o título principal se for vídeo único
+                     } else {
+                         // Usa o título específico da videoaula se houver e não for genérico
+                         titleEl.textContent = (detailData.title && !detailData.title.toLowerCase().startsWith("videoaula"))
+                                                ? detailData.title
+                                                : `${mainTitle} - Parte ${romanize(videoIndex + 1)}`;
+                     }
+                 } else {
+                      // Para outros tipos, usa o título do subitem ou um título genérico
+                      titleEl.textContent = detailData.title || `${subItemType.slice(0,-1)} - ${mainTitle}`;
+                 }
+             }
+
+             // Configura o link de download ou remove o ícone
+             if (downloadLink) {
+                 // Mostra link se houver URL válida e não for placeholder genérico de vídeo
+                 // O link já está no formato /preview
+                 if (detailData.downloadUrl && detailData.downloadUrl !== '#' && !detailData.downloadUrl.startsWith('#dl-')) {
+                     downloadLink.href = detailData.downloadUrl;
+                     downloadLink.title = `Baixar ${titleEl.textContent}`;
+                     downloadLink.setAttribute('target', '_blank'); // Abrir em nova aba
+                     downloadLink.addEventListener('click', (e) => {
+                         e.stopPropagation(); // Evita que o clique no download carregue o item no iframe
+                     });
+                 } else {
+                     downloadLink.remove(); // Remove o ícone/link de download se não houver URL
+                 }
+             }
+
+              // Adiciona atributos e classes para interatividade (carregar no iframe)
+              const itemDisplayTitle = titleEl.textContent; // Título que será mostrado na descrição
+              // Usa a URL do Drive para preview/embed no iframe (já está no formato correto)
+              const displayUrl = detailData.driveVideoUrl || detailData.downloadUrl;
+
+              if (displayUrl && displayUrl.includes('/d/')) { // Verifica se é um link do Drive
+                  if (subItemType === 'Videoaulas') {
+                      detailDiv.setAttribute('data-drive-video-url', displayUrl);
+                  } else {
+                      detailDiv.setAttribute('data-download-url', displayUrl); // Usa a mesma lógica para docs
+                  }
+                  detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                  detailDiv.classList.add('cursor-pointer'); // Torna o item clicável
+              } else {
+                   // Se não for link do Drive visualizável, remove o cursor pointer
+                   detailDiv.classList.remove('cursor-pointer');
+              }
+
+              return detailDiv; // Retorna o elemento HTML do detalhe criado
+        }
+
+
+        // --- Geração do Menu ---
+        if (menuListContainer && detailsTemplate && contentViewer && contentDescription && likeButton) {
+             contentDescription.textContent = "Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar."; // Mensagem inicial
+
+             // Limpa o menu existente antes de gerar o novo
+             menuListContainer.innerHTML = '';
+
+             // Itera sobre os dados de cada módulo para criar o menu
+             menuItemsData.forEach((itemData, mainIndex) => {
+                 const title = itemData.title; // Pega o título do módulo (já atualizado)
+                 const description = itemData.description; // Pega a descrição (atualizada ou placeholder)
+                 const subItems = itemData.subItems || {}; // Pega os subitens (atualizados para todos os módulos)
+                 // Cria um ID único para o conteúdo do acordeão principal
+                 const mainContentId = `content-${mainIndex}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30)}`;
+
+                 // Cria o container principal para o item do acordeão
+                 const accordionItem = document.createElement('div');
+                 accordionItem.className = 'accordion-item';
+                 accordionItem.setAttribute('data-completed', 'false'); // Atributo para controle de status (concluído/não)
+                 accordionItem.setAttribute('data-main-description', description); // Guarda a descrição principal
+
+                 // Cria o botão do cabeçalho do acordeão principal
+                 const headerButton = document.createElement('button');
+                 headerButton.className = 'menu-item-header w-full accordion-header';
+                 headerButton.setAttribute('aria-expanded', 'false'); // Estado inicial: fechado
+                 headerButton.setAttribute('aria-controls', mainContentId); // Associa ao conteúdo
+
+                 // Cria o conteúdo interno do cabeçalho (título, subtítulo, botão de status)
+                 const headerContent = document.createElement('div');
+                 headerContent.className = 'text-left flex-grow mr-2 overflow-hidden'; // Layout flexível e esconde overflow
+                 headerContent.innerHTML = `
+                     <h3 class="text-sm font-medium text-gray-800 truncate">${title}</h3> <div class="text-xs text-gray-500 mt-1 flex justify-between items-center flex-wrap gap-2">
+                          <span>Estratégia Educacional</span> <button type="button" class="status-toggle flex-shrink-0"> <span>Concluído</span>
+                              <svg class="icon-not-completed w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="1.5"></rect></svg>
+                              <svg class="icon-completed w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                          </button>
+                     </div>`;
+
+                 // Cria o ícone de chevron (seta para baixo)
+                 const chevronIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                 chevronIcon.setAttribute('class', 'w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon');
+                 chevronIcon.setAttribute('fill', 'none');
+                 chevronIcon.setAttribute('stroke', 'currentColor');
+                 chevronIcon.setAttribute('viewBox', '0 0 24 24');
+                 chevronIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
+
+                 // Adiciona o conteúdo e o ícone ao botão do cabeçalho
+                 headerButton.appendChild(headerContent);
+                 headerButton.appendChild(chevronIcon);
+
+                 // Cria a div que conterá os subitens (inicialmente escondida)
+                 const contentDiv = document.createElement('div');
+                 contentDiv.id = mainContentId;
+                 contentDiv.className = 'menu-item-content hidden'; // Classe 'hidden' para esconder
+
+                 // Gera os subitens (acordeões aninhados para cada tipo: Videoaulas, Livros, etc.)
+                 subItemOrder.forEach((subItemType, subIndex) => {
+                     const subItemArray = subItems[subItemType] || []; // Pega o array de detalhes para este tipo
+                     const count = subItemArray.length; // Conta quantos itens existem
+                     // Cria um ID único para o conteúdo do acordeão aninhado
+                     const nestedContentId = `nested-content-${mainIndex}-${subIndex}`;
+
+                     // Cria o container para o subitem acordeão
+                     const subAccordionItem = document.createElement('div');
+                     subAccordionItem.className = `sub-accordion-item ${subIndex > 0 ? 'mt-2' : ''}`; // Adiciona margem superior se não for o primeiro
+
+                     // Cria o botão do cabeçalho do subitem acordeão
+                     const subHeaderButton = document.createElement('button');
+                     subHeaderButton.className = 'sub-accordion-header w-full';
+                     subHeaderButton.setAttribute('aria-expanded', 'false');
+                     subHeaderButton.setAttribute('aria-controls', nestedContentId);
+                     if (count === 0) {
+                         subHeaderButton.disabled = true; // Desabilita se não houver itens
+                     }
+                     // Conteúdo do cabeçalho do subitem (Nome do tipo e contagem)
+                     subHeaderButton.innerHTML = `
+                          <span class="text-sm font-medium text-gray-700">${subItemType} (${count})</span>
+                          <svg class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon-nested ${count === 0 ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                     `;
+
+                     // Cria a div que conterá os detalhes (vídeos, links de download)
+                     const subContentDiv = document.createElement('div');
+                     subContentDiv.id = nestedContentId;
+                     subContentDiv.className = 'sub-accordion-content hidden'; // Inicialmente escondida
+
+                     // Se houver detalhes, cria e adiciona cada um
+                     if (count > 0) {
+                         const totalVideos = (subItemType === 'Videoaulas') ? count : 0; // Para numerar corretamente as partes dos vídeos
+                         subItemArray.forEach((detailData, detailIndex) => {
+                             // Chama a função auxiliar para criar o elemento HTML do detalhe
+                             const detailElement = createSubItemDetail(subItemType, detailData, title, detailIndex, totalVideos);
+                             if (detailElement) {
+                                 subContentDiv.appendChild(detailElement); // Adiciona ao container de conteúdo do subitem
+                             }
+                         });
+                     }
+
+                     // Adiciona o cabeçalho e o conteúdo ao container do subitem acordeão
+                     subAccordionItem.appendChild(subHeaderButton);
+                     subAccordionItem.appendChild(subContentDiv);
+                     // Adiciona o subitem acordeão completo ao conteúdo do acordeão principal
+                     contentDiv.appendChild(subAccordionItem);
+                 });
+
+                 // Adiciona o cabeçalho e o conteúdo ao item principal do acordeão
+                 accordionItem.appendChild(headerButton);
+                 accordionItem.appendChild(contentDiv);
+                 // Adiciona o item principal completo à lista do menu
+                 menuListContainer.appendChild(accordionItem);
+             });
+
+             // --- Lógica de Funcionamento do Acordeão Principal (MODIFICADO PARA EXCLUSIVO) ---
+            const allAccordionHeaders = document.querySelectorAll('.accordion-header'); // Pega todos os cabeçalhos principais
+            allAccordionHeaders.forEach(header => {
+            header.addEventListener('click', (event) => {
+                // Ignora o clique se foi no botão de status
+                if (event.target.closest('.status-toggle')) return;
+
+                const currentContentId = header.getAttribute('aria-controls');
+                const currentContent = document.getElementById(currentContentId);
+                const currentChevronIcon = header.querySelector('.chevron-icon');
+                const isOpening = header.getAttribute('aria-expanded') === 'false'; // Verifica se este item está fechado e será aberto
+
+                // Fecha TODOS os outros itens ANTES de abrir/fechar o clicado
+                allAccordionHeaders.forEach(otherHeader => {
+                if (otherHeader !== header) { // Não executa no próprio item que foi clicado
+                    const otherContentId = otherHeader.getAttribute('aria-controls');
+                    const otherContent = document.getElementById(otherContentId);
+                    const otherChevronIcon = otherHeader.querySelector('.chevron-icon');
+
+                    if (otherHeader.getAttribute('aria-expanded') === 'true') { // Se o outro item estiver aberto...
+                    // ...fecha ele
+                    otherHeader.setAttribute('aria-expanded', 'false');
+                    if (otherContent) otherContent.classList.add('hidden');
+                    if (otherChevronIcon) otherChevronIcon.classList.remove('rotate-180');
+                    }
+                }
+                });
+
+                // Agora, abre ou fecha o item que foi clicado
+                if (!currentContent) return; // Segurança caso o conteúdo não exista
+                header.setAttribute('aria-expanded', isOpening); // Define o novo estado (true se estava fechado, false se estava aberto)
+                currentContent.classList.toggle('hidden', !isOpening); // Mostra se isOpening=true, esconde se isOpening=false
+                if (currentChevronIcon) currentChevronIcon.classList.toggle('rotate-180', isOpening); // Gira se isOpening=true, volta se isOpening=false
+            });
+            });
+
+             // --- Lógica de Funcionamento do Acordeão Aninhado ---
+             // Adiciona event listeners aos cabeçalhos dos subitens
+             const subAccordionHeaders = document.querySelectorAll('.sub-accordion-header');
+             subAccordionHeaders.forEach(subHeader => {
+                 if (!subHeader.disabled) { // Apenas para cabeçalhos habilitados
+                     subHeader.addEventListener('click', (event) => {
+                         event.stopPropagation(); // Impede que o clique feche o acordeão pai
+                         const contentId = subHeader.getAttribute('aria-controls');
+                         const content = document.getElementById(contentId);
+                         if (!content) return;
+                         const expanded = subHeader.getAttribute('aria-expanded') === 'true';
+                         const chevronIcon = subHeader.querySelector('.chevron-icon-nested');
+                         subHeader.setAttribute('aria-expanded', !expanded);
+                         content.classList.toggle('hidden');
+                         if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                     });
+                 }
+             });
+
+             // --- Lógica para Marcar/Desmarcar como Concluído ---
+             // Adiciona event listeners aos botões de status
+             const statusToggles = document.querySelectorAll('.status-toggle');
+             statusToggles.forEach(toggle => {
+                 toggle.addEventListener('click', (event) => {
+                     event.stopPropagation(); // Impede que o clique abra/feche o acordeão pai
+                     const accordionItem = toggle.closest('.accordion-item'); // Encontra o item principal
+                     if (!accordionItem) return;
+                     // Inverte o estado 'data-completed'
+                     const isCompleted = accordionItem.getAttribute('data-completed') === 'true';
+                     accordionItem.setAttribute('data-completed', !isCompleted);
+                     // Adiciona/remove a classe 'is-completed' para mostrar/esconder os ícones corretos
+                     toggle.classList.toggle('is-completed', !isCompleted);
+                     // Log (opcional)
+                     console.log(`Item "${accordionItem.querySelector('h3').innerText}" marcado como ${!isCompleted ? 'concluído' : 'não concluído'}`);
+                 });
+             });
+
+              // --- Lógica para Carregar Conteúdo (Vídeo ou PDF/Documento) no Iframe ---
+              // Adiciona um único event listener ao container do menu (event delegation)
+              menuListContainer.addEventListener('click', (event) => {
+                  // Encontra o elemento '.sub-item-details' mais próximo que foi clicado
+                  const detailItem = event.target.closest('.sub-item-details');
+
+                  // Ignora cliques no link/ícone de download
+                  if (event.target.closest('.download-link')) {
+                      return;
+                  }
+
+                  // Se um item de detalhe foi clicado e os elementos do viewer existem
+                  if (detailItem && contentViewer && contentDescription) {
+                      const driveVideoUrl = detailItem.getAttribute('data-drive-video-url');
+                      const downloadUrl = detailItem.getAttribute('data-download-url'); // Usado para PDFs/Docs
+                      const itemTitle = detailItem.getAttribute('data-item-title') || 'Conteúdo selecionado';
+                      const parentAccordionItem = detailItem.closest('.accordion-item');
+                      const mainDescription = parentAccordionItem ? parentAccordionItem.getAttribute('data-main-description') : 'Descrição não disponível.';
+
+                      // Verifica se o item é clicável (possui URL válida para visualização)
+                      if (driveVideoUrl || downloadUrl) {
+                           // Remove a classe 'is-active' de qualquer item previamente ativo
+                           document.querySelectorAll('.sub-item-details.is-active').forEach(activeItem => {
+                               activeItem.classList.remove('is-active');
+                           });
+                           // Adiciona a classe 'is-active' ao item clicado
+                           detailItem.classList.add('is-active');
+
+                          // Carrega o conteúdo no iframe
+                          if (driveVideoUrl) { // Prioriza vídeo
+                               contentViewer.src = driveVideoUrl; // Define o src do iframe para o vídeo
+                               contentDescription.textContent = `${mainDescription} - Assistindo: ${itemTitle}`; // Atualiza a descrição
+                               console.log(`Carregando vídeo do Drive: ${driveVideoUrl}`);
+                          } else if (downloadUrl) { // Se não for vídeo, carrega documento
+                               contentViewer.src = downloadUrl; // Define o src do iframe para o documento
+                               contentDescription.textContent = `${mainDescription} - Visualizando: ${itemTitle}`; // Atualiza a descrição
+                               console.log(`Carregando documento: ${downloadUrl}`);
+                          }
+                      }
+                  }
+              });
+
+
+              // --- Lógica para o botão de Like ---
+              if(likeButton) {
+                  likeButton.addEventListener('click', () => {
+                      likeButton.classList.toggle('is-liked'); // Alterna a classe que muda o ícone
+                      const isLiked = likeButton.classList.contains('is-liked');
+                      console.log(`Item ${isLiked ? 'curtido' : 'descurtido'}`); // Log (opcional)
+                  });
+              }
+
+              // --- Carregar o Primeiro Conteúdo Clicável ao Iniciar ---
+              // Encontra o primeiro item de detalhe que tem um link de vídeo ou documento visualizável
+              const firstClickableDetail = document.querySelector('#menu-items-list .sub-item-details[data-drive-video-url], #menu-items-list .sub-item-details[data-download-url]');
+              if (firstClickableDetail) {
+                  // Encontra o cabeçalho do acordeão pai
+                  const parentHeader = firstClickableDetail.closest('.accordion-item')?.querySelector('.accordion-header');
+                  if (parentHeader) {
+                      // Abre o acordeão pai se estiver fechado
+                      const contentId = parentHeader.getAttribute('aria-controls');
+                      const content = document.getElementById(contentId);
+                      const chevronIcon = parentHeader.querySelector('.chevron-icon');
+                      if (content && content.classList.contains('hidden')) {
+                           parentHeader.setAttribute('aria-expanded', 'true');
+                           content.classList.remove('hidden');
+                           if(chevronIcon) chevronIcon.classList.add('rotate-180');
+                      }
+                      // Abre o sub-acordeão (aninhado) se estiver fechado
+                      const parentSubAccordionContent = firstClickableDetail.closest('.sub-accordion-content');
+                      if (parentSubAccordionContent && parentSubAccordionContent.classList.contains('hidden')) {
+                          const parentSubHeader = parentSubAccordionContent.previousElementSibling; // Pega o botão do cabeçalho aninhado
+                          // Simula um clique no cabeçalho aninhado para abri-lo
+                          if(parentSubHeader && !parentSubHeader.disabled && typeof parentSubHeader.click === 'function') {
+                              parentSubHeader.click();
+                          }
+                      }
+                      // Simula um clique no próprio item de detalhe para carregar seu conteúdo no iframe
+                      firstClickableDetail.click();
+                  }
+              } else {
+                 // Se nenhum item for clicável inicialmente (raro, mas possível), limpa o viewer e a descrição
+                 contentViewer.src = '';
+                 contentDescription.textContent = 'Nenhum conteúdo selecionado ou disponível para visualização.';
+              }
+
+
+        } else {
+            // Mensagem de erro se algum elemento essencial não for encontrado
+            console.error("Erro: Elementos essenciais do DOM não foram encontrados (menuListContainer, detailsTemplate, contentViewer, contentDescription, likeButton).");
+        }
+    </script>
+
+</body>
+</html>

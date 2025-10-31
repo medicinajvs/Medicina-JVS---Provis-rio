@@ -1,0 +1,3046 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula ou material selecionado */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+
+        /* Estilos para os menus suspensos de materiais */
+        .material-category-details, .video-subcategory-details {
+            background-color: #2d3748; /* bg-gray-800 um pouco mais claro */
+            border-radius: 0.375rem; /* rounded-lg */
+            margin-bottom: 0.75rem; /* space-y-3 */
+            overflow: hidden; /* Garante que os cantos arredondados funcionem bem */
+        }
+        .material-category-summary, .video-subcategory-summary {
+            padding: 0.75rem 1rem; /* p-3 */
+            background-color: #2d3748; /* Mesma cor para fundo consistente */
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #e2e8f0;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .material-category-summary:hover, .video-subcategory-summary:hover {
+            background-color: #4a5568; /* hover:bg-gray-700 */
+        }
+        .material-category-summary::-webkit-details-marker, .video-subcategory-summary::-webkit-details-marker {
+            display: none; /* Esconde o triângulo padrão do Chrome */
+        }
+        .material-category-summary::marker, .video-subcategory-summary::marker {
+            display: none; /* Esconde o triângulo padrão do Firefox */
+        }
+        .material-category-summary .icon, .video-subcategory-summary .icon {
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease-in-out;
+        }
+        .material-category-details[open] .material-category-summary .icon,
+        .video-subcategory-details[open] .video-subcategory-summary .icon {
+            transform: rotate(90deg); /* Gira o ícone quando aberto */
+        }
+        .material-items-container, .video-items-container {
+            padding: 0.5rem 1rem 0.75rem; /* Ajusta o padding interno para os itens */
+            background-color: #2d3748; /* Mesma cor para fundo consistente */
+            border-top: 1px solid #4a5568; /* Linha divisória */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Sala Vermelha Sempre Tranquila</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src="https://drive.google.com/file/d/1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU/preview"
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+
+            <!-- Materiais de Estudo agora com menus suspensos -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript como menus suspensos -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado (Aulas de Vídeo) -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h=full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // Módulo - Atendimento Inicial ao Paciente Grave
+        modulesData.push({
+            id: 'module_atendimento_inicial_novo_curso',
+            title: 'Módulo - Atendimento Inicial ao Paciente Grave',
+            path: 'Novo Curso / Atendimento Inicial ao Paciente Grave',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yX45nkCzHdQ8UnjlP7YMgldw0k4ht649/view?usp=sharing'),
+                    title: `Aula 01 - Atendimento Inicial 1`,
+                    description: `Conteúdo da aula 1 de Atendimento Inicial ao Paciente Grave.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uxDW298LemtZlGoDUv5AX4b2oFPL6fTy/view?usp=sharing'),
+                    title: `Aula 02 - Atendimento Inicial 2`,
+                    description: `Conteúdo da aula 2 de Atendimento Inicial ao Paciente Grave.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Atendimento Inicial - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1d7b0mmJ2vEC_cLfSEMqLN4yGTk-6ANnc/view?usp=drive_link'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Três Pilares para um Plantão Sempre Tranquilo
+        modulesData.push({
+            id: 'module_tres_pilares',
+            title: 'Módulo - Três Pilares para um Plantão Sempre Tranquilo',
+            path: 'Novo Curso / Três Pilares',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1s_umhbZKGe-gc_RNr8s-XPEiaBos1lMh/view?usp=sharing'),
+                    title: `Aula 01 - Pilares do Plantão 1`,
+                    description: `Conteúdo da aula 1 de Três Pilares para um Plantão Sempre Tranquilo.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XctAye2_aGmoKfPRGvqQUVwx2hXDijlr/view?usp=sharing'),
+                    title: `Aula 02 - Pilares do Plantão 2`,
+                    description: `Conteúdo da aula 2 de Três Pilares para um Plantão Sempre Tranquilo.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RQm4JHveKi8Nj-JJBJYgHNqqpDBAUfTA/view?usp=sharing'),
+                    title: `Aula 03 - Pilares do Plantão 3`,
+                    description: `Conteúdo da aula 3 de Três Pilares para um Plantão Sempre Tranquilo.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15BbSvhJQSXYhJrqtJ36gjhD7F18Vc0Vl/view?usp=sharing'),
+                    title: `Aula 04 - Pilares do Plantão 4`,
+                    description: `Conteúdo da aula 4 de Três Pilares para um Plantão Sempre Tranquilo.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_21Mefeqrn6aYAgjJpGfnA9_aNg-ibLK/view?usp=sharing'),
+                    title: `Aula 05 - Pilares do Plantão 5`,
+                    description: `Conteúdo da aula 5 de Três Pilares para um Plantão Sempre Tranquilo.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - Síndrome Coronariana Aguda (SCA) com Supra de ST
+        modulesData.push({
+            id: 'module_sca_supra',
+            title: 'Módulo - Síndrome Coronariana Aguda (SCA) com Supra de ST',
+            path: 'Novo Curso / SCA com Supra',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gN_Zh0yLPSpkpGTof--lIPEW02S-G1iz/view?usp=sharing'),
+                    title: `Aula 01 - SCA com Supra 1`,
+                    description: `Conteúdo da aula 1 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uTUKo3NREt7DJQsvyV7d4L_t1for0mFX/view?usp=sharing'),
+                    title: `Aula 02 - SCA com Supra 2`,
+                    description: `Conteúdo da aula 2 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10rCkMwVqqwFB0ieGK5H_rtv-3pUjK5bz/view?usp=sharing'),
+                    title: `Aula 03 - SCA com Supra 3`,
+                    description: `Conteúdo da aula 3 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L5sKz1SK4obKTD4QV1sl6GmITXRM2dZj/view?usp=sharing'),
+                    title: `Aula 04 - SCA com Supra 4`,
+                    description: `Conteúdo da aula 4 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OnRrS1TqSvOXhBFIKC4KNS_GfF4EQAI4/view?usp=sharing'),
+                    title: `Aula 05 - SCA com Supra 5`,
+                    description: `Conteúdo da aula 5 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/164P3lu523ddXxx8zVgHhx8qf6ypWO7O1/view?usp=sharing'),
+                    title: `Aula 06 - SCA com Supra 6`,
+                    description: `Conteúdo da aula 6 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UbcsrUEcjViH-DqEAj5M2yCS0Nhmi05r/view?usp=sharing'),
+                    title: `Aula 07 - SCA com Supra 7`,
+                    description: `Conteúdo da aula 7 de SCA com Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - Gasometria
+        modulesData.push({
+            id: 'module_gasometria',
+            title: 'Módulo - Gasometria',
+            path: 'Novo Curso / Gasometria',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1w29c5htlcsrj7ZlmKQbVu0icMQmFfEzW/view?usp=sharing'),
+                    title: `Aula 01 - Gasometria 1`,
+                    description: `Conteúdo da aula 1 de Gasometria.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WVEopj3525tyZHJ2GhQubqLfwjrndAvY/view?usp=sharing'),
+                    title: `Aula 02 - Gasometria 2`,
+                    description: `Conteúdo da aula 2 de Gasometria.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lfJ845q2rF6f__Ica6fbWzJYbwTr0TRc/view?usp=sharing'),
+                    title: `Aula 03 - Gasometria 3`,
+                    description: `Conteúdo da aula 3 de Gasometria.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1oKMYCKSn6ZtBhuB26jcIExA4lVTQL9wV/view?usp=sharing'),
+                    title: `Aula 04 - Gasometria 4`,
+                    description: `Conteúdo da aula 4 de Gasometria.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Gasometria - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/112ganGqBlWGYM8myHoXaOkHBYXp1A6t9/view?usp=sharing'
+                        },
+                        {
+                            title: `Gasometria - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1bgSljdfwj14v3RvseLl1tfa2IZSBTFCc/view?usp=sharing'
+                        },
+                        {
+                            title: `Gasometria - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Z3D7FC30viWUe54fwgGvIhA9gMeoch2Q/view?usp=sharing'
+                        },
+                        {
+                            title: `Gasometria - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/187oripKqbxznmMS0Kc3DYAbtoCa5cQr2/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Sedoanalgesia
+        modulesData.push({
+            id: 'module_sedoanalgesia',
+            title: 'Módulo - Sedoanalgesia',
+            path: 'Novo Curso / Sedoanalgesia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zv7M7Pmqp1_rlWm29HI2HMOLL2YIIJ88/view?usp=sharing'),
+                    title: `Aula 01 - Sedoanalgesia 1`,
+                    description: `Conteúdo da aula 1 de Sedoanalgesia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1x0K3FLRxA9MKzxz7ZNlFqGzA1mMZYrSd/view?usp=sharing'),
+                    title: `Aula 02 - Sedoanalgesia 2`,
+                    description: `Conteúdo da aula 2 de Sedoanalgesia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1sZbNgeFQvk5I0xFAx04FkHIS4iYWCEc7/view?usp=sharing'),
+                    title: `Aula 03 - Sedoanalgesia 3`,
+                    description: `Conteúdo da aula 3 de Sedoanalgesia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FjgNO3PQle7xQ0BNeP_9_zBGZA1uxD9s/view?usp=sharing'),
+                    title: `Aula 04 - Sedoanalgesia 4`,
+                    description: `Conteúdo da aula 4 de Sedoanalgesia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FTKipxaeGJaJQ6stkoZ0XTgp3YKzc09d/view?usp=sharing'),
+                    title: `Aula 05 - Sedoanalgesia 5`,
+                    description: `Conteúdo da aula 5 de Sedoanalgesia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Sedoanalgesia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1-Xhd2UphhAuWjCU8qJ4mOdJsdJwh3HmG/view?usp=sharing'
+                        },
+                        {
+                            title: `Sedoanalgesia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Y1GAfOs52ederMOVZ43coiC22_Xsc_Zw/view?usp=sharing'
+                        },
+                        {
+                            title: `Sedoanalgesia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ynD-RjfMIjgs9W6AigXugkh5BK8YTj37/view?usp=sharing'
+                        },
+                        {
+                            title: `Sedoanalgesia - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/19I4t_G5P8ZMUhzMC4KOdUpQXI3tz_yX9/view?usp=sharing'
+                        },
+                        {
+                            title: `Sedoanalgesia - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/133pbXSvzxwZ9BRtSlMn3Wo3idJf8ESBO/view?usp=sharing'
+                        },
+                        {
+                            title: `Sedoanalgesia - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1g7lkhIwyJRpcNnGyYpUTC-QsbSItmC6_/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Injúria Renal Aguda
+        modulesData.push({
+            id: 'module_injuria_renal_aguda',
+            title: 'Módulo - Injúria Renal Aguda',
+            path: 'Novo Curso / Injúria Renal Aguda',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13iXzJReAGd8Rh_LSJORdOGKqizk_icA3/view?usp=sharing'),
+                    title: `Aula 01 - Injúria Renal Aguda 1`,
+                    description: `Conteúdo da aula 1 de Injúria Renal Aguda.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_ziCxmdWwFdPbMNLHC0iau4-duuuSh5G/view?usp=sharing'),
+                    title: `Aula 02 - Injúria Renal Aguda 2`,
+                    description: `Conteúdo da aula 2 de Injúria Renal Aguda.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DX9c5O0r6YuKPhW2GIQ3tylaNEMsLJWB/view?usp=sharing'),
+                    title: `Aula 03 - Injúria Renal Aguda 3`,
+                    description: `Conteúdo da aula 3 de Injúria Renal Aguda.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Injúria Renal Aguda - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1HrwtSMJd3oaC0egYcHN6TxlNP3lYAAGn/view?usp=sharing'
+                        },
+                        {
+                            title: `Injúria Renal Aguda - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1UqK5CV3hVpH1AdjKbPQELvWR1zZ_guND/view?usp=sharing'
+                        },
+                        {
+                            title: `Injúria Renal Aguda - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1KZSDJ3wuY2UD8p-cBUbjbsLIMIID3BI-/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Insuficiência Cardíaca Aguda Descompensada (ICAD)
+        modulesData.push({
+            id: 'module_icad',
+            title: 'Módulo - Insuficiência Cardíaca Aguda Descompensada (ICAD)',
+            path: 'Novo Curso / ICAD',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QH2Le_HpLYnm6NU7cKg8W19vONudXCcE/view?usp=sharing'),
+                    title: `Aula 01 - ICAD 1`,
+                    description: `Conteúdo da aula 1 de ICAD.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PYWaZJboG8NNsoSrRnVpeI0sn566T7K5/view?usp=sharing'),
+                    title: `Aula 02 - ICAD 2`,
+                    description: `Conteúdo da aula 2 de ICAD.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wrTVys8KmCr6DZ5QH57AjJyByK_Tx8xT/view?usp=sharing'),
+                    title: `Aula 03 - ICAD 3`,
+                    description: `Conteúdo da aula 3 de ICAD.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `ICAD - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1DyXvWqBLK9fCv0-zRn7E4tLYvZ9m3WNA/view?usp=sharing'
+                        },
+                        {
+                            title: `ICAD - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/19HaVPbnaVh-OUiYEBEfD-rqV_3jJorGp/view?usp=sharing'
+                        },
+                        {
+                            title: `ICAD - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/14YGbZweFcC3FKzQcgOIfqO-PSU84zvu3/view?usp=sharing'
+                        },
+                        {
+                            title: `ICAD - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1FpX6ulF4wq-Ot2NLDF25LIa-30kjnwMD/view?usp=sharing'
+                        },
+                        {
+                            title: `ICAD - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1TB9RiUA1q35l6OMbrc6QGOtB26CAd0qr/view?usp=sharing'
+                        },
+                        {
+                            title: `ICAD - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1qT7ksrErdcO19aqBP-tgryehMLB-oK2R/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Bradiarritmia
+        modulesData.push({
+            id: 'module_bradiarritmia',
+            title: 'Módulo - Bradiarritmia',
+            path: 'Novo Curso / Bradiarritmia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1prqx_1gW9mJE41dBKCaeEpOBqNroL_Yy/view?usp=sharing'),
+                    title: `Aula 01 - Bradiarritmia 1`,
+                    description: `Conteúdo da aula 1 de Bradiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rEotkwZt4z-CqNoBPNOGVbPnUNEPaDdQ/view?usp=sharing'),
+                    title: `Aula 02 - Bradiarritmia 2`,
+                    description: `Conteúdo da aula 2 de Bradiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1sRqJyMjPsr21cs1geN5Tv7PznbSfzdwD/view?usp=sharing'),
+                    title: `Aula 03 - Bradiarritmia 3`,
+                    description: `Conteúdo da aula 3 de Bradiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o9IOdWdVcuSAF05pF2aVy3DVrjTBhXi0/view?usp=sharing'),
+                    title: `Aula 04 - Bradiarritmia 4`,
+                    description: `Conteúdo da aula 4 de Bradiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Bradiarritmia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1K-xXOVtbc35sfxLyoW6rGpaPhoMpUALi/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1vjzsp_fp3YqcbTauIFKs1MxMq5_EpcZn/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/12yUxUHD9vwD3zHWCKbNPCE7DiGJAo_V5/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ZdyK7yhJoEeVyoe1M2_1rXKsl_P8rz7b/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1wX_VXHGmeTRKmT27Joj6OAXjJDvsnyTj/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/10Ff_OWCMZ5QqQgzW-l27rOyDeSCRUUCl/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 7`,
+                            description: `PDF de material de estudo 7.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Y9qpiwyVUqlc55AWzdTlDsznJw0OEd9b/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 8`,
+                            description: `PDF de material de estudo 8.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ruXst_TCqvnkhxGhb8_KXeMRLpow6yVX/view?usp=sharing'
+                        },
+                        {
+                            title: `Bradiarritmia - PDF 9`,
+                            description: `PDF de material de estudo 9.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1A1r9gJwNXL22qyNmkTN5Dlq5Qh1NKeCm/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Taquiarritmia
+        modulesData.push({
+            id: 'module_taquiarritmia',
+            title: 'Módulo - Taquiarritmia',
+            path: 'Novo Curso / Taquiarritmia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zHxzL0oZe3M3QPqUxSAa-Bojujx6Lhc5/view?usp=sharing'),
+                    title: `Aula 01 - Taquiarritmia 1`,
+                    description: `Conteúdo da aula 1 de Taquiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fV5DY_nNx3kVUJa-yodiLxd3Coi6b6KD/view?usp=sharing'),
+                    title: `Aula 02 - Taquiarritmia 2`,
+                    description: `Conteúdo da aula 2 de Taquiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gUaBMIcS-HnibIWc8fSU0SLvQ64Ia7Gj/view?usp=sharing'),
+                    title: `Aula 03 - Taquiarritmia 3`,
+                    description: `Conteúdo da aula 3 de Taquiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_K1uuWA0tzqRKcmJ2xFjgQJA0Z07W0zu/view?usp=sharing'),
+                    title: `Aula 04 - Taquiarritmia 4`,
+                    description: `Conteúdo da aula 4 de Taquiarritmia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Taquiarritmia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1sPFhbsE30LG2Tr57RNad2n0yq9TwVvXI/view?usp=sharing'
+                        },
+                        {
+                            title: `Taquiarritmia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1wlfUqqSLKO081OKwkTHFYeyqtWUW7yoM/view?usp=sharing'
+                        },
+                        {
+                            title: `Taquiarritmia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1gMZaXpVdF2d9xe2fjucwx2jiOp50nItx/view?usp=sharing'
+                        },
+                        {
+                            title: `Taquiarritmia - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1WPHkCNhsVEyT_fuCR4IylV-88a5rjUOx/view?usp=sharing'
+                        },
+                        {
+                            title: `Taquiarritmia - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1PTvtZllZyjcG-qC2HzmRzTzNtmZnUN-O/view?usp=sharing'
+                        },
+                        {
+                            title: `Taquiarritmia - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1a8J2wDgNctJjaVV-IrPzFaVV6J5Dhmxv/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Distúrbios de Potássio
+        modulesData.push({
+            id: 'module_disturbios_potassio',
+            title: 'Módulo - Distúrbios de Potássio',
+            path: 'Novo Curso / Distúrbios de Potássio',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U3aQ3AQKL3amy1CbxA2FuKmCrQgzgkyA/view?usp=sharing'),
+                    title: `Aula 01 - Distúrbios de Potássio 1`,
+                    description: `Conteúdo da aula 1 de Distúrbios de Potássio.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tOcM4_fFwcTGGEieKrekaFim9UJRQxk3/view?usp=sharing'),
+                    title: `Aula 02 - Distúrbios de Potássio 2`,
+                    description: `Conteúdo da aula 2 de Distúrbios de Potássio.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1YBSAhQoVPFXxQ6DjbkZU9oWcPN9dVn9N/view?usp=sharing'),
+                    title: `Aula 03 - Distúrbios de Potássio 3`,
+                    description: `Conteúdo da aula 3 de Distúrbios de Potássio.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Potássio - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/184v0m2VkRfHbuiOwWKXEu9kcqLYfElQO/view?usp=sharing'
+                        },
+                        {
+                            title: `Potássio - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1OV_JcPlEpSU1P63lvgh_QLWEIiBUQXgZ/view?usp=sharing'
+                        },
+                        {
+                            title: `Potássio - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1QwSjdukLQ19igbX99SDbOIH50pQEk15L/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Distúrbios do Sódio
+        modulesData.push({
+            id: 'module_disturbios_sodio',
+            title: 'Módulo - Distúrbios do Sódio',
+            path: 'Novo Curso / Distúrbios do Sódio',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ng9pbCnnxngvKDK7aS3d_FlSufAGMW85/view?usp=sharing'),
+                    title: `Aula 01 - Distúrbios do Sódio 1`,
+                    description: `Conteúdo da aula 1 de Distúrbios do Sódio.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1A7mrKtFAik6yL6mTxWVMmjYatI2OdaTN/view?usp=sharing'),
+                    title: `Aula 02 - Distúrbios do Sódio 2`,
+                    description: `Conteúdo da aula 2 de Distúrbios do Sódio.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1j-PQ4FusFXIzJh7keQwta68gE9tecj--/view?usp=sharing'),
+                    title: `Aula 03 - Distúrbios do Sódio 3`,
+                    description: `Conteúdo da aula 3 de Distúrbios do Sódio.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Sódio - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1XSrGL5kTfG00SfvnlzSbf3mgl2M5CvTB/view?usp=sharing'
+                        },
+                        {
+                            title: `Sódio - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1_bSCNzDJl370NF2-r0SZf1sR0WaURYrh/view?usp=sharing'
+                        },
+                        {
+                            title: `Sódio - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1RgOFP_z0tR_5B6muXf2euCYGfJ4S8PZv/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Tromboembolismo Pulmonar
+        modulesData.push({
+            id: 'module_tromboembolismo_pulmonar',
+            title: 'Módulo - Tromboembolismo Pulmonar',
+            path: 'Novo Curso / Tromboembolismo Pulmonar',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CRy5uyp7dP7cgzGcY8lbSc2nGTTctelO/view?usp=sharing'),
+                    title: `Aula 01 - TEP 1`,
+                    description: `Conteúdo da aula 1 de Tromboembolismo Pulmonar.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i2MxFAtJUvY96ay95oD9GFR-mwY69ci2/view?usp=sharing'),
+                    title: `Aula 02 - TEP 2`,
+                    description: `Conteúdo da aula 2 de Tromboembolismo Pulmonar.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/156RbXqKEZz9C-O0D1ITb6NgaVPSPXDuN/view?usp=sharing'),
+                    title: `Aula 03 - TEP 3`,
+                    description: `Conteúdo da aula 3 de Tromboembolismo Pulmonar.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `TEP - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1yBZSbES4VkitnJiYNWt5iRoLhhFMu57D/view?usp=sharing'
+                        },
+                        {
+                            title: `TEP - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1IhuQPmEf1KarGnM1NYlgOAvsAZAq-HaL/view?usp=sharing'
+                        },
+                        {
+                            title: `TEP - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ttrjvKhy0h2TAJ5foz5UgrMf2YOcppie/view?usp=sharing'
+                        },
+                        {
+                            title: `TEP - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/17O_5Dbfi3k5zIm4f8i53lMWBAdPpPRIR/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Crise Hipertensiva
+        modulesData.push({
+            id: 'module_crise_hipertensiva_novo',
+            title: 'Módulo - Crise Hipertensiva',
+            path: 'Novo Curso / Crise Hipertensiva',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rXdO3DZtzXP5YnSNqT6o7tay5AkiU2GG/view?usp=sharing'),
+                    title: `Aula 01 - Crise Hipertensiva 1`,
+                    description: `Conteúdo da aula 1 de Crise Hipertensiva.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1sl1RlpOqHGZiUFVa-LpXAg7K7rqp3lR1/view?usp=sharing'),
+                    title: `Aula 02 - Crise Hipertensiva 2`,
+                    description: `Conteúdo da aula 2 de Crise Hipertensiva.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Crise Hipertensiva - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1HnOUa6_u7VC-Qspp3S3pIEIjKp-KFuFU/view?usp=sharing'
+                        },
+                        {
+                            title: `Crise Hipertensiva - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1SqTgoA06A1zWm4y1H6MheUnBZ2x1UzC-/view?usp=sharing'
+                        },
+                        {
+                            title: `Crise Hipertensiva - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1VAvJKpt2wpWai10uqr6Az8OVqXxXZMME/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Choque Hipovolêmico + Hemotransfusão
+        modulesData.push({
+            id: 'module_choque_hemotransfusao',
+            title: 'Módulo - Choque Hipovolêmico + Hemotransfusão',
+            path: 'Novo Curso / Choque e Hemotransfusão',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XZJs0mOCw1FZAJdRNTIPi6CUD9f_sr7j/view?usp=sharing'),
+                    title: `Aula 01 - Choque e Hemotransfusão 1`,
+                    description: `Conteúdo da aula 1 de Choque Hipovolêmico + Hemotransfusão.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SyIfVSlcFloHoLW4vJywz7a3KmhjOWFa/view?usp=sharing'),
+                    title: `Aula 02 - Choque e Hemotransfusão 2`,
+                    description: `Conteúdo da aula 2 de Choque Hipovolêmico + Hemotransfusão.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1p2wZmbBBrtoHMPYTEnffqLZr7oyfi80m/view?usp=sharing'),
+                    title: `Aula 03 - Choque e Hemotransfusão 3`,
+                    description: `Conteúdo da aula 3 de Choque Hipovolêmico + Hemotransfusão.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Choque e Hemotransfusão - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1_7Ln_AoXQAdUQvlSK4y-zX3OiLZpIivL/view?usp=sharing'
+                        },
+                        {
+                            title: `Choque e Hemotransfusão - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1sk9iJESvmBnwVfJFc-cSDjplFwVbJFLd/view?usp=sharing'
+                        },
+                        {
+                            title: `Choque e Hemotransfusão - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1XHWg9wXP7ZPzQloW96I-QW_KTgMBwiam/view?usp=sharing'
+                        },
+                        {
+                            title: `Choque e Hemotransfusão - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Nz5D65vwzhLmWRZjgazb6KCNColftKgz/view?usp=sharing'
+                        },
+                        {
+                            title: `Choque e Hemotransfusão - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1SXSo5ppwHUJ3OUWzT_9mq5YMPvuFji7q/view?usp=sharing'
+                        },
+                        {
+                            title: `Choque e Hemotransfusão - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1SEXCZfczgIF4yKOryyGy9Mbej7-ii2ys/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Princípios da Reposição Volêmica
+        modulesData.push({
+            id: 'module_reposicao_volemica',
+            title: 'Módulo - Princípios da Reposição Volêmica',
+            path: 'Novo Curso / Reposição Volêmica',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ymf5NJuKFljF5Qzi09WTMtozVC6njjgE/view?usp=sharing'),
+                    title: `Aula 01 - Reposição Volêmica 1`,
+                    description: `Conteúdo da aula 1 de Princípios da Reposição Volêmica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19l6gO_xnw7Eg7B_hHjnYZRuesXVWJa9D/view?usp=sharing'),
+                    title: `Aula 02 - Reposição Volêmica 2`,
+                    description: `Conteúdo da aula 2 de Princípios da Reposição Volêmica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1EGrkspOKpfJ6C7jzPHEoucq2QHj6fyhO/view?usp=sharing'),
+                    title: `Aula 03 - Reposição Volêmica 3`,
+                    description: `Conteúdo da aula 3 de Princípios da Reposição Volêmica.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Reposição Volêmica - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1SPDeXiANSeApQehAMcBmYZkQlJoyovxJ/view?usp=sharing'
+                        },
+                        {
+                            title: `Reposição Volêmica - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/130FGrJG806RRuWTCfotvTFmOQ2FNqizb/view?usp=sharing'
+                        },
+                        {
+                            title: `Reposição Volêmica - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1OTWC20hPli577ugh3vZbDx7wMXqUlOz1/view?usp=sharing'
+                        },
+                        {
+                            title: `Reposição Volêmica - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1pSaqRAvDHtUAIN3fZG9wFFKJ8E1WR0Ei/view?usp=sharing'
+                        },
+                        {
+                            title: `Reposição Volêmica - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1didpXQ4osANDnQZWUGzT-JFMYCAKtRis/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Emergência Hiperglicêmica (Cetoacidose Diabética e Estado Hiperosmolar)
+        modulesData.push({
+            id: 'module_emergencia_hiperglicemica',
+            title: 'Módulo - Emergência Hiperglicêmica (Cetoacidose Diabética e Estado Hiperosmolar)',
+            path: 'Novo Curso / Emergência Hiperglicêmica',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fOink1Ub0ltoKxm7PISpbve51dLftWFj/view?usp=sharing'),
+                    title: `Aula 01 - Emergência Hiperglicêmica 1`,
+                    description: `Conteúdo da aula 1 de Emergência Hiperglicêmica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UEUS6z2JQmkZOPTVsuA_tAo8lLAvMsfJ/view?usp=sharing'),
+                    title: `Aula 02 - Emergência Hiperglicêmica 2`,
+                    description: `Conteúdo da aula 2 de Emergência Hiperglicêmica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/18sMLY9MhWspXDlqCmPxmOlHYMevnkKgU/view?usp=sharing'),
+                    title: `Aula 03 - Emergência Hiperglicêmica 3`,
+                    description: `Conteúdo da aula 3 de Emergência Hiperglicêmica.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Emergência Hiperglicêmica - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1LyuGB2jmLT0Tlx0-JjLhR0zpY1ziQ8HT/view?usp=sharing'
+                        },
+                        {
+                            title: `Emergência Hiperglicêmica - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/10Yr165lmfDFOG1nGyNk4tD3DX2QuUrYX/view?usp=sharing'
+                        },
+                        {
+                            title: `Emergência Hiperglicêmica - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1VDC2ITOHSpFLIrcxHDWizWQqel76VpC3/view?usp=sharing'
+                        },
+                        {
+                            title: `Emergência Hiperglicêmica - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1M7RRmPUqUcCO2rMEl3O2Eltj8-sJ-3NJ/view?usp=sharing'
+                        },
+                        {
+                            title: `Emergência Hiperglicêmica - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1-03RFvDwAz903sfDTOumZSJJKLzfnT_V/view?usp=sharing'
+                        },
+                        {
+                            title: `Emergência Hiperglicêmica - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/18nAKMCILPFFCEiViGi9cVQOSaP9EwyDI/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Síndrome Coronariana Aguda Sem Supra de ST
+        modulesData.push({
+            id: 'module_sca_sem_supra_novo',
+            title: 'Módulo - Síndrome Coronariana Aguda Sem Supra de ST',
+            path: 'Novo Curso / SCA Sem Supra',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i6KKn263AheHEES8Y0Q40U1YAfy0BjkW/view?usp=sharing'),
+                    title: `Aula 01 - SCA Sem Supra 1`,
+                    description: `Conteúdo da aula 1 de SCA Sem Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19-LFcfZ1RdIl62Y8gzIpiDDtrOAFUUFR/view?usp=sharing'),
+                    title: `Aula 02 - SCA Sem Supra 2`,
+                    description: `Conteúdo da aula 2 de SCA Sem Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L4YFHTT9yvCP2ZQrsUcHZIpy4XO_fWxn/view?usp=sharing'),
+                    title: `Aula 03 - SCA Sem Supra 3`,
+                    description: `Conteúdo da aula 3 de SCA Sem Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1drJ9TAlPZQb8Z01XHYBGvwozalXqBada/view?usp=sharing'),
+                    title: `Aula 04 - SCA Sem Supra 4`,
+                    description: `Conteúdo da aula 4 de SCA Sem Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SqIa3mJrE6LMiyP3U0Ly72bRhf1NDChl/view?usp=sharing'),
+                    title: `Aula 05 - SCA Sem Supra 5`,
+                    description: `Conteúdo da aula 5 de SCA Sem Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16jbJ6QiPVdg516sDs1zUl4nQ1rF9j49B/view?usp=sharing'),
+                    title: `Aula 06 - SCA Sem Supra 6`,
+                    description: `Conteúdo da aula 6 de SCA Sem Supra de ST.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `SCA Sem Supra - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1QQtk07_If5_IzvW8EiwmzjdmCC58frmw/view?usp=drive_link'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Intubação Orotraqueal
+        modulesData.push({
+            id: 'module_intubacao_orotraqueal',
+            title: 'Módulo - Intubação Orotraqueal',
+            path: 'Novo Curso / Intubação Orotraqueal',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1AUpLut0mx5-wz_JDmBWq2-Z2TtA9jNKv/view?usp=sharing'),
+                    title: `Aula 01 - Intubação Orotraqueal 1`,
+                    description: `Conteúdo da aula 1 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wh1v6-eqgQWBwXMDuXvMeuqcoYlkwUxL/view?usp=sharing'),
+                    title: `Aula 02 - Intubação Orotraqueal 2`,
+                    description: `Conteúdo da aula 2 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DyL9hDnZoIE_-haxGZLYo1dKrv_Ytdxx/view?usp=sharing'),
+                    title: `Aula 03 - Intubação Orotraqueal 3`,
+                    description: `Conteúdo da aula 3 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13oWpOGMltr-xuAi4Hk9soadfr1zk3i-H/view?usp=sharing'),
+                    title: `Aula 04 - Intubação Orotraqueal 4`,
+                    description: `Conteúdo da aula 4 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iynU4Ta09fLZCmfzKYTiihEeOHQPApWB/view?usp=sharing'),
+                    title: `Aula 05 - Intubação Orotraqueal 5`,
+                    description: `Conteúdo da aula 5 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RNKzRs_Jq4QWPHkIcKEzQzPJpwyLOZP9/view?usp=sharing'),
+                    title: `Aula 06 - Intubação Orotraqueal 6`,
+                    description: `Conteúdo da aula 6 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13dzXT8qX-NPTs53f8cfFNmXJcV1l6rUR/view?usp=sharing'),
+                    title: `Aula 07 - Intubação Orotraqueal 7`,
+                    description: `Conteúdo da aula 7 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OD-BLjXa_iiEgCqSnQ7UOmq7TShWRjJL/view?usp=sharing'),
+                    title: `Aula 08 - Intubação Orotraqueal 8`,
+                    description: `Conteúdo da aula 8 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F3OQEJ9pDy0MiLp3z8eZV3vpwiE1Rs9c/view?usp=sharing'),
+                    title: `Aula 09 - Intubação Orotraqueal 9`,
+                    description: `Conteúdo da aula 9 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14sy0p81d1oSGa3TMDy-k3rHeIh9eKGnV/view?usp=sharing'),
+                    title: `Aula 10 - Intubação Orotraqueal 10`,
+                    description: `Conteúdo da aula 10 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eVSdNcD6fvY0TnzGRk3RrucwfFHLSmuH/view?usp=sharing'),
+                    title: `Aula 11 - Intubação Orotraqueal 11`,
+                    description: `Conteúdo da aula 11 de Intubação Orotraqueal.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Intubação Orotraqueal - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1HYmQRQP8in9kTBBwAey8vIm6-L5v67aA/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1nHLOQvY9WrxBF30SQZNJo0HSiHbIpw0Y/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1HieKTMSQACHIs33c3pfQQu5nbN7nQ4NJ/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1u-Yi3KS0CepYhtz_tPeFg0AcpfyCRLqL/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1MujC2O-KlKItv6p8ndr43Wth4lOlTruX/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1lnNEJfp6EUILvqFH9C4lp0ypQvIf2HKi/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 7`,
+                            description: `PDF de material de estudo 7.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1TtFuXsAnrImqU1VHTMHLx1eRLpjHv19u/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 8`,
+                            description: `PDF de material de estudo 8.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1A8hK7GGu2xNlRMSA2a7JpxP1-332TKLo/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 9`,
+                            description: `PDF de material de estudo 9.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1DXXxpwmTxAvbYNYQNB_ITCw5qdbJ-QdL/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 10`,
+                            description: `PDF de material de estudo 10.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ihzqA0XaVDcJDeL6X03iUhRxyG4Ybwhb/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 11`,
+                            description: `PDF de material de estudo 11.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1YRlwm9mwsiTIfqYdP6tWE2VmoHRTWtsA/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 12`,
+                            description: `PDF de material de estudo 12.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1bRvznUSALRFrf3joQA3cOG5wgLhkvfaS/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 13`,
+                            description: `PDF de material de estudo 13.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1EUp2gqjHjGJJKnRkujd-Eb6RgG1h9eo0/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 14`,
+                            description: `PDF de material de estudo 14.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1lO3kqEWX1Pa5Or8wf54NAA7xAXXLX3x0/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 15`,
+                            description: `PDF de material de estudo 15.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1lpexNbXpxuMoux8v69XzOuL3ONBYQBeZ/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 16`,
+                            description: `PDF de material de estudo 16.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1zcmy31CKUIoH0gJBx-UYqORKp2BZ6dr3/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 17`,
+                            description: `PDF de material de estudo 17.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1NbnfNhclc6IDYzsxtkXTnVlsAXikRd61/view?usp=sharing'
+                        },
+                        {
+                            title: `Intubação Orotraqueal - PDF 18`,
+                            description: `PDF de material de estudo 18.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1XuMTk5HZFJo2QQKBTHz0lgCNGDuaEUJ8/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Antibioticoterapia
+        modulesData.push({
+            id: 'module_antibioticoterapia',
+            title: 'Módulo - Antibioticoterapia',
+            path: 'Novo Curso / Antibioticoterapia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1X9NdrFOF8gUK6igUzpIF9Rn7y__9eMSl/view?usp=sharing'),
+                    title: `Aula 01 - Antibioticoterapia 1`,
+                    description: `Conteúdo da aula 1 de Antibioticoterapia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GEcbqIs3Mv5cs8DIp7ksOIA45mj0EWYz/view?usp=sharing'),
+                    title: `Aula 02 - Antibioticoterapia 2`,
+                    description: `Conteúdo da aula 2 de Antibioticoterapia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jCJKNKSHs_BxjCkvRv5qk1se3CMUjzR-/view?usp=sharing'),
+                    title: `Aula 03 - Antibioticoterapia 3`,
+                    description: `Conteúdo da aula 3 de Antibioticoterapia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Antibioticoterapia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1btNcYMQrAlHHo5YkyPBi7Gv7J7OEn7am/view?usp=sharing'
+                        },
+                        {
+                            title: `Antibioticoterapia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1JwjRSMjXXRoI73XJEP966PU4Rp2Qn2Qs/view?usp=sharing'
+                        },
+                        {
+                            title: `Antibioticoterapia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1CaQZ36-Qcw90cXTvhgALl6kG6W-ilTFq/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Radiologia
+        modulesData.push({
+            id: 'module_radiologia_novo_curso',
+            title: 'Módulo - Radiologia',
+            path: 'Novo Curso / Radiologia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hFgnzGpVKSxozxoGEFTb1AnO8n0FYum2/view?usp=drive_link'),
+                    title: `Aula 01 - Radiologia 1`,
+                    description: `Conteúdo da aula 1 de Radiologia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - ATLS
+        modulesData.push({
+            id: 'module_atls_novo_curso',
+            title: 'Módulo - ATLS',
+            path: 'Novo Curso / ATLS',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KIgnjQlEumHHwf-umBCf9QV8CM920-z9/view?usp=sharing'),
+                    title: `Aula 01 - ATLS 1`,
+                    description: `Conteúdo da aula 1 de ATLS.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wYtutMmaaK9w7EufKsbHD25VO97HoMQA/view?usp=sharing'),
+                    title: `Aula 02 - ATLS 2`,
+                    description: `Conteúdo da aula 2 de ATLS.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/135hOM9WUI_gqAU5j6fSFwsZwPW1C3IoU/view?usp=sharing'),
+                    title: `Aula 03 - ATLS 3`,
+                    description: `Conteúdo da aula 3 de ATLS.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e6HtKRSdr7Yn1lhdmhEGZ2goNJWSkfOA/view?usp=sharing'),
+                    title: `Aula 04 - ATLS 4`,
+                    description: `Conteúdo da aula 4 de ATLS.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - Guia do Paciente Grave (agora com sub-módulos para vídeos)
+        modulesData.push({
+            id: 'module_guia_paciente_grave',
+            title: 'Módulo - Guia do Paciente Grave',
+            path: 'Novo Curso / Guia do Paciente Grave',
+            videos: [
+                {
+                    subcategoryTitle: 'Comece por Aqui',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vzifDGTbgpg2ob8XA9WQ5XIYF3rOp9i2/view?usp=sharing'),
+                            title: `Guia - Comece por Aqui - Aula 01`,
+                            description: `Conteúdo da aula 1 de Comece por Aqui.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/153lXc4AV3lTyrjAmd-CH7QEZSgCxb5ks/view?usp=sharing'),
+                            title: `Guia - Comece por Aqui - Aula 02`,
+                            description: `Conteúdo da aula 2 de Comece por Aqui.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1qZlRqKA5b7PxNLr81XnxEUoViQ1AwcQR/view?usp=sharing'),
+                            title: `Guia - Comece por Aqui - Aula 03`,
+                            description: `Conteúdo da aula 3 de Comece por Aqui.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Os Três Pacientes Mais Graves do seu Plantão',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15mxcs5gEGdLNrruTqlF7XdQ0d0j-TmHp/view?usp=sharing'),
+                            title: `Guia - Os Três Pacientes Mais Graves - Aula 01`,
+                            description: `Conteúdo da aula 1 de Os Três Pacientes Mais Graves.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11DaOtxSfhNXaIUbIqgT-Kh0UWSSabxIN/view?usp=sharing'),
+                            title: `Guia - Os Três Pacientes Mais Graves - Aula 02`,
+                            description: `Conteúdo da aula 2 de Os Três Pacientes Mais Graves.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hDJxgr-Oj5-mApzC7BBFHDby0rMkcM07/view?usp=sharing'),
+                            title: `Guia - Os Três Pacientes Mais Graves - Aula 03`,
+                            description: `Conteúdo da aula 3 de Os Três Pacientes Mais Graves.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Choque',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PFSX9xM8M9o8tFKYY18zboH5UleBu3sn/view?usp=sharing'),
+                            title: `Guia - Choque - Aula 01`,
+                            description: `Conteúdo da aula 1 de Choque.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1c0d9mTBA6epP_O4l8dxXAhwCTuwiq9XE/view?usp=sharing'),
+                            title: `Guia - Choque - Aula 02`,
+                            description: `Conteúdo da aula 2 de Choque.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IsyA-jYztN5RZQQCi81XZf9lVkdd3DAx/view?usp=sharing'),
+                            title: `Guia - Choque - Aula 03`,
+                            description: `Conteúdo da aula 3 de Choque.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1h9apdY8XIE4CCD2FJAez3oFLYk8yCnta/view?usp=sharing'),
+                            title: `Guia - Choque - Aula 04`,
+                            description: `Conteúdo da aula 4 de Choque.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VEDZTpv9ew2jOdD-9zFnPrerldhmaXzW/view?usp=sharing'),
+                            title: `Guia - Choque - Aula 05`,
+                            description: `Conteúdo da aula 5 de Choque.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Insuficiência Respiratória Aguda',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ycIcC2-RjjyBepj4Vyg14M7Yng_aABEC/view?usp=sharing'),
+                            title: `Guia - Insuficiência Respiratória Aguda - Aula 01`,
+                            description: `Conteúdo da aula 1 de Insuficiência Respiratória Aguda.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1nVCPa0WWF8ypUoCXMoZHCRtTWnhn3RAa/view?usp=sharing'),
+                            title: `Guia - Insuficiência Respiratória Aguda - Aula 02`,
+                            description: `Conteúdo da aula 2 de Insuficiência Respiratória Aguda.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yEN-uA8AV12t-elQbtNUUtHf6XkM_d1U/view?usp=sharing'),
+                            title: `Guia - Insuficiência Respiratória Aguda - Aula 03`,
+                            description: `Conteúdo da aula 3 de Insuficiência Respiratória Aguda.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1a8bMVAO1MDWT_NNASiKMrj3RgOZ41OX1/view?usp=sharing'),
+                            title: `Guia - Insuficiência Respiratória Aguda - Aula 04`,
+                            description: `Conteúdo da aula 4 de Insuficiência Respiratória Aguda.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Rebaixamento do Nível de Consciência',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VJwgbjpUszUmWO3ypaUjWrotysz6To6B/view?usp=sharing'),
+                            title: `Guia - Rebaixamento do Nível de Consciência - Aula 01`,
+                            description: `Conteúdo da aula 1 de Rebaixamento do Nível de Consciência.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MgmhuDiJJjbGL481JW3tlidZAyid0lc7/view?usp=sharing'),
+                            title: `Guia - Rebaixamento do Nível de Consciência - Aula 02`,
+                            description: `Conteúdo da aula 2 de Rebaixamento do Nível de Consciência.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Procedimentos',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1qxvTz6bSUh0bm-meunhGYD3wyuJGVSyb/view?usp=sharing'),
+                            title: `Guia - Procedimentos - Aula 01`,
+                            description: `Conteúdo da aula 1 de Procedimentos.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DjSuYhG008Ow7L8yl0TOTU2KJVFlNazh/view?usp=sharing'),
+                            title: `Guia - Procedimentos - Aula 02`,
+                            description: `Conteúdo da aula 2 de Procedimentos.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1is49psUdtLE4Cw_ylGl9Gp7dH7xPuFZL/view?usp=sharing'),
+                            title: `Guia - Procedimentos - Aula 03`,
+                            description: `Conteúdo da aula 3 de Procedimentos.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Finalização',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16yR7QuQMdFNpUVMbvzUtWKkipiIrvpdU/view?usp=drive_link'),
+                            title: `Guia - Finalização - Aula 01`,
+                            description: `Conteúdo da aula 1 de Finalização.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'Bônus',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o-LkY4qL6avIMFL2SSeghqBS64zYoIuE/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 01`,
+                            description: `Conteúdo da aula 1 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F8U-umSAfk3ymRzq2fNhRUjFQYZNQckQ/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 02`,
+                            description: `Conteúdo da aula 2 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Q56sZuYLIziNCQ1zN77PcA2Ialn--4Jo/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 03`,
+                            description: `Conteúdo da aula 3 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Z_7fI0yOGsgx0pOOKmCHzrIqS3LKUD8p/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 04`,
+                            description: `Conteúdo da aula 4 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mLaZGBO89dYI4QOAW14XnZILdoIYKIVJ/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 05`,
+                            description: `Conteúdo da aula 5 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jS7FJV5-I6vR9naV1F1ZF50SWlswFhE4/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 06`,
+                            description: `Conteúdo da aula 6 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vl6vEzZFBkb654VX4W7Y_FqjoGv4YWvA/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 07`,
+                            description: `Conteúdo da aula 7 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NxtKGrIhBjwHfEgetsHTaTfKD9vyLO7c/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 08`,
+                            description: `Conteúdo da aula 8 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1oqP-e9et8Kp1ydVBYZGuatvEJdpS1EvZ/view?usp=sharing'),
+                            title: `Guia - Bônus - Aula 09`,
+                            description: `Conteúdo da aula 9 de Bônus.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                },
+                {
+                    subcategoryTitle: 'PCR',
+                    items: [
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o9y1C-DQNk8-aNSPxKxeB5T77RTjatOB/view?usp=sharing'),
+                            title: `Guia - PCR - Aula 01`,
+                            description: `Conteúdo da aula 1 de PCR.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_afqYs4837J7X9bn6NTWQ8SeDV2yypr9/view?usp=sharing'),
+                            title: `Guia - PCR - Aula 02`,
+                            description: `Conteúdo da aula 2 de PCR.`,
+                            icon: 'fas fa-play-circle'
+                        },
+                        {
+                            id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cUadSbngu_tEd5NT68otRqKnfrW7Pbnx/view?usp=sharing'),
+                            title: `Guia - PCR - Aula 03`,
+                            description: `Conteúdo da aula 3 de PCR.`,
+                            icon: 'fas fa-play-circle'
+                        }
+                    ]
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Guia do Paciente Grave - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1_K_8cONpjFw6JxvzUh20hloVaNfxDb2e/view?usp=sharing'
+                        },
+                        {
+                            title: `Guia do Paciente Grave - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1DQxaxM9DlOet-pg-SyUG8TtKDINUz9UH/view?usp=sharing'
+                        },
+                        {
+                            title: `Guia do Paciente Grave - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1c6l-rvC065jkMvnRgRldd8vYq78g9s7e/view?usp=sharing'
+                        },
+                        {
+                            title: `Guia do Paciente Grave - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1pjhnNJxMCn41EvEQWKnoDemKdhTY0c-3/view?usp=sharing'
+                        },
+                        {
+                            title: `Guia do Paciente Grave - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1K4QhK-l7A9bBg0VES5BKwl2YgWShEwDb/view?usp=sharing'
+                        },
+                        {
+                            title: `Guia do Paciente Grave - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1lPgIbSpYzuy7BMD8rhgrwQnSSPbriqRU/view?usp=sharing'
+                        },
+                        {
+                            title: `Guia do Paciente Grave - PDF 7`,
+                            description: `PDF de material de estudo 7.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1FF_fF9N8yq45BdSXvjxHCMhoH7bSNtiJ/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Raciocínio a Beira-Leito
+        modulesData.push({
+            id: 'module_raciocinio_beira_leito',
+            title: 'Módulo - Raciocínio a Beira-Leito',
+            path: 'Novo Curso / Raciocínio a Beira-Leito',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fPLxIVCWpc_dF0hItCoaDmOSN8yvCX9v/view?usp=sharing'),
+                    title: `Aula 01 - Raciocínio a Beira-Leito 1`,
+                    description: `Conteúdo da aula 1 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OCK4tWfYVkul3ke-m_tadghiZTlkyZgk/view?usp=sharing'),
+                    title: `Aula 02 - Raciocínio a Beira-Leito 2`,
+                    description: `Conteúdo da aula 2 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15g9ZOgxXmft7seQgs5HwRkFWh-c8Nz1G/view?usp=sharing'),
+                    title: `Aula 03 - Raciocínio a Beira-Leito 3`,
+                    description: `Conteúdo da aula 3 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zp9vBf7etj3ETQMLACo2b7U_hQm7AnEA/view?usp=sharing'),
+                    title: `Aula 04 - Raciocínio a Beira-Leito 4`,
+                    description: `Conteúdo da aula 4 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RgMpS9Geb-CsqDCEHbvIJ2z-TWc2fbpf/view?usp=sharing'),
+                    title: `Aula 05 - Raciocínio a Beira-Leito 5`,
+                    description: `Conteúdo da aula 5 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NIWqo7oBXUeUtogSxG6POkCY9q-9puuG/view?usp=sharing'),
+                    title: `Aula 06 - Raciocínio a Beira-Leito 6`,
+                    description: `Conteúdo da aula 6 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QT3ysX3bdYgzsyA_5HyuBdY9fyeXloFM/view?usp=sharing'),
+                    title: `Aula 07 - Raciocínio a Beira-Leito 7`,
+                    description: `Conteúdo da aula 7 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1X7PC7PJhfI7Hf22DbjQBi0zqrpiFg-U3/view?usp=sharing'),
+                    title: `Aula 08 - Raciocínio a Beira-Leito 8`,
+                    description: `Conteúdo da aula 8 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IRu5M5mhOGXqZdwszOudLlPx3GLcD1h1/view?usp=sharing'),
+                    title: `Aula 09 - Raciocínio a Beira-Leito 9`,
+                    description: `Conteúdo da aula 9 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tg2Gk1Gdbw5QvMfYO4x20MtOUV5a0Jnx/view?usp=sharing'),
+                    title: `Aula 10 - Raciocínio a Beira-Leito 10`,
+                    description: `Conteúdo da aula 10 de Raciocínio a Beira-Leito.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - Ventilação Mecânica
+        modulesData.push({
+            id: 'module_vm_novo_curso',
+            title: 'Módulo - Ventilação Mecânica',
+            path: 'Novo Curso / Ventilação Mecânica',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hw0c6ssUYYDV7ZVtGOXtqI-fYYnAeMZ9/view?usp=sharing'),
+                    title: `Aula 01 - Ventilação Mecânica 1`,
+                    description: `Conteúdo da aula 1 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yeYHn1YX9ovQ5YsrwtRTZJwdxy8tfavh/view?usp=sharing'),
+                    title: `Aula 02 - Ventilação Mecânica 2`,
+                    description: `Conteúdo da aula 2 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13e3TJUkfctc8MaN1IXhFUA8Ga5jWUV-Q/view?usp=sharing'),
+                    title: `Aula 03 - Ventilação Mecânica 3`,
+                    description: `Conteúdo da aula 3 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1E6Susr-94z4J3qSnyCrOQspMBlerGooI/view?usp=sharing'),
+                    title: `Aula 04 - Ventilação Mecânica 4`,
+                    description: `Conteúdo da aula 4 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1pltZEhCuUm7HGZOU8nhKRK8zMp3ZnrBU/view?usp=sharing'),
+                    title: `Aula 05 - Ventilação Mecânica 5`,
+                    description: `Conteúdo da aula 5 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hgm7T_ibzDQRqEKxdc3F2AZTzVT5qTFl/view?usp=sharing'),
+                    title: `Aula 06 - Ventilação Mecânica 6`,
+                    description: `Conteúdo da aula 6 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zA3lY0M6h4oEofNcmDjVg5h50S1Kfkjm/view?usp=sharing'),
+                    title: `Aula 07 - Ventilação Mecânica 7`,
+                    description: `Conteúdo da aula 7 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MUkY2B6TpHr3pfz1rMnjrwhX1QteRclz/view?usp=sharing'),
+                    title: `Aula 08 - Ventilação Mecânica 8`,
+                    description: `Conteúdo da aula 8 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bxDbFXaqW_ZvEICY-_xZtbgeR8IgRt1-/view?usp=sharing'),
+                    title: `Aula 09 - Ventilação Mecânica 9`,
+                    description: `Conteúdo da aula 9 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ns9cub2uajtm8n-MWZsru7sTZFuhwhzA/view?usp=sharing'),
+                    title: `Aula 10 - Ventilação Mecânica 10`,
+                    description: `Conteúdo da aula 10 de Ventilação Mecânica.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - Drogas Vasoativas
+        modulesData.push({
+            id: 'module_drogas_vasoativas',
+            title: 'Módulo - Drogas Vasoativas',
+            path: 'Novo Curso / Drogas Vasoativas',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xx_q5wb6gaHeRln-LoYEJotHqLP235K8/view?usp=sharing'),
+                    title: `Aula 01 - Drogas Vasoativas 1`,
+                    description: `Conteúdo da aula 1 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1AzRrAs-Gv1OQoP3DPRFI6uDE7ip2BFsc/view?usp=sharing'),
+                    title: `Aula 02 - Drogas Vasoativas 2`,
+                    description: `Conteúdo da aula 2 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ya4CR_a1qsXzJTuN1XrgjZlvYZnXLgi1/view?usp=sharing'),
+                    title: `Aula 03 - Drogas Vasoativas 3`,
+                    description: `Conteúdo da aula 3 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nk5YuU3yWdWft-5gYaRRghrUhtdG3NpR/view?usp=sharing'),
+                    title: `Aula 04 - Drogas Vasoativas 4`,
+                    description: `Conteúdo da aula 4 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-c2SVJyhXUC5ooNWUU5jO1PTeVXHEV_1/view?usp=sharing'),
+                    title: `Aula 05 - Drogas Vasoativas 5`,
+                    description: `Conteúdo da aula 5 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CWe2-SafbgvDMEnh2roTndTgNAerD4X0/view?usp=sharing'),
+                    title: `Aula 06 - Drogas Vasoativas 6`,
+                    description: `Conteúdo da aula 6 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ioebxBQ_zVxFw1VUQatGm46Ki_CWR0dX/view?usp=sharing'),
+                    title: `Aula 07 - Drogas Vasoativas 7`,
+                    description: `Conteúdo da aula 7 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19-u4mDRKb4S2Wz5jmqKDXOpRnEHLBHwV/view?usp=sharing'),
+                    title: `Aula 08 - Drogas Vasoativas 8`,
+                    description: `Conteúdo da aula 8 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fCWlNEfoFDmEw16s568icfsZbXVto7qD/view?usp=sharing'),
+                    title: `Aula 09 - Drogas Vasoativas 9`,
+                    description: `Conteúdo da aula 9 de Drogas Vasoativas.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Drogas Vasoativas - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/185QrTYbq5GGUdTIQe-eVULmLkvlKShhu/view?usp=sharing'
+                        },
+                        {
+                            title: `Drogas Vasoativas - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1woc4J3JJv5CaIrTfDT-B6ggEo_4j6Mi1/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Toracocentese
+        modulesData.push({
+            id: 'module_toracocentese',
+            title: 'Módulo - Toracocentese',
+            path: 'Novo Curso / Toracocentese',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DgSULgFyu5fkPNkuPVSKPZrSJtlQMAmM/view?usp=drive_link'),
+                    title: `Aula 01 - Toracocentese 1`,
+                    description: `Conteúdo da aula 1 de Toracocentese.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+        // Módulo - Acidente Vascular Encefálico Isquêmico
+        modulesData.push({
+            id: 'module_ave_isquemico',
+            title: 'Módulo - Acidente Vascular Encefálico Isquêmico',
+            path: 'Novo Curso / AVE Isquêmico',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_eXY2uVebnbnsh_PcrEeV4o6QbxkJC_s/view?usp=sharing'),
+                    title: `Aula 01 - AVE Isquêmico 1`,
+                    description: `Conteúdo da aula 1 de AVE Isquêmico.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13D1Rep1osSOUJdpPrqHoUQISUjeLH5iz/view?usp=sharing'),
+                    title: `Aula 02 - AVE Isquêmico 2`,
+                    description: `Conteúdo da aula 2 de AVE Isquêmico.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1t2_3513Nzvj_Uis4OdRUmkYEmgOErxCW/view?usp=sharing'),
+                    title: `Aula 03 - AVE Isquêmico 3`,
+                    description: `Conteúdo da aula 3 de AVE Isquêmico.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PDEXZta7p-QdL-BFzmb7C2TX5QRiVe5i/view?usp=sharing'),
+                    title: `Aula 04 - AVE Isquêmico 4`,
+                    description: `Conteúdo da aula 4 de AVE Isquêmico.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `AVE Isquêmico - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Qw3pXHXNfVepIjyIcysfq62R5t6dhwoG/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Isquêmico - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/15PCnk1AfcBkmquYISSRV9aEZ3wv-hXZt/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Isquêmico - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1aGYKxyMcYPbHO0B0br0bcwSqIuFjrGBM/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Isquêmico - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1UorDxSqbtsGQBv3Vxz0eH0vP1E6LMmZr/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Isquêmico - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Dbtqv8PycbPOCgmxSV1NeuMAvijGOfNq/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Isquêmico - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1me8MSHLaz1ZWW0fWSrePvpYSzheSWZk0/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Isquêmico - PDF 7`,
+                            description: `PDF de material de estudo 7.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/10C5eLbTVUtz1nLXwXdIv1nathhi4Runk/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Acidente Vascular Encefálico Hemorrágico
+        modulesData.push({
+            id: 'module_ave_hemorragico',
+            title: 'Módulo - Acidente Vascular Encefálico Hemorrágico',
+            path: 'Novo Curso / AVE Hemorrágico',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_5RMio_fntnGvEhpgpKmZcuNlHzDo8-g/view?usp=sharing'),
+                    title: `Aula 01 - AVE Hemorrágico 1`,
+                    description: `Conteúdo da aula 1 de AVE Hemorrágico.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rn5s6APFUNKD2hQlOuulJ3-5CCPPfYEP/view?usp=sharing'),
+                    title: `Aula 02 - AVE Hemorrágico 2`,
+                    description: `Conteúdo da aula 2 de AVE Hemorrágico.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SQZ6Es_N9-FPQUr9VI2Q8lhxXI2DpYLU/view?usp=sharing'),
+                    title: `Aula 03 - AVE Hemorrágico 3`,
+                    description: `Conteúdo da aula 3 de AVE Hemorrágico.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `AVE Hemorrágico - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1WPyz4c8QQJdc4woXr72-230vK4B7a5yP/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Hemorrágico - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Yj45ifrIB6o0oNz4LaKVz1bE79BqMgZv/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Hemorrágico - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1jfTn6JTzO2RDAN1HIF4iQnX8K33j9Ykv/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Hemorrágico - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1nAhuyquQIk1XBKm7xJpl09xAH3gSYVxS/view?usp=sharing'
+                        },
+                        {
+                            title: `AVE Hemorrágico - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1QxtwjEx1YSiUYaaV2kYU-OX0j4dXduwD/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Crise Convulsiva
+        modulesData.push({
+            id: 'module_crise_convulsiva',
+            title: 'Módulo - Crise Convulsiva',
+            path: 'Novo Curso / Crise Convulsiva',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jZVivVh0yj4nkgU4BhMeQfdbOGUrVOIs/view?usp=sharing'),
+                    title: `Aula 01 - Crise Convulsiva 1`,
+                    description: `Conteúdo da aula 1 de Crise Convulsiva.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OmSb4xnXYXx1OHqiB524yrPjPLQ33GrQ/view?usp=sharing'),
+                    title: `Aula 02 - Crise Convulsiva 2`,
+                    description: `Conteúdo da aula 2 de Crise Convulsiva.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Lc8SZKbW3Y1Zv1wpJ-tlMi1KgOGqW32v/view?usp=sharing'),
+                    title: `Aula 03 - Crise Convulsiva 3`,
+                    description: `Conteúdo da aula 3 de Crise Convulsiva.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1m5Cg2jUOe97cwlbCV4mxblCYN1zezwsl/view?usp=sharing'),
+                    title: `Aula 04 - Crise Convulsiva 4`,
+                    description: `Conteúdo da aula 4 de Crise Convulsiva.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1z3vnd4QtovYT7DOhEEPRx8PNG0vOR7Vt/view?usp=sharing'),
+                    title: `Aula 05 - Crise Convulsiva 5`,
+                    description: `Conteúdo da aula 5 de Crise Convulsiva.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Crise Convulsiva - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1oPa_xxqKzJEEjY_ja-CSBfnxGe9DSiy0/view?usp=sharing'
+                        },
+                        {
+                            title: `Crise Convulsiva - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1wDAUW1CILyZDw9mxsDgbuy3cGA6EJ_-y/view?usp=sharing'
+                        },
+                        {
+                            title: `Crise Convulsiva - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/17qVY5HOAmM6xJv7NSNzUJ4Ygej7_na5k/view?usp=sharing'
+                        },
+                        {
+                            title: `Crise Convulsiva - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1fiOCwSFSCPFFicsl2gDEyU_qT2HvhmL9/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Pneumonia
+        modulesData.push({
+            id: 'module_pneumonia_novo',
+            title: 'Módulo - Pneumonia',
+            path: 'Novo Curso / Pneumonia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17aiIKNB5_ydiDStQzWm8y8g0I3KR--SU/view?usp=sharing'),
+                    title: `Aula 01 - Pneumonia 1`,
+                    description: `Conteúdo da aula 1 de Pneumonia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cBcKk1QiqjaTG4JAyIa2MPFz6L7ASbR2/view?usp=sharing'),
+                    title: `Aula 02 - Pneumonia 2`,
+                    description: `Conteúdo da aula 2 de Pneumonia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1sH0Wnjrrgt7S3XgNRTcPxUMmmpKkOein/view?usp=sharing'),
+                    title: `Aula 03 - Pneumonia 3`,
+                    description: `Conteúdo da aula 3 de Pneumonia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15MWwFWOo1oWlfpBrFC1DZyrsHakV9Ocp/view?usp=sharing'),
+                    title: `Aula 04 - Pneumonia 4`,
+                    description: `Conteúdo da aula 4 de Pneumonia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Pneumonia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1DdIGnuR_isfH6jYJpCLW9l9Hu4hAn1gB/view?usp=sharing'
+                        },
+                        {
+                            title: `Pneumonia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1WJ1Z-F-afPh_RTzKNpttjbuko22yDVEG/view?usp=sharing'
+                        },
+                        {
+                            title: `Pneumonia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1JcCdgFcrO1Yw28zTxZyUz2pkPBgcjfLo/view?usp=sharing'
+                        },
+                        {
+                            title: `Pneumonia - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Mr_jNmzmovy1rGnQZ0xzmKvMXQcC7bsR/view?usp=sharing'
+                        },
+                        {
+                            title: `Pneumonia - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1bO0iJ1L1yKJOl1Y2wHh4y3xHzwNVjMU-/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Asma
+        modulesData.push({
+            id: 'module_asma_novo_curso',
+            title: 'Módulo - Asma',
+            path: 'Novo Curso / Asma',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16g3XKo8kau0IuP-L4zKHcrDLCDJCX_16/view?usp=sharing'),
+                    title: `Aula 01 - Asma 1`,
+                    description: `Conteúdo da aula 1 de Asma.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SG2Axt6RTJIIH58rP7rZP7GCOLChA8BH/view?usp=sharing'),
+                    title: `Aula 02 - Asma 2`,
+                    description: `Conteúdo da aula 2 de Asma.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16uVle43EcI9S8ovT5fwiDJbLKUTbqbE0/view?usp=sharing'),
+                    title: `Aula 03 - Asma 3`,
+                    description: `Conteúdo da aula 3 de Asma.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Asma - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/19tJJ3LO4JjQvsplwgdCP5fj3fogWVWfd/view?usp=sharing'
+                        },
+                        {
+                            title: `Asma - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ZZdMxTUCP7pH7KFqBbqOmZMB84uN-xG9/view?usp=sharing'
+                        },
+                        {
+                            title: `Asma - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1yVcQ6m6flCBdDvtXDdEH-mWyhSXykgUd/view?usp=sharing'
+                        },
+                        {
+                            title: `Asma - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1-VWIdi8DDrw2gyrNZr7Az6O0MJ56SL4U/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - DPOC (Doença Pulmonar Obstrutiva Crônica)
+        modulesData.push({
+            id: 'module_dpoc_novo_curso',
+            title: 'Módulo - DPOC (Doença Pulmonar Obstrutiva Crônica)',
+            path: 'Novo Curso / DPOC',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F4fecAPT1FuHU94mesgBPAfbsxhSlRiy/view?usp=sharing'),
+                    title: `Aula 01 - DPOC 1`,
+                    description: `Conteúdo da aula 1 de DPOC.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PQUq2p_vm7tS6sygCijCujoWdJhPh_Se/view?usp=sharing'),
+                    title: `Aula 02 - DPOC 2`,
+                    description: `Conteúdo da aula 2 de DPOC.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zNMw_KpBJpVZDJlU6bpr01XaaKRCZSoS/view?usp=sharing'),
+                    title: `Aula 03 - DPOC 3`,
+                    description: `Conteúdo da aula 3 de DPOC.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `DPOC - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1_df2TtQmRm4pM23ITLOgt95AmPcgsocz/view?usp=sharing'
+                        },
+                        {
+                            title: `DPOC - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ajrmcXX43Sf8gXPAxPGfyat8XsSfQhjO/view?usp=sharing'
+                        },
+                        {
+                            title: `DPOC - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1lw8GW7ADmrNP7iLsYNjCfGNmEcLdowrs/view?usp=sharing'
+                        },
+                        {
+                            title: `DPOC - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1KVEfO7JoPhGD2J7Ttw2rsCSS3uobOyMn/view?usp=sharing'
+                        },
+                        {
+                            title: `DPOC - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1O5V5NPdx-msbPhCDyEypcu_V_3hQAG9S/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Sepse (Choque Séptico)
+        modulesData.push({
+            id: 'module_sepse',
+            title: 'Módulo - Sepse (Choque Séptico)',
+            path: 'Novo Curso / Sepse',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TfukR0TTd40AFx_d7d_faAjvOHtTm8wr/view?usp=sharing'),
+                    title: `Aula 01 - Sepse 1`,
+                    description: `Conteúdo da aula 1 de Sepse.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1B6wK_idui-zy5ZY_GSMK74uUzk3hXi47/view?usp=sharing'),
+                    title: `Aula 02 - Sepse 2`,
+                    description: `Conteúdo da aula 2 de Sepse.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13o_4Fsyxkx3NUdr_vnVwzQSYj0qietEf/view?usp=sharing'),
+                    title: `Aula 03 - Sepse 3`,
+                    description: `Conteúdo da aula 3 de Sepse.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19i-WKo5ruBkkivnEo8NJUUpezeZ9zfK4/view?usp=sharing'),
+                    title: `Aula 04 - Sepse 4`,
+                    description: `Conteúdo da aula 4 de Sepse.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Sepse - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1PIxhLxePek4Dafz1LzKh1cXFgQLvJXSv/view?usp=sharing'
+                        },
+                        {
+                            title: `Sepse - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1zkm3uQ4yYo1zoRjHTmCM8e6N_wseQ0df/view?usp=sharing'
+                        },
+                        {
+                            title: `Sepse - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1TcYj6rrjDoG0mZukt5buVMUmvp3GG-Wx/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Anafilaxia
+        modulesData.push({
+            id: 'module_anafilaxia',
+            title: 'Módulo - Anafilaxia',
+            path: 'Novo Curso / Anafilaxia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WWMDiD1QX9qffpVvxUHAKlYgtbAw7Onx/view?usp=sharing'),
+                    title: `Aula 01 - Anafilaxia 1`,
+                    description: `Conteúdo da aula 1 de Anafilaxia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U1fQpEquunuyG91OFMb1PcIxJ7_t_Gb0/view?usp=sharing'),
+                    title: `Aula 02 - Anafilaxia 2`,
+                    description: `Conteúdo da aula 2 de Anafilaxia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ufj3ElFraeNsdXXN1EYXP1yVmCO6NjPg/view?usp=sharing'),
+                    title: `Aula 03 - Anafilaxia 3`,
+                    description: `Conteúdo da aula 3 de Anafilaxia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Anafilaxia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1ARfhoSzOP4yMTc338kB1dt_JjJ3rTe4Q/view?usp=sharing'
+                        },
+                        {
+                            title: `Anafilaxia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1V8xUDAXs7GBKKJ1WudWzBbc1WvjuUUeK/view?usp=sharing'
+                        },
+                        {
+                            title: `Anafilaxia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1P73VGd43VWZLtYkoOxenEyHErcnh1RSR/view?usp=sharing'
+                        },
+                        {
+                            title: `Anafilaxia - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1VXm8g3GMf-W_rWeY6Az87tW8JRK0mJri/view?usp=sharing'
+                        },
+                        {
+                            title: `Anafilaxia - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1wltraz2Aail8ju25MjJKAAvFAWaoHwQ-/view?usp=sharing'
+                        },
+                        {
+                            title: `Anafilaxia - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1kPLFko385oV691WVk5kHFbUrarawWBon/view?usp=sharing'
+                        },
+                        {
+                            title: `Anafilaxia - PDF 7`,
+                            description: `PDF de material de estudo 7.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1pFEKZ1yxzWh7AphUl0hBJmjryYetm_bq/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Acesso Venoso Central
+        modulesData.push({
+            id: 'module_acesso_venoso_central',
+            title: 'Módulo - Acesso Venoso Central',
+            path: 'Novo Curso / Acesso Venoso Central',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14CGXIowZEVBgjSe_Y0mEYVJjGF662-kn/view?usp=sharing'),
+                    title: `Aula 01 - Acesso Venoso Central 1`,
+                    description: `Conteúdo da aula 1 de Acesso Venoso Central.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MCbBFQMMNlFdA20IZ7oQBw4rc_x-u7dv/view?usp=sharing'),
+                    title: `Aula 02 - Acesso Venoso Central 2`,
+                    description: `Conteúdo da aula 2 de Acesso Venoso Central.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11LT4fOJ2vklGSchF_FN_55xZrn5TyRSr/view?usp=sharing'),
+                    title: `Aula 03 - Acesso Venoso Central 3`,
+                    description: `Conteúdo da aula 3 de Acesso Venoso Central.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16dRTwwtmJTWlMz48GXZTgIwUix0yfhGO/view?usp=sharing'),
+                    title: `Aula 04 - Acesso Venoso Central 4`,
+                    description: `Conteúdo da aula 4 de Acesso Venoso Central.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ACW88yiWJ4YkoXZEDJ8Ud1LIGyRq0DTD/view?usp=sharing'),
+                    title: `Aula 05 - Acesso Venoso Central 5`,
+                    description: `Conteúdo da aula 5 de Acesso Venoso Central.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Acesso Venoso Central - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1BNEPl_BRRppfTeexOeZFcyIMsHXdnCED/view?usp=sharing'
+                        },
+                        {
+                            title: `Acesso Venoso Central - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1R_lIxy3AX1p2G-UQ4fHRpv-FW5QIII4t/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Toxicologia
+        modulesData.push({
+            id: 'module_toxicologia_novo_curso',
+            title: 'Módulo - Toxicologia',
+            path: 'Novo Curso / Toxicologia',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wIJscoFwG3QC0TmbZ9OS6A1rkPstJyS-/view?usp=sharing'),
+                    title: `Aula 01 - Toxicologia 1`,
+                    description: `Conteúdo da aula 1 de Toxicologia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fr80izO7D1fagSn0PuVM7ST89xHfFMoF/view?usp=sharing'),
+                    title: `Aula 02 - Toxicologia 2`,
+                    description: `Conteúdo da aula 2 de Toxicologia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yGl_U2eslBEYo6uGg3Qch3UR_Ajae22d/view?usp=sharing'),
+                    title: `Aula 03 - Toxicologia 3`,
+                    description: `Conteúdo da aula 3 de Toxicologia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OQXPHUljCp1Nw9PVF3xTOGoXOfu19YWz/view?usp=sharing'),
+                    title: `Aula 04 - Toxicologia 4`,
+                    description: `Conteúdo da aula 4 de Toxicologia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1H1653x5z3Tpg6cOrqmM-BqfUOWR0aulL/view?usp=sharing'),
+                    title: `Aula 05 - Toxicologia 5`,
+                    description: `Conteúdo da aula 5 de Toxicologia.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13_Gtx4-uq8lm06U7Pu0qZ-IdRv9TnZxl/view?usp=sharing'),
+                    title: `Aula 06 - Toxicologia 6`,
+                    description: `Conteúdo da aula 6 de Toxicologia.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: [
+                {
+                    categoryTitle: 'Materiais de Estudo',
+                    items: [
+                        {
+                            title: `Toxicologia - PDF 1`,
+                            description: `PDF de material de estudo 1.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1PqWr6us5wCgJZKMXtAU2zYqzn11zhRcw/view?usp=sharing'
+                        },
+                        {
+                            title: `Toxicologia - PDF 2`,
+                            description: `PDF de material de estudo 2.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1IobRvKO8oSJv1tF5-CxnLjaGQ1oIu-lv/view?usp=sharing'
+                        },
+                        {
+                            title: `Toxicologia - PDF 3`,
+                            description: `PDF de material de estudo 3.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1SEC0ioRmA5z2NBJXV1QNnwJU7esIZGQ-/view?usp=sharing'
+                        },
+                        {
+                            title: `Toxicologia - PDF 4`,
+                            description: `PDF de material de estudo 4.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1C2Yh7v1OfpyR6kFWeODa11Q_9lDF1QfS/view?usp=sharing'
+                        },
+                        {
+                            title: `Toxicologia - PDF 5`,
+                            description: `PDF de material de estudo 5.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1unsRA5dgF_zHzBkr3MmMJGqWUWldpNLi/view?usp=sharing'
+                        },
+                        {
+                            title: `Toxicologia - PDF 6`,
+                            description: `PDF de material de estudo 6.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/19DR40WrKX4DckZbR5NCAWzh4DaPqmas9/view?usp=sharing'
+                        },
+                        {
+                            title: `Toxicologia - PDF 7`,
+                            description: `PDF de material de estudo 7.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://docs.google.com/presentation/d/1i-j_dVF2NSvG5LAhyWQupFM8F97N5s6d/edit?usp=sharing&ouid=110082115939957319708&rtpof=true&sd=true'
+                        },
+                        {
+                            title: `Toxicologia - PDF 8`,
+                            description: `PDF de material de estudo 8.`,
+                            icon: 'fas fa-file-pdf',
+                            link: 'https://drive.google.com/file/d/1Md6qCXxjgMwD3LR5XrEEzpuuMBkFnmKz/view?usp=sharing'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Módulo - Eletrocardiograma Aplicado ao Paciente
+        modulesData.push({
+            id: 'module_eletrocardiograma_aplicado',
+            title: 'Módulo - Eletrocardiograma Aplicado ao Paciente',
+            path: 'Novo Curso / Eletrocardiograma Aplicado',
+            videos: [
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SDPsO3gQAE3tIp4ZRcTQ9So2Gntc-DO1/view?usp=sharing'),
+                    title: `Aula 01 - Eletrocardiograma Aplicado 1`,
+                    description: `Conteúdo da aula 1 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/18tJHxiRiAu-4Di8G3SSDXNURYcbK6hpe/view?usp=sharing'),
+                    title: `Aula 02 - Eletrocardiograma Aplicado 2`,
+                    description: `Conteúdo da aula 2 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NdO61QYuhtt201uxnQ-w0EnQwNaRB04X/view?usp=sharing'),
+                    title: `Aula 03 - Eletrocardiograma Aplicado 3`,
+                    description: `Conteúdo da aula 3 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16D5H8-RR_p24xh4DIHE9rvJo7eMNGQDd/view?usp=sharing'),
+                    title: `Aula 04 - Eletrocardiograma Aplicado 4`,
+                    description: `Conteúdo da aula 4 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Z9QNrfmiiEJyA3FsPdoe4v3gfV34XoMT/view?usp=sharing'),
+                    title: `Aula 05 - Eletrocardiograma Aplicado 5`,
+                    description: `Conteúdo da aula 5 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QYPbv0TWLcmpQSuNghx5e4lZrPATrH69/view?usp=sharing'),
+                    title: `Aula 06 - Eletrocardiograma Aplicado 6`,
+                    description: `Conteúdo da aula 6 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VIJ5X3nIEprt9ySJze3y-Jv8NSdaDqW7/view?usp=sharing'),
+                    title: `Aula 07 - Eletrocardiograma Aplicado 7`,
+                    description: `Conteúdo da aula 7 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10Hx3vXpkTBHbr2GVapgfftJMjP3D_-4N/view?usp=sharing'),
+                    title: `Aula 08 - Eletrocardiograma Aplicado 8`,
+                    description: `Conteúdo da aula 8 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19fwrDAGG4UYfIuUvP8l313ns-J9KKFeM/view?usp=sharing'),
+                    title: `Aula 09 - Eletrocardiograma Aplicado 9`,
+                    description: `Conteúdo da aula 9 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                },
+                {
+                    id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CnQg4WoHxLpVn62U9MbolKR-TisXsKuh/view?usp=sharing'),
+                    title: `Aula 10 - Eletrocardiograma Aplicado 10`,
+                    description: `Conteúdo da aula 10 de Eletrocardiograma Aplicado ao Paciente.`,
+                    icon: 'fas fa-play-circle'
+                }
+            ],
+            materials: []
+        });
+
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/edit?usp=drive_link&ouid=116952115189052058854&rtpof=true&sd=true', '/preview'); // Adicionado substituição para links de apresentação também
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * Os materiais são renderizados como menus suspensos (detalhes/sumário).
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+            const contentPlayer = document.getElementById('contentPlayer');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement || !contentPlayer) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstContentItem = null; // Para carregar o primeiro item (vídeo ou material)
+
+            // Renderiza os vídeos
+            // Verifica se o módulo tem subcategorias de vídeos ou apenas uma lista plana de vídeos
+            if (Array.isArray(module.videos) && module.videos.length > 0 && typeof module.videos[0].subcategoryTitle === 'string') {
+                // Módulo com subcategorias de vídeos (como "Guia do Paciente Grave")
+                module.videos.forEach(subcategory => {
+                    let subcategoryItemsHtml = '';
+                    subcategory.items.forEach(item => {
+                        const itemDescription = item.description || '';
+                        if (firstContentItem === null) {
+                            firstContentItem = { type: 'video', id: item.id, title: item.title };
+                        }
+                        subcategoryItemsHtml += `
+                            <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] my-2"
+                                 onclick="loadVideo('${item.id}', '${item.title}')" data-id="${item.id}">
+                                <div class="item-thumbnail-placeholder">
+                                    <i class="${item.icon}"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${item.title}</p>
+                                    <p class="text-xs text-gray-400">${itemDescription}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    videosHtml += `
+                        <details class="video-subcategory-details">
+                            <summary class="video-subcategory-summary">
+                                <span>${subcategory.subcategoryTitle}</span>
+                                <i class="fas fa-chevron-right icon"></i>
+                            </summary>
+                            <div class="video-items-container">
+                                ${subcategoryItemsHtml}
+                            </div>
+                        </details>
+                    `;
+                });
+            } else {
+                // Módulos com lista plana de vídeos
+                module.videos.forEach(item => {
+                    const itemDescription = item.description || '';
+                    if (firstContentItem === null) {
+                        firstContentItem = { type: 'video', id: item.id, title: item.title };
+                    }
+                    videosHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                             onclick="loadVideo('${item.id}', '${item.title}')" data-id="${item.id}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            videosContainer.innerHTML = videosHtml;
+
+
+            // Renderiza os materiais como menus suspensos (details/summary)
+            materialsContainer.innerHTML = ''; // Limpa o container antes de adicionar os novos
+            module.materials.forEach(category => {
+                let categoryItemsHtml = '';
+                category.items.forEach(item => {
+                    const itemDescription = item.description || '';
+                    // Se não houver vídeos e este for o primeiro material do primeiro módulo, defina-o como o primeiro item de conteúdo
+                    if (firstContentItem === null && module.videos.length === 0) { // Prioriza vídeos, mas se não houver, usa o primeiro material
+                        firstContentItem = { type: 'material', link: item.link, title: item.title };
+                    }
+                    categoryItemsHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] my-2"
+                             onclick="loadMaterial('${item.link}', '${item.title}')" data-id="${item.link}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                materialsHtml += `
+                    <details class="material-category-details">
+                        <summary class="material-category-summary">
+                            <span>${category.categoryTitle}</span>
+                            <i class="fas fa-chevron-right icon"></i>
+                        </summary>
+                        <div class="material-items-container">
+                            ${categoryItemsHtml}
+                        </div>
+                    </details>
+                `;
+            });
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstContentItem) {
+                if (firstContentItem.type === 'video') {
+                    loadVideo(firstContentItem.id, firstContentItem.title);
+                } else if (firstContentItem.type === 'material') {
+                    loadMaterial(firstContentItem.link, firstContentItem.title);
+                }
+            } else {
+                contentPlayer.src = '';
+                lessonTitleElement.textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+
+            // Certifica-se de que a primeira categoria de materiais seja aberta por padrão, se houver
+            const firstMaterialDetails = materialsContainer.querySelector('details');
+            if (firstMaterialDetails) {
+                firstMaterialDetails.open = true;
+            }
+
+            // Certifica-se de que a primeira subcategoria de vídeos seja aberta por padrão, se houver
+            const firstVideoDetails = videosContainer.querySelector('details');
+            if (firstVideoDetails) {
+                firstVideoDetails.open = true;
+            }
+        }
+
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Limpa as opções existentes antes de repopular
+            moduleSelector.innerHTML = '';
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[25].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[25].id);
+            } else {
+                // Se não houver módulos, limpa os containers e o título
+                document.getElementById('videosContainer').innerHTML = '';
+                document.getElementById('materialsContainer').innerHTML = '';
+                document.getElementById('lessonTitle').textContent = 'Nenhum módulo disponível';
+                document.getElementById('contentPlayer').src = '';
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

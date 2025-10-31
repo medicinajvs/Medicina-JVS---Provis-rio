@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">OFTReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_1', title: 'Módulo 01 - Onboarding', content: [
+                { type: 'video', title: 'Aula 01 - Boas-Vindas', link: 'https://drive.google.com/file/d/1SDMV50grRbxAbn15sz5eGPRzzl-rprr5/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 02 - Cronograma', link: 'https://drive.google.com/file/d/1RzRlIImXmQsKzd-9XtT4HpNH-UZGTS3U/view?usp=sharing' }, materials: [{ title: 'Cronograma Extensive 6.0', link: 'https://drive.google.com/file/d/1cFmAPz1MPrvN_Axg8SXnPIpIWkNpbiNh/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 03 - Metodologia', link: 'https://drive.google.com/file/d/17auWb7RIOyc__coS5rGHMCZaKLnAY5zo/view?usp=sharing' },
+                { type: 'video', title: 'Aula 04 - Plataforma', link: 'https://drive.google.com/file/d/1XQjssOFjVWRBpzrGz_AwmFKjmeX9PrIO/view?usp=sharing' },
+                { type: 'video', title: 'Aula 05 - Aulas', link: 'https://drive.google.com/file/d/1LiRTIkv2Qq-Wf-K5NMjZDPa9wyWcgSiz/view?usp=sharing' },
+                { type: 'video', title: 'Aula 06 - Questões', link: 'https://drive.google.com/file/d/1RchkCjkOVNiRUgxEzM35ntaaWlGUiSv5/view?usp=sharing' },
+                { type: 'video', title: 'Aula 07 - Suporte', link: 'https://drive.google.com/file/d/1Hvpb2fQ7qtuI7xd_vaU80X9aPpAm5ipR/view?usp=sharing' },
+                { type: 'video', title: 'Aula 08 - Feedback', link: 'https://drive.google.com/file/d/18wDLNNDR_sM9m_PE5e9V1nknbA7trRvi/view?usp=sharing' },
+                { type: 'video', title: 'Aula 09 - Dúvidas', link: 'https://drive.google.com/file/d/1bG6MJUJBHe1J2_3xfs7SJ87hs6S9Qa8-/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10 - Flashcards', link: 'https://drive.google.com/file/d/17I3aGDu4k04DDalSgVaX7XPGkGOAoo_R/view?usp=sharing' },
+                { type: 'video', title: 'Aula 11 - Prova do CBO', link: 'https://drive.google.com/file/d/1IwKW31F2UuorrC6Lt3ydhudsVonhFk2q/view?usp=sharing' },
+            ]},
+            { id: 'module_2', title: 'Módulo 02 - Órbita', content: [
+                { type: 'pdf', title: 'Apostila - Órbita', link: 'https://drive.google.com/file/d/1H27ZlYsI1mxRdcuMwuBH08KCE0QJQVG4/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Bases de Órbita', link: 'https://drive.google.com/file/d/1mJxpBcU7OzjmpR5y2v_o1ZZdcpR1ey73/view?usp=sharing' }, materials: [{ title: 'Órbita - Bases', link: 'https://drive.google.com/file/d/1Bc1y-00SRgRsm-ybcdt0IHgyst11WAfs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Inervação e Vascularização da Órbita', link: 'https://drive.google.com/file/d/1sp5_4itAFChKi4yu9gQSmitfvX6QPdUm/view?usp=sharing' }, materials: [{ title: 'Vascularização e Inervação da Órbita', link: 'https://drive.google.com/file/d/1iDd28gR9TaF2ayiiQqTe4O5UVvZDmr1K/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Anomalias Congênitas da Órbita', link: 'https://drive.google.com/file/d/1q5jOYgdnkk2j8DNmSTgNUQhtIQnjRhOu/view?usp=sharing' }, materials: [{ title: 'Anomalias Congênitas da Órbita', link: 'https://drive.google.com/file/d/1teBj1e7pv10WOLab3Kof9ax66aWlenGM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Doença Ocular Tireoidiana', link: 'https://drive.google.com/file/d/1sEtSzkaNlE5Q1hQ8iMGDF5eq3dAwY3Mq/view?usp=sharing' }, materials: [{ title: 'Doença Ocular Tireoidiana', link: 'https://drive.google.com/file/d/13Q5kg2uSDfWF3tI6rOxcsnWCPIU2LApL/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Orbitopatias Inflamatórias e Infecciosas', link: 'https://drive.google.com/file/d/1Kfuyli4idT4oW6_8AaGHz08-tiQPNqQL/view?usp=sharing' }, materials: [{ title: 'Doenças Infecciosas/Inflamatórias', link: 'https://drive.google.com/file/d/1ed_VNcEMpbG4_pfRzCN0zuv-m3ViTsfa/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 06 - Emergency: Atendimento Inicial no Pronto-Socorro: Parte I', link: 'https://drive.google.com/file/d/1cPMiCSVubgftYvQLcSc5ucIgRKTyYcMX/view?usp=sharing' },
+                { type: 'video', title: 'Aula 07 - Emergency: Atendimento Inicial no Pronto-Socorro: Parte II', link: 'https://drive.google.com/file/d/11v-9X9Xr1flQl9fdPtIKMZUtK7x8reg7/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 08 - Tumores Orbitários Benignos da Infância', link: 'https://drive.google.com/file/d/1YIWpmFJgjPJKTf7r01eiEAYsFS31Ke-P/view?usp=sharing' }, materials: [{ title: 'Tumores Orbitários Benignos da Infância', link: 'https://drive.google.com/file/d/1z_c37JQQKHfPP9xw6bdEJUKbtdvRsZqV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Tumores Orbitários Malignos da Infância', link: 'https://drive.google.com/file/d/1vo-2rE535Ze4OgfTrvMc3VybDXngM6W1/view?usp=sharing' }, materials: [{ title: 'Tumores Orbitários Malignos da Infância', link: 'https://drive.google.com/file/d/1jxt1WNoYwzaMpLHLiSuVYOiIo4mUfq8I/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Tumores Orbitários Benignos do Adulto', link: 'https://drive.google.com/file/d/11XHw0b4hH6kUlry5_k41BoDRZAFjgknX/view?usp=sharing' }, materials: [{ title: 'Tumores Orbitários Benignos do Adulto', link: 'https://drive.google.com/file/d/1SRnol0BVFIc6wmvutAsBc1wSpHEyfpjg/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Tumores Orbitários Malignos do Adulto', link: 'https://drive.google.com/file/d/1dq9udflR7iS7t96j5B30fNIvfzBcRCex/view?usp=sharing' }, materials: [{ title: 'Tumores Orbitários Malignos do Adulto', link: 'https://drive.google.com/file/d/1eXUn-X0UYW_JHAJHYtoAtlFScq87llX5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Tumores Epiteliais da Glândula Lacrimal', link: 'https://drive.google.com/file/d/10j0Mg-KHWJHvE4pnv95R9ftRAcmdMa4z/view?usp=sharing' }, materials: [{ title: 'Tumores Epiteliais da Glândula Lacrimal', link: 'https://drive.google.com/file/d/1NDNkNEV5QCH72VivcbgtbRoFmWmScLWJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Sala de Cirurgia | Evisceração, Enucleação e Cavidade Anoftálmica', link: 'https://drive.google.com/file/d/15dDEhZnXorcgeYX26aCOD6EIdpp3-vEx/view?usp=sharing' }, materials: [{ title: 'Slides - Cavidade Anoftálmica', link: 'https://drive.google.com/file/d/1ZkPxf64cJoVc69rK7EuvF9T3wUQtcDTh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Emergency: Trauma Orbitário', link: 'https://drive.google.com/file/d/1n9p4Eu1T5EOTa0NJI7YDJzbxA8JhBASb/view?usp=sharing' }, materials: [{ title: 'Trauma Orbitário', link: 'https://drive.google.com/file/d/1F2HYXEYJh3vCoFlPLzyJhVZNqJMF8ca2/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 15 - Oft-Cast: Revisão PNO - Órbita', link: 'https://drive.google.com/file/d/1Y6cGXaC9dZTTFSjF8Sj-xJAEK_10ypD5/view?usp=sharing' },
+            ]},
+            { id: 'module_3', title: 'Módulo 03 - Córnea, Conjuntiva e Esclera', content: [
+                { type: 'pdf', title: 'Apostila de Córnea', link: 'https://drive.google.com/file/d/1OcSZep9jY9ckMdpZpITc8zem3n97emky/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Anatomia e Fisiologia da Córnea I', link: 'https://drive.google.com/file/d/1j4G2YYVwQdfML9LXNax173YLtvAKN9zd/view?usp=sharing' }, materials: [{ title: 'Anatomia e Fisiologia da Córnea', link: 'https://drive.google.com/file/d/1-OhG0GOrTx3aUKGyEY5q-Knz2ILhjyfT/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 02 - Anatomia e Fisiologia da Córnea II', link: 'https://drive.google.com/file/d/1wIV6lZgMQHthbBTWGyDsrVwLJqxmVatM/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 03 - Embriologia da Córnea', link: 'https://drive.google.com/file/d/1Bx9Lu9k-UC7UrfO6FldicdvUG8lhIFxX/view?usp=sharing' }, materials: [{ title: 'Embriologia e Malformações de Córnea', link: 'https://drive.google.com/file/d/145vlaBjcPRP5MwF9bQTN9MoP9L4NvdAT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Puk e Mooren', link: 'https://drive.google.com/file/d/10svfW1K48BA8eVMcLhaXtRqsfnYr4P3M/view?usp=sharing' }, materials: [{ title: 'Puk e Mooren', link: 'https://drive.google.com/file/d/1Rfk1PoSQ_pZZIQqBPSxmhYjWFPvHTtfn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Outras Ceratites', link: 'https://drive.google.com/file/d/1BYw4KYVoLdTM9GsB77G8nRgwGeCs9QEY/view?usp=sharing' }, materials: [{ title: 'Outras Ceratites', link: 'https://drive.google.com/file/d/1ffftFmQa1dwPzul8J8zIyaA5xMNOoQqT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Emergency: Queimadura Química Ocular', link: 'https://drive.google.com/file/d/11U4r_U7Tgh04CC9UTBhxzez34q3_pHMQ/view?usp=sharing' }, materials: [{ title: 'Queimadura Química Ocular', link: 'https://drive.google.com/file/d/1LKqHlWmBrnSTANv52A0CIfwhb9rWR6WA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Ceratite Bacteriana', link: 'https://drive.google.com/file/d/1OOkoE5-d2YVcKLUQy7kAi6cWFnkevmCM/view?usp=sharing' }, materials: [{ title: 'Ceratite Bacteriana', link: 'https://drive.google.com/file/d/12BHx8fKBJqRAM-sbh_qK_erHaH3jstVs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Ceratite Fúngica', link: 'https://drive.google.com/file/d/1_XpR-5UcO_tEac1R61CcRiZhIMqE0hiY/view?usp=sharing' }, materials: [{ title: 'Ceratite Fúngica', link: 'https://drive.google.com/file/d/1-AByJYK0EEz__dIwAerp-J1-sd_5p7TN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Ceratite Acanthamoeba', link: 'https://drive.google.com/file/d/1zcXyB2h6d_6AYX50TQtb6Pa4Ro06P5Am/view?usp=sharing' }, materials: [{ title: 'Ceratite Acanthamoeba', link: 'https://drive.google.com/file/d/1I_IFSTxeU8eBHZUTgN_Ra7mKvLGHmHto/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Ceratite Herpética', link: 'https://drive.google.com/file/d/1Tcu3qCG_B9xgMHwz2xuTepVw-aAawR0o/view?usp=sharing' }, materials: [{ title: 'Ceratite Herpética', link: 'https://drive.google.com/file/d/1rKykbr2GH-G5d06PL_iPheEikqTPCkGn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Herpes Zoster Oftálmico', link: 'https://drive.google.com/file/d/1-7lpXy4AmZLP_Lrp4Cr78-2ynHC2V1Zp/view?usp=sharing' }, materials: [{ title: 'Herpes Zoster Oftálmico', link: 'https://drive.google.com/file/d/1SlhGr6wwoWFeTZjKng6Iy3xVAacl63QE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Alergia Ocular', link: 'https://drive.google.com/file/d/1K4odfBYdJ6OWrA68xQmssDbhEti3PbnT/view?usp=sharing' }, materials: [{ title: 'Alergia Ocular', link: 'https://drive.google.com/file/d/1FwU2yjz7UnIm3nlH1a-GZ_0Yg43XVgAT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Farmacologia dos Anti-Inflamatórios / Anti-Alérgicos', link: 'https://drive.google.com/file/d/1z9LZWlZh8caKgBxP4QxJKT7CK7Wfd7pi/view?usp=sharing' }, materials: [{ title: 'Farmacologia dos Antialérgicos', link: 'https://drive.google.com/file/d/1x5PvwHBUVXmD1seo7MdYq8PXcMf6b4os/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Distrofias do Epitélio da Córnea', link: 'https://drive.google.com/file/d/1aHAkSz78swONP24DU6gldWHb8VBqB9HL/view?usp=sharing' }, materials: [{ title: 'Distrofias do Epitélio da Córnea', link: 'https://drive.google.com/file/d/1maPirxE04X-xJBESYxBFP2M2HjHyXgTC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Distrofias Epiteliais-Estromais', link: 'https://drive.google.com/file/d/1VbloylbjSarozOxRH-XSTKRbetFYIluJ/view?usp=sharing' }, materials: [{ title: 'Distrofias Epiteliais-Estromais', link: 'https://drive.google.com/file/d/13_YD6PSXcSxCASYdnbRKJMIcKBY8ranI/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Distrofias do Estroma da Córnea', link: 'https://drive.google.com/file/d/1EoIstg-drHVjWQJXqxzvoMu8ntGNKVWN/view?usp=sharing' }, materials: [{ title: 'Distrofias do Estroma da Córnea', link: 'https://drive.google.com/file/d/1TfdeyPXi_P7mWaFc_6pTRVoueNsZMHZK/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Distrofias do Endotélio da Córnea', link: 'https://drive.google.com/file/d/1RedX6wQK69OZ9Q6-VQBURhmcyFH-T_y3/view?usp=sharing' }, materials: [{ title: 'Distrofias do Endotélio da Córnea', link: 'https://drive.google.com/file/d/1azPqYNAeiQe59ngAtmKt0gj6BlX6DNNm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 18 - Ectasias da Córnea I', link: 'https://drive.google.com/file/d/1xhhFliqba--PMuIJREP-WgH1VdGuRlob/view?usp=sharing' }, materials: [{ title: 'Ectasias de Córnea - Parte I e II', link: 'https://drive.google.com/file/d/1vj8ePju-WbonPVp-pipto2bc21KfF5Eu/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 19 - Ectasias da Córnea II', link: 'https://drive.google.com/file/d/1ElaeVWjnBhp5KhBjzU3lTmC5uLA1Rhhh/view?usp=sharing' },
+                { type: 'video', title: 'Aula 20 - Emergency: Trauma Ocular - Classificação de Bett', link: 'https://drive.google.com/file/d/15JymHJu4HqKct_PF-J5U2TTdIluJh73T/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 21 - Degenerações da Córnea', link: 'https://drive.google.com/file/d/1gih8ITazzv1zzWGZx2CBFCvZtdGg9DJF/view?usp=sharing' }, materials: [{ title: 'Degenerações Corneanas', link: 'https://drive.google.com/file/d/1-hIJEqLv_KZhRQuE57u74cGREDWeovJY/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 22 - Banco de Olhos e Transplante de Córnea', link: 'https://drive.google.com/file/d/1nkxTnig588jY_B59O2nJ6ygc4o1dJ9Bp/view?usp=sharing' },
+                { type: 'video', title: 'Aula 23 - Transplantes Penetrantes', link: 'https://drive.google.com/file/d/1BEYfE3ZnrLHG-Mlp0-O5S7SoqBr2ggw8/view?usp=sharing' },
+                { type: 'video', title: 'Aula 24 - Transplantes Lamelares', link: 'https://drive.google.com/file/d/1yEek95YQRa_OjOOwBxhoJ0TAQ-Rt35zF/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 25 - Emergency: Trauma Aberto Segmento Anterior', link: 'https://drive.google.com/file/d/1oAinBrRKmg11xhAIIh5DGRLL4FSKvcMl/view?usp=sharing' }, materials: [{ title: 'Trauma Aberto do Segmento Anterior', link: 'https://drive.google.com/file/d/1amq2GbhUrIqc4-aUMhLbvDEaxEHQ4yCp/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 26 - Bases Conjuntiva', link: 'https://drive.google.com/file/d/1Rs0jIvCHKj73zz8tvKX9-GrJAiF47cLk/view?usp=sharing' }, materials: [{ title: 'Bases Conjuntiva', link: 'https://drive.google.com/file/d/17ss-pUtPFwXrlwhb8B09nk0O3g8dLfRN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 27 - Síndromes Foliculares', link: 'https://drive.google.com/file/d/1LQ226etyLZ9SUvrkAskhkvh-kSeNimvp/view?usp=sharing' }, materials: [{ title: 'Síndromes Foliculares', link: 'https://drive.google.com/file/d/1mnQiMuOCk4_mPvY2K1F0RJrmydlfE4aX/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 28 - Outras Conjuntivites', link: 'https://drive.google.com/file/d/1BK_vnul6UlGtqmLcJTcL5rnr0dumEqNx/view?usp=sharing' }, materials: [{ title: 'Outras Conjuntivites', link: 'https://drive.google.com/file/d/1ihUm19Y_wp8Ohn8W3KYbdjE1hI6C8VyJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 29 - Bases Esclera', link: 'https://drive.google.com/file/d/1Z0MHgGQzlCUnLKl_B7DTqZsVvXxOFLiX/view?usp=sharing' }, materials: [{ title: 'Bases de Esclera', link: 'https://drive.google.com/file/d/1_pUBgfRRIJviWqrSXLXS7z3QWm_kHoYM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 30 - Esclerites e Episclerites', link: 'https://drive.google.com/file/d/1gXYM9uvc5wca7MSahxGf9ocO27FwCZ0y/view?usp=sharing' }, materials: [{ title: 'Esclerites e Episclerites', link: 'https://drive.google.com/file/d/1OqXIvynpu0hBtc-6JFachyrRk3jIMcAR/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 31 - Conjuntivites Crônicas Cicatriciais', link: 'https://drive.google.com/file/d/1fbW90TXv3nor0WjThhyRzyShawug33BL/view?usp=sharing' }, materials: [{ title: 'Conjuntivites Crônicas Cicatriciais', link: 'https://drive.google.com/file/d/14WsKqALbAHZ3fZge5edYPZ9PnoS5kYAJ/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 32 - Sala de Cirurgia | Pterígio', link: 'https://drive.google.com/file/d/19Pz7rVZuAeTKqaZvRVwZ0TOikbymYrpf/view?usp=sharing' },
+                { type: 'video', title: 'Aula 33 - Oft-Cast: Revisão Córnea I', link: 'https://drive.google.com/file/d/1YCDi0CkDGBSpa69wUohVdUE6FQ-zxE4y/view?usp=sharing' },
+                { type: 'video', title: 'Aula 34 - Oft-Cast: Revisão Córnea II', link: 'https://drive.google.com/file/d/1rQIZn_flhTfpkI8AWAFjn22DDOImbTXO/view?usp=sharing' },
+                { type: 'video', title: 'Aula 35 - Oft-Cast: Revisão Conjuntiva e Esclera', link: 'https://drive.google.com/file/d/1XgVZa6__2oQuQb6WbjiT00JnOjkEGyzz/view?usp=sharing' },
+            ]},
+            { id: 'module_4', title: 'Módulo 04 - Cristalino e Catarata', content: [
+                 { type: 'pdf', title: 'Apostila - Cristalino e Catarata', link: 'https://drive.google.com/file/d/11L5cifi6UY_xgJNk38UEPXh-5CCr3QRL/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 01 - Bases do Cristalino', link: 'https://drive.google.com/file/d/1H4gBzvsBXNOmL4N_Myf2pVNK69Ihu3ZJ/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 02 - Pré-Operatório', link: 'https://drive.google.com/file/d/1hqd35r5hQlT9ZMgNkWW_TEKVwi3gkkVl/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 03 - Alterações Congênitas do Cristalino I', link: 'https://drive.google.com/file/d/1fulM2K6Ncoc9yXDS7tvc4HOWzXxLZ3g2/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 04 - Alterações Congênitas do Cristalino II', link: 'https://drive.google.com/file/d/1RbfVMwJmgRFwJ2KkQAxmwMNaC3VoAAsP/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 05 - Cataratas Especiais e Fatores de Risco', link: 'https://drive.google.com/file/d/1FCKBSKkZa7rh-82hIsVEPiuU8Lbwx8SO/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 06 - Fluídica e Aparelho de Facoemulsificação', link: 'https://drive.google.com/file/d/1jz6ekind0pnibOVSPTiCH5nGqkmwYw9N/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 07 - Lentes Intraoculares', link: 'https://drive.google.com/file/d/1PZu2oxEIG5Y5PPLJWqqf-NDeYTeHSi--/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 08 - Sala de Cirurgia | Bloqueios Anestésicos', link: 'https://drive.google.com/file/d/136sl98BEz45d1-MYXQkdo-ul_pejfnX7/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 09 - Sala de Cirurgia | Viscoelásticos', link: 'https://drive.google.com/file/d/1XYnP0bM-DEPF1iFldaYbnOc-Wan6Kc3Y/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 10 - Sala de Cirurgia | Técnicas de Fratura', link: 'https://drive.google.com/file/d/1XfxjFeAWD9hjkQha8wu9FJygAdA_wKJH/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 11 - Sala de Cirurgia | Complicações Perioperatórias I', link: 'https://drive.google.com/file/d/14vxT0MnWW4OQqrsi2NKUy89CEN0zmjC8/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 12 - Sala de Cirurgia | Complicações Perioperatórias II', link: 'https://drive.google.com/file/d/1ROXG8d7KSLX79SBlF__9XGTkRb00L9My/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 13 - Sala de Cirurgia | Complicações Pós-Operatórias', link: 'https://drive.google.com/file/d/1DyZfBu1Mn8ca3P6w439zrqOxwQYReEPQ/view?usp=sharing' },
+                 { type: 'video', title: 'Aula 14 - Oft-Cast: Revisão Catarata e Cristalino', link: 'https://drive.google.com/file/d/117zg8cAZLv4dTWZWLsFF1mIP04kxYAws/view?usp=sharing' },
+            ]},
+            { id: 'module_5', title: 'Módulo 05 - Neuroftalmologia', content: [
+                { type: 'pdf', title: 'Apostila Neuro-Oftalmo', link: 'https://drive.google.com/file/d/1XgYepcTXxFTGU3cwUU9rFXojmd_F6WXC/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Anatomia das Vias Ópticas: Parte I', link: 'https://drive.google.com/file/d/1rvC7CWlBzKM_gVau_Vag7w8NQCg1wBBW/view?usp=sharing' }, materials: [{ title: 'Anatomia das Vias Ópticas - Parte I', link: 'https://drive.google.com/file/d/1pCZWLGZalQ96sw5mc1YxVffGF30o7hke/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Anatomia das Vias Ópticas: Parte II', link: 'https://drive.google.com/file/d/1xk-xaRKiwIunouGWqu8bhr_Nqeq9LZUB/view?usp=sharing' }, materials: [{ title: 'Anatomia das Vias Ópticas - Parte II', link: 'https://drive.google.com/file/d/1wpyo0YuP70MibfUWEmDljbN96L7EUx4T/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - III, IV e VI Pares Cranianos: Parte I', link: 'https://drive.google.com/file/d/1Y9JIzfSgdzEeJecKm1qibNurc-4QpJWj/view?usp=sharing' }, materials: [{ title: 'III, IV e VI Pares Cranianos - Parte I', link: 'https://drive.google.com/file/d/1HZb3rH3K8kWYB4M5klOXY5aYPGGYsFdV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - III, IV e VI Pares Cranianos: Parte II', link: 'https://drive.google.com/file/d/1QTXdQ8T08gO6_EsvvQK5sUOhxqTKWgtM/view?usp=sharing' }, materials: [{ title: 'III, IV e VI Pares Cranianos - Parte II', link: 'https://drive.google.com/file/d/1hRFgH2f9LyTw83LGyH-tGmULI3pRedfV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Alterações Congênitas do Nervo Óptico', link: 'https://drive.google.com/file/d/1K-TZc8N4wL6_zatoadtOXaINmVpcPRh1/view?usp=sharing' }, materials: [{ title: 'Anomalias Congênitas NO', link: 'https://drive.google.com/file/d/1OFZIVqqV1fl2PpfrfrhyMXHj1IkAFhnR/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Paralisia Facial', link: 'https://drive.google.com/file/d/1DlL9N6pO5_x8UXQaLbNkrT4Z-54vk6IR/view?usp=sharing' }, materials: [{ title: 'Paralisia Facial - 2025', link: 'https://drive.google.com/file/d/1nTI3PpNToI-lUqfwEL5a1PM8iuQBetU4/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Síndromes Pupilares I', link: 'https://drive.google.com/file/d/1lvM-eT4i-i2zAQfmVLEqA15wwwrqUyMk/view?usp=sharing' }, materials: [{ title: 'Síndromes Pupilares - Parte I', link: 'https://drive.google.com/file/d/1T_2Eq2N6W1qxeGhyTk2pbopY7rxJXaDv/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Síndromes Pupilares II', link: 'https://drive.google.com/file/d/1pNOBJnoU2xHCUWrwDUjn5p-Yy34A00dH/view?usp=sharing' }, materials: [{ title: 'Síndromes Pupilares - Parte II', link: 'https://drive.google.com/file/d/1-S4KRkEw90fj53xj6KYA5m1LSFmhr2Oj/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Neuropatias Ópticas', link: 'https://drive.google.com/file/d/1WV1kampAlV4wu_Dganud5OlI6ROCXYtu/view?usp=sharing' }, materials: [{ title: 'Neuropatias Ópticas', link: 'https://drive.google.com/file/d/1Hk-OKO5ePZ8H605SosC8zzPNVpgIuMZD/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Neuropatias Ópticas Isquêmicas', link: 'https://drive.google.com/file/d/1-Mv-3r3EJydUye50QAZzJSrM0UA0yGIJ/view?usp=sharing' }, materials: [{ title: 'Neuropatia Óptica Isquêmica - 2025', link: 'https://drive.google.com/file/d/1l9mB_yyg39rxxeMLTngHiEkrqWSuec3k/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Neuropatia Óptica Hereditária', link: 'https://drive.google.com/file/d/1RYCgM7TGv67-91NmPbMqkn1gEgkIsDZM/view?usp=sharing' }, materials: [{ title: 'Neuropatias Ópticas Hereditárias - 2025', link: 'https://drive.google.com/file/d/1oXVfQm76EUF1eJleNgKan8ddb_bsQ7jF/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Neuropatia Óptica Tóxica e Carencial', link: 'https://drive.google.com/file/d/1IWp3ipRR-lXhOxJEf-skmCMPcljUqvZm/view?usp=sharing' }, materials: [{ title: 'Neuropatias Tóxico-Carenciais - 2025', link: 'https://drive.google.com/file/d/1eJE3kNfayymVUbj-C8H7zpAiUokVcTkg/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Hipertensão Intracraniana Idiopática', link: 'https://drive.google.com/file/d/1pLTYCSP3drzKkCvNfshG2corYU3LRd53/view?usp=sharing' }, materials: [{ title: 'HII - 2025', link: 'https://drive.google.com/file/d/1qTGmxn_qZsCB_3jhpzCxDcvCT-ITG-CU/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Papiledema', link: 'https://drive.google.com/file/d/1Vx8ASw8uc7b1z1H8N5ZO2aFjzuaNfp8B/view?usp=sharing' }, materials: [{ title: 'Papiledema - 2025', link: 'https://drive.google.com/file/d/1tz-vnUf2epc4kZ2V08G48PP-NdmiliWF/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Miopatias Oculares', link: 'https://drive.google.com/file/d/1b_cNeOglzPBGae27jI6sZOssuN7s8TfJ/view?usp=sharing' }, materials: [{ title: 'Miopatias Oculares', link: 'https://drive.google.com/file/d/1vfc1jC7j-QK8M7_l9cvWjUgan7T05oI5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Nistagmos', link: 'https://drive.google.com/file/d/1Etpd8FqoRhisHb6tkQGNNgZ4g_WNG6hX/view?usp=sharing' }, materials: [{ title: 'Nistagmos', link: 'https://drive.google.com/file/d/1g-DAOuE65SjFqp1LHDuGeIC_hFlhviqO/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Emergency: Diplopia Aguda', link: 'https://drive.google.com/file/d/1WegOHV4MfgMDVFfAOE81L5szGv0Pq6Ti/view?usp=sharing' }, materials: [{ title: 'Material de Estudo: Diplopia Aguda', link: 'https://drive.google.com/file/d/1Y1hqL6VQaW6Vakdh4linQ5Mw5eOAMrc4/view?usp=sharing' }] },
+            ]},
+            { id: 'module_6', title: 'Módulo 06 - Glaucoma', content: [
+                { type: 'pdf', title: 'Apostila - Glaucoma', link: 'https://drive.google.com/file/d/1YGvh_YDmQYhXQuJxGaZBtNycOtVRLzzn/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Bases de Glaucoma: Humor Aquoso e Seio Camerular', link: 'https://drive.google.com/file/d/1wgfVqPokEySmkDsEzY_slYBEL6mcXHpV/view?usp=sharing' }, materials: [{ title: 'Humor Aquoso e Seio Camerular', link: 'https://drive.google.com/file/d/1Q5x29oSAqh3ViCMwnpU4iJd9LeXfcWgw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Bases de Glaucoma: Tonometria', link: 'https://drive.google.com/file/d/1BN1TIkEMf2_QiFyvQ3nPANx75x4Qasar/view?usp=sharing' }, materials: [{ title: 'Bases de Glaucoma', link: 'https://drive.google.com/file/d/1HhUDhkP3zwCNjclJ5VDKVgctVTS1-g2w/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Nervo Óptico Glaucomatoso', link: 'https://drive.google.com/file/d/1KEpdMCM3lY4Eccm1exJ5tfyGbohTc2Ha/view?usp=sharing' }, materials: [{ title: 'Nervo Óptico', link: 'https://drive.google.com/file/d/19cVTMOIw9Zq8yo5YKsQbIHImKmqGz3Fo/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Campo Visual: Parte I', link: 'https://drive.google.com/file/d/1xqMogdqGW_NEZBBODNZ4wTVVJCpxsMHf/view?usp=sharing' }, materials: [{ title: 'Slide - Campo Visual: Parte I', link: 'https://drive.google.com/file/d/1NQxbriVS_4bPGaBMwbll6IVlny9WjsVY/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Campo Visual: Parte II', link: 'https://drive.google.com/file/d/1JbU8ANdn1YDrr9rTOui7mMHpJ7L5O7oX/view?usp=sharing' }, materials: [{ title: 'Glaucoma - Campo Visual: Parte II - 2025', link: 'https://drive.google.com/file/d/1c48HF_sceOzEnVWETqBz1gI_iSpviJnl/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Avaliação Estrutural', link: 'https://drive.google.com/file/d/1CN5f0d5XcQT3Y7lAjnDKFZI5XFxKqUba/view?usp=sharing' }, materials: [{ title: 'Avaliação Estrutural - 2025', link: 'https://drive.google.com/file/d/1wFY9kicI8uvvXxrphvqHcY5I4U9tLjDN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Relação Estrutura-Função', link: 'https://drive.google.com/file/d/1-Zurq75sDBSfo7sfmmN_ygZa4Cbt7sFF/view?usp=sharing' }, materials: [{ title: 'Relação Estrutura-Função - 2025', link: 'https://drive.google.com/file/d/1SxMv8wNLxgkihCqN4KEd4RXLTr_2x-zU/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - GPAA, HO e GPN', link: 'https://drive.google.com/file/d/1EepZaGMKK_Qa3kHLCZlrdxgCHvGPoz2Z/view?usp=sharing' }, materials: [{ title: 'GPAA, HO e GPN', link: 'https://drive.google.com/file/d/1mWiX1X9dr8EiElsfUqZiksaeRzOIVun0/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Glaucoma Pigmentar e Pseudoexfoliativo', link: 'https://drive.google.com/file/d/1Mi0W6OEnRK1T07gAYUtAskPpsmHxk9a1/view?usp=sharing' }, materials: [{ title: 'PIG e PEX', link: 'https://drive.google.com/file/d/1Aan5x3RY53ERfbyqZZgX-9MMrPTr41_9/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Glaucoma Neovascular', link: 'https://drive.google.com/file/d/19ac7tmCsJBXuJnq91_st219Hyz4u_nh-/view?usp=sharing' }, materials: [{ title: 'Glaucoma Neovascular - 2025', link: 'https://drive.google.com/file/d/1idsy9nYFr02pWlvzEz7FWJkVdKvZXPWC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Glaucoma Primário de Ângulo Fechado', link: 'https://drive.google.com/file/d/1lTvRr1-YqT8QYljvyMxfnBWsrgUQ1wu1/view?usp=sharing' }, materials: [{ title: 'Glaucoma Primário de Ângulo Fechado - 2025', link: 'https://drive.google.com/file/d/12tCJCx0LJ7ZAAItJ1ghSCnSXF5PiLtJE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Síndrome ICE', link: 'https://drive.google.com/file/d/1_6A39_7zzVimBJi-nYid9rSK-3yIZXrK/view?usp=sharing' }, materials: [{ title: 'Síndrome ICE', link: 'https://drive.google.com/file/d/144YYeGbpRYk_qSVvhZGdIo-GvrdOFwLN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Glaucoma Congênito Primário', link: 'https://drive.google.com/file/d/1PE_5RPRpb6ZtLRvf9atBqbAhmgVJG6br/view?usp=sharing' }, materials: [{ title: 'Glaucoma Pediátrico Primário - 2025', link: 'https://drive.google.com/file/d/1_rLAtxYWxekOAfYV4SkRsLazd8A2ugY4/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Neurocristopatias', link: 'https://drive.google.com/file/d/1uHPzhZ3k0FNevg0lR9UTYtObsyFl37Fw/view?usp=sharing' }, materials: [{ title: 'Neurocristopatia', link: 'https://drive.google.com/file/d/1ChCFfsBCSwOBX_GDFxRnnJZvtoQrZBnM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Glaucoma Pós-Trabecular', link: 'https://drive.google.com/file/d/1gCVYOi3VBkH5II70E5AJj_QAIi3OWEi9/view?usp=sharing' }, materials: [{ title: 'Glaucoma Pós-Trabecular - 2025', link: 'https://drive.google.com/file/d/1Gt1rr14g2bjhE3JJgICgusvaxYsXWgqi/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Glaucomas Relacionados ao Cristalino e às Hemorragias', link: 'https://drive.google.com/file/d/1RaQ0bNCrPAAr80Di8nV_Gy4oYZJTrMbE/view?usp=sharing' }, materials: [{ title: 'Glaucomas Relacionados ao Cristalino e às Hemorragias - 2025', link: 'https://drive.google.com/file/d/1fLFSmO7bK980S9Q9fMWSGzYLeFd_8XCd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Outros Glaucomas Secundários', link: 'https://drive.google.com/file/d/1yWvAJBqRLXr4F5cxIEsruPpSp3ZC1nmo/view?usp=sharing' }, materials: [{ title: 'Outros Glaucomas Secundários - 2025', link: 'https://drive.google.com/file/d/1fX2WIwFYyDyEXCB_SP_GzFcoODxMQd7w/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 18 - Tratamento Clínico do Glaucoma I', link: 'https://drive.google.com/file/d/1s6wbVX3I8pgtO1tl5YMHquBC4Y0xootr/view?usp=sharing' }, materials: [{ title: 'Tratamento Clínico - Glaucoma: Parte I - 2025', link: 'https://drive.google.com/file/d/1NRXIgGlje5ov5E2sPbviEXyUT5p3DW6D/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 19 - Tratamento Clínico do Glaucoma II', link: 'https://drive.google.com/file/d/1-osv9tEZoTofFYht8r_E3dC8gzh33Tgl/view?usp=sharing' }, materials: [{ title: 'Tratamento Clínico - Glaucoma: Parte II - 2025', link: 'https://drive.google.com/file/d/1HGBbdJsbtdsvF_QELBupUkFK10OMEJSx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 20 - Tratamento Laser em Glaucoma', link: 'https://drive.google.com/file/d/1vAF6MW6HGsI9ceLOvYkI4bLIHOMjFFIX/view?usp=sharing' }, materials: [{ title: 'Laser em Glaucoma', link: 'https://drive.google.com/file/d/1M4XsEDd3_rC4RdhQK2lRm0OQZ4Po_5z3/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 21 - Procedimentos Ciclo Destrutivos', link: 'https://drive.google.com/file/d/1j4dwcuJSqZM3jqj_JhRTYraPFmhmUVer/view?usp=sharing' }, materials: [{ title: 'Procedimentos Ciclo Destrutivos', link: 'https://drive.google.com/file/d/1pFCINMxct6VCh7rKfIK3Gemq8KJO13p6/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 22 - Sala de Cirurgia | Trabeculectomia: Parte I', link: 'https://drive.google.com/file/d/1g9_ik9viqWpMDmDvzj30QRJPUwJH3Br_/view?usp=sharing' }, materials: [{ title: 'Trabeculectomia - Parte I: 2025', link: 'https://drive.google.com/file/d/1Jc2vGEwUi7MQhTCvggfl5Vwfex-Ehfbk/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 23 - Sala de Cirurgia | Trabeculectomia: Parte II', link: 'https://drive.google.com/file/d/1IebJegpCgY_44m76b4QlijVwquowb4zh/view?usp=sharing' }, materials: [{ title: 'Trabeculectomia - Parte II: 2025', link: 'https://drive.google.com/file/d/17QdzKNQJHyP3LbCqxzy9-hJgtwQbjHfM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 24 - Sala de Cirurgia | Implantes de Drenagem', link: 'https://drive.google.com/file/d/13yNylqU3kXPTbtgAtzXhK8vCsbX88XQn/view?usp=sharing' }, materials: [{ title: 'Implantes de Drenagem', link: 'https://drive.google.com/file/d/1R2r8PMIAsYVsurJ7IFmoc7laEY7rt9Kx/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 25 - Sala de Cirurgia | MIGS', link: 'https://drive.google.com/file/d/1yGPKgZBypy60TKjVcjhwm8bvnVXar3Uk/view?usp=sharing' },
+            ]},
+            { id: 'module_7', title: 'Módulo 07 - Uveítes', content: [
+                { type: 'pdf', title: 'Apostila - Uveítes', link: 'https://drive.google.com/file/d/1w5z0aJzY2mOaeRf1Bse2-9cmg0qVTDfK/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Bases do Trato Uveal: Íris', link: 'https://drive.google.com/file/d/1ZmTRHQ8pNDqwR6OSIJCP5tYnXN5pRfUA/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 02 - Bases do Trato Uveal: Corpo Ciliar', link: 'https://drive.google.com/file/d/1vTHOnfUETEMmrO68fyYClj2YxlzPVzME/view?usp=sharing' }, materials: [{ title: 'Corpo Ciliar - 2025', link: 'https://drive.google.com/file/d/1ujZuvoXdNrdPOjHphKyFNPbQflpvZmhh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Bases do Trato Uveal: Coroide', link: 'https://drive.google.com/file/d/1l6WsrcUIg6ZTTU4F0n5g8A7tRIbjGeSG/view?usp=sharing' }, materials: [{ title: 'Coroide - 2025', link: 'https://drive.google.com/file/d/1TGSzVVgFIv3zGfSxNkAwJ6Oj52HzRj3X/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Classificação das Uveítes', link: 'https://drive.google.com/file/d/10F9Qe3WHylbJRWZWK_Mvzy8toHYMUtDN/view?usp=sharing' }, materials: [{ title: 'Classificação das Uveítes', link: 'https://drive.google.com/file/d/1XOMtepgCDn6mqeZoljXRSHkyBSg1N9CS/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Biomicroscopia: Técnicas de Iluminação', link: 'https://drive.google.com/file/d/1AlZjomVMazkp6tUTDeQ40XA0VbUaEclx/view?usp=sharing' }, materials: [{ title: 'Técnicas de Iluminação', link: 'https://drive.google.com/file/d/1A9bc0NXbaaC9y1o9rSlgliJPwtwbSjKw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Uveítes nas Espondiloartropatias', link: 'https://drive.google.com/file/d/1zFcKydVY6NlTTE4J1ufZHedWoOjUwHUd/view?usp=sharing' }, materials: [{ title: 'HLA - B27', link: 'https://drive.google.com/file/d/192W-_-VFMPbYwpGsHPfyX12CkeikVBsq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Uveítes na Artrite Idiopática Juvenil', link: 'https://drive.google.com/file/d/1-WtHNM-HZ1A4AzpgExFcfvkyOc2bQxzh/view?usp=sharing' }, materials: [{ title: 'Uveíte na Artrite Idiopática Juvenil - 2025', link: 'https://drive.google.com/file/d/1LZQAM4Obh9qZoTpTmB1MY1tCj7-qSbY1/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Outras Uveítes Anteriores', link: 'https://drive.google.com/file/d/115yrjFRirxdGkOBJfgRdeva6CUcSV0lv/view?usp=sharing' }, materials: [{ title: 'Outras Uveítes Anteriores', link: 'https://drive.google.com/file/d/19mTSCOCg3FlAWUfv9xrDiU0YpIx5Pi7V/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Uveíte Intermediária', link: 'https://drive.google.com/file/d/1nMGnTY_KkE3afqg8XpmGAA4kz7ym-aWv/view?usp=sharing' }, materials: [{ title: 'Uveíte Intermediária', link: 'https://drive.google.com/file/d/1yKIJcCCBKY9eczRRrO3bQpKugoLAFrco/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 10 - Emergency: Trauma Fechado do Segmento Anterior', link: 'https://drive.google.com/file/d/1Xjq6YTg1ISo1uiiy-NigyaE33nwbfSRy/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 11 - Uveítes Posteriores: Toxoplasmose', link: 'https://drive.google.com/file/d/1vr448pWqwsOdS33QJk-Fssx46S3i17ec/view?usp=sharing' }, materials: [{ title: 'Toxoplasmose - 2025', link: 'https://drive.google.com/file/d/1FR-zTe_UgcaVZMDWx8PCjmOpiSoFixro/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Uveítes Posteriores: Toxoplasmose Congênita', link: 'https://drive.google.com/file/d/1yeI3lY8iX9juY7hEOq5PQPTGzctCz1h7/view?usp=sharing' }, materials: [{ title: 'Toxoplamose Congênita - 2025', link: 'https://drive.google.com/file/d/1cUny5ts8XuBqrSCSBUaRbn8EFZQ1KQSn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Uveítes Posteriores: Sífilis Adquirida', link: 'https://drive.google.com/file/d/1JVd7WSpfxDT1lw02s-MUKA2qaW3pkhSR/view?usp=sharing' }, materials: [{ title: 'Sífilis Adquirida', link: 'https://drive.google.com/file/d/1RTTKhuOronXIHKQJycaSA051_9FyrcHf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Uveítes Posteriores: Sífilis Congênita', link: 'https://drive.google.com/file/d/1gQ89pXH55XEs-9cR8nmiP95vr0r4hFCJ/view?usp=sharing' }, materials: [{ title: 'Sífilis Congênita', link: 'https://drive.google.com/file/d/1H2YU0oAUncFOvMKzxqgtF2jsPpTNv4Sk/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Uveítes Posteriores: Tuberculose', link: 'https://drive.google.com/file/d/1v9hCb7WBLF2YLzMbdg8x9oO1cVx3nULs/view?usp=sharing' }, materials: [{ title: 'Tuberculose', link: 'https://drive.google.com/file/d/131q3IkLyfKFrjZ_vq4iIU7KWoEnSIRMJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Uveítes Posteriores: Virais', link: 'https://drive.google.com/file/d/1TN_pgH2ZGQjRALPvZIlqJ1PhOT3DxA73/view?usp=sharing' }, materials: [{ title: 'Uveítes Virais', link: 'https://drive.google.com/file/d/1G-_MYYHzwosavYbSSHUW4hPgXBEtrX4o/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Uveítes Posteriores: Toxocaríase e DUSN', link: 'https://drive.google.com/file/d/1yX3fwF5F1KhzFVuV52OX9RSPzP_KBRRj/view?usp=sharing' }, materials: [{ title: 'Toxocaríase e DUSN', link: 'https://drive.google.com/file/d/1EJtA7FvMBUk0FIzKX0ykeR8jn1VEWXRO/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 18 - Síndrome dos Pontos Brancos', link: 'https://drive.google.com/file/d/1SzqX21I1lQuCQBPeskSZnHsanT_Csr0O/view?usp=sharing' }, materials: [{ title: 'Síndrome dos Pontos Brancos - 2025', link: 'https://drive.google.com/file/d/1DUkYQu8NwYjeFGpSUxS2anSObiZch0pu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 19 - Uveítes Difusas: Vogt-Koyanagi-Harada e Oftalmia Simpática', link: 'https://drive.google.com/file/d/1MZ_NWNmGoX3ZaN0aTD_L6Pf2aT-1WcEC/view?usp=sharing' }, materials: [{ title: 'VKH - 2025', link: 'https://drive.google.com/file/d/12AR0PWU1GYRSSUUVxuRhjrH_9cFhMrLr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 20 - Uveítes Difusas: Behçet', link: 'https://drive.google.com/file/d/1GUfism0H4v_7z6ToX_0ThMS4EOSDuU1Y/view?usp=sharing' }, materials: [{ title: 'Behçet', link: 'https://drive.google.com/file/d/1yD4ltId_zrMSeqa6buBXT1efnRs88KzQ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 21 - Uveítes Difusas: Sarcoidose', link: 'https://drive.google.com/file/d/1GMFQIK0oBRu6OpKojqtfJXHbZJzocRBB/view?usp=sharing' }, materials: [{ title: 'Sarcoidose', link: 'https://drive.google.com/file/d/1IBixV2CRHIc7P3gur3AYata_3A5mTKvA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 22 - Farmacologia da Imunossupressão', link: 'https://drive.google.com/file/d/1hBtvKEqHsdTuiJGQE5yR0M3bhY3m13qk/view?usp=sharing' }, materials: [{ title: 'Farmacologia da Imunossupressão', link: 'https://drive.google.com/file/d/1gXGzSA7i2upjen0F5tlP_6_QVik_xoRJ/view?usp=sharing' }] },
+            ]},
+            { id: 'module_8', title: 'Módulo 08 - Óptica, Refração e VSN', content: [
+                { type: 'pdf', title: 'Apostila - Óptica, Refração e VSN', link: 'https://drive.google.com/file/d/1DRhAcotkw14ARQWbhr0xt_dB8QsH7wc_/view?usp=sharing' },
+                { type: 'video', title: 'Fundamentos da Óptica', link: 'https://drive.google.com/file/d/18BN9566V3kuE0bA89_QmaUbtgxSjeAd2/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Conceitos Iniciais', link: 'https://drive.google.com/file/d/13_vlorqrxCgwiOkbntDGERMn4eTr26hE/view?usp=sharing' }, materials: [{ title: 'Conceitos Básicos', link: 'https://drive.google.com/file/d/1e9flrKQ8aCNKzVt7RUImz0P_ewpBE18C/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Interação da Luz c/ Materiais: Refração', link: 'https://drive.google.com/file/d/1OJSJVy-UQAPA9aBIKkM8wPrU6AzpXydW/view?usp=sharing' }, materials: [{ title: 'Slide - Interação da Luz com Materiais: Refração', link: 'https://drive.google.com/file/d/1WU8sLGdro4A5rB5vClykXnc5b-4rDTsh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Interação da Luz c/ Materiais: Reflexão, Filtração e Polarização', link: 'https://drive.google.com/file/d/1O4vLmuz2aum02pzg0ROUUHoS4joMa1i9/view?usp=sharing' }, materials: [{ title: 'Slide - Interação da Luz com Materiais: Reflexão, Filtração e Polarização', link: 'https://drive.google.com/file/d/1MGy1OFkTzZp3vXR4J-2SJ9ieO-DKzZUM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Interação da Luz c/ Orifícios e Arestas: Difração e Interferência', link: 'https://drive.google.com/file/d/1mEkBwzqP2Nw6eeYwIAbF3LFMDtwYzYx1/view?usp=sharing' }, materials: [{ title: 'Slide - Interação da Luz com Orifícios e Arestas: Difração e Interferência', link: 'https://drive.google.com/file/d/1_k19WeMGQeS1fYYdb2rL4BsAB5t59x8U/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Introdução às Lentes', link: 'https://drive.google.com/file/d/1BJgFM6XMvvfjX6CiMM19p93W0953pCrk/view?usp=sharing' }, materials: [{ title: 'Slide - Introdução às Lentes', link: 'https://drive.google.com/file/d/1E8fB8STFv_zCMJDELVMzWOZ3hyo1RZFg/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Vergência, Objeto e Imagem', link: 'https://drive.google.com/file/d/19HLs_SxccRNDjBpPcJwNR0YITyWM_uyH/view?usp=sharing' }, materials: [{ title: 'Slide - Vergência', link: 'https://drive.google.com/file/d/10d3hlLwaP60j9LHEo2wGfoXMnXcUKbOP/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Espelhos Planos e Esféricos', link: 'https://drive.google.com/file/d/1QMEFU0uprmYAZC5eygCrY7fdk4Vx1Jp5/view?usp=sharing' }, materials: [{ title: 'Slide - Espelhos', link: 'https://drive.google.com/file/d/1Vt7oVVBiH4hoTLFvCL9HMM8Zejs-OQ15/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 08 - Aberrações Ópticas', link: 'https://drive.google.com/file/d/1JCA6Wj1WGm8RkwfhcjQAQexgeCfrxx-8/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 09 - Óptica dos Prismas', link: 'https://drive.google.com/file/d/1Jr9kaFDzMlgj83kew54jL0L0wtMeAfgw/view?usp=sharing' }, materials: [{ title: 'Slide - Prisma', link: 'https://drive.google.com/file/d/1mvWwoFy4CatoPy7GCZR-_SVygZGRXcPt/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Acuidade Visual', link: 'https://drive.google.com/file/d/1BiJZnHCnb1BSBjEas4L5R5-2oIjeISwN/view?usp=sharing' }, materials: [{ title: 'Slide - Acuidade Visual', link: 'https://drive.google.com/file/d/1PhCKgBFoPuzpGr40Ot_l7PSeavSStAb_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Acomodação', link: 'https://drive.google.com/file/d/1TPNBP_j5Oz6NksPBFkGYo_rJBhahCNGs/view?usp=sharing' }, materials: [{ title: 'Slide - Acomodação', link: 'https://drive.google.com/file/d/1KLCmfnGLMCWKpW48nL-Okd8PHGhmzNLp/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Ponto Próximo e Ponto Remoto', link: 'https://drive.google.com/file/d/1aKySRhWKFlT4Tj_LFpPd3aXCt1Vo9-ax/view?usp=sharing' }, materials: [{ title: 'Ponto Próximo e Ponto Remoto', link: 'https://drive.google.com/file/d/10f4HoVyN4U--pHhAL0us8U_CSqDFwrZJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Esquiascopia', link: 'https://drive.google.com/file/d/1SCAZ2vYGWdAz3aoJXUCCtaopR3PEvMbQ/view?usp=sharing' }, materials: [{ title: 'Slides - Esquiascopia', link: 'https://drive.google.com/file/d/128hspuE0m_XrbS5BT11bY82Ez6k3ZVM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Miopia e Hipermetropia', link: 'https://drive.google.com/file/d/1GaXyz0vexqdW9c9fvYtHzbyOHZecU5JL/view?usp=sharing' }, materials: [{ title: 'Miopia e Hipermetropia', link: 'https://drive.google.com/file/d/1-qjA5t9d8Q5Z3JIPU4_C4VMW4rIC_neM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Astigmatismo', link: 'https://drive.google.com/file/d/1cIE3CWZlqgGtv2pIIncfHm3jFNsKfr9U/view?usp=sharing' }, materials: [{ title: 'Astigmatismo', link: 'https://drive.google.com/file/d/1o-hDROPLS8n5D-ADJAHvaoYusADRFLYI/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Anisometropia', link: 'https://drive.google.com/file/d/1Z1WZVALPMQ2VscCJpsDaQwCNoV9VUXBC/view?usp=sharing' }, materials: [{ title: 'Slides - Anisometropia', link: 'https://drive.google.com/file/d/1WlID0xaFQ-Na5889i3zmP4C12Dv8zl69/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Material das Lentes e Tratamentos', link: 'https://drive.google.com/file/d/131LwZnXDj-pu2NiGvvXsnLEy7q9a7_7r/view?usp=sharing' }, materials: [{ title: 'Materiais e Tratamentos das Lentes', link: 'https://drive.google.com/file/d/12TNHogz_VHAEu28LB-SfRL5d8LvNOOdE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 18 - Óptica dos Bifocais e Multifocais', link: 'https://drive.google.com/file/d/1hkzAw1z3U44JJ54O1Csr3JxAHpYKWNeP/view?usp=sharing' }, materials: [{ title: 'Slides - Bifocais e Multifocais', link: 'https://drive.google.com/file/d/1hrnpYABc1hs-9A5PdowrWABHTxoX9gu4/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 19 - Causas de Insatisfação com Óculos', link: 'https://drive.google.com/file/d/15FIhxHV96LnBEO4IMgpUW0yp9bx0HWoR/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 20 - Definições e Avaliação do Paciente com VSN', link: 'https://drive.google.com/file/d/1m_husTgI_MRRLkjo1ak2xkTmkILLcqKr/view?usp=sharing' }, materials: [{ title: 'Slide Aula - Definições e Avaliação do Paciente com VSN', link: 'https://drive.google.com/file/d/1RqV5hJD6liyhQX8rD_crfN9_yEXS6AOf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 21 - Magnificação', link: 'https://drive.google.com/file/d/1HLTql_4s4qFTMH9v8HJZQJarRaMnoaRg/view?usp=sharing' }, materials: [{ title: 'Magnificação', link: 'https://drive.google.com/file/d/1aKY3BcvNDL2038wF7OWQseYkEw7OaI4N/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 22 - Auxílios Ópticos I', link: 'https://drive.google.com/file/d/1hfqM1j8j4rJ1moEq2kyS7_kRTYaXGhQT/view?usp=sharing' }, materials: [{ title: 'Slides - Auxílios Ópticos I', link: 'https://drive.google.com/file/d/1GCPEuEZb7gdF_FCcXpP3mKX7Kd_Fvroa/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 23 - Auxílios Ópticos II', link: 'https://drive.google.com/file/d/1IzD3iSaV61GblmC_6ec1Lr1rv3Nd_NyV/view?usp=sharing' }, materials: [{ title: 'Slides - Auxílios Ópticos II', link: 'https://drive.google.com/file/d/1V8TCUzVvzlYGi_4hNxXMR8vK2AnGslrx/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 24 - Refração na Prática e Estudos de Caso: Acuidade Visual', link: 'https://drive.google.com/file/d/1iTdOY9bx81SYOA1vx0PHlM1EIl_Ww-U9/view?usp=sharing' },
+                { type: 'video', title: 'Aula 25 - Refração na Prática e Estudos de Caso: Teste Verde e Vermelho', link: 'https://drive.google.com/file/d/1DQj4I0eMD-pI6vDsHPpjwAjjCdgXwgnl/view?usp=sharing' },
+                { type: 'video', title: 'Aula 26 - Refração na Prática e Estudos de Caso: Balanço Refratométrico', link: 'https://drive.google.com/file/d/15u1ILEqlo0fdGY8AMGl24xHbgmcSzeWW/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 27 - Casos Clínicos em Refração', link: 'https://drive.google.com/file/d/1qm5h7O6SBkJJZ2ksBxtpjBpCuMftluJD/view?usp=sharing' }, materials: [{ title: 'Refração - Casos Clínicos', link: 'https://drive.google.com/file/d/1tFKtwQhV_4NmlnREckNLD-DS8rvBUXjE/view?usp=sharing' }] },
+            ]},
+            { id: 'module_9', title: 'Módulo 09 - Retina e Vítreo', content: [
+                { type: 'pdf', title: 'Apostila - Retina', link: 'https://drive.google.com/file/d/14i3vEAIe1dCh68gJjlnY98t4KroEqpli/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Bases de Vítreo', link: 'https://drive.google.com/file/d/1Upa34l6s8p_IcaOxPaay2OKW7b3MxtdR/view?usp=sharing' }, materials: [{ title: 'Bases do Vítreo', link: 'https://drive.google.com/file/d/1DDXj8Bglw9nMes22QVOKusyp-ZX9rO_-/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Bases de Retina', link: 'https://drive.google.com/file/d/1siReUMfRRQFv7jpmYH7ryXjfVGA3DJ4W/view?usp=sharing' }, materials: [{ title: 'Bases da Retina', link: 'https://drive.google.com/file/d/1j_1AK9Ze2f-Dl97XesF6M9gLl3QvV90b/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Autofluorescência', link: 'https://drive.google.com/file/d/1KRi2GNkWPPdc9xS2sO-wHKrE2fNrGBqa/view?usp=sharing' }, materials: [{ title: 'Autofluorescência', link: 'https://drive.google.com/file/d/16F9YpfbjNAiWAgZydPMcDnoL5z2qut4k/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Angiografia Fluoresceínica', link: 'https://drive.google.com/file/d/1jy8VKZrCPbIsLE2diAXtBg_J8jthZpC8/view?usp=sharing' }, materials: [{ title: 'Angiografia Fluoresceínica', link: 'https://drive.google.com/file/d/1WjIbLLDq3D02abHyS34AetelSptVuNrK/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Angiografia com Indocianina Verde', link: 'https://drive.google.com/file/d/17mqc_lBEDkcts-0U3z83R3HRhtKqa3B3/view?usp=sharing' }, materials: [{ title: 'Angiografia com Indocianina Verde', link: 'https://drive.google.com/file/d/17L27NEVZqoL6Ot-bEqkEr9NdiUIRTf25/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - OCT', link: 'https://drive.google.com/file/d/1hq7wEPzw6qI3OrtkiGiQwd-A7LQ3ul2I/view?usp=sharing' }, materials: [{ title: 'OCT', link: 'https://drive.google.com/file/d/1mgluC_KAcfgL0ygvlalQbxFPO8wO9L04/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - OCT-A', link: 'https://drive.google.com/file/d/1cAFk4DoiA11J84JGADsbDJpy5KR6yDx-/view?usp=sharing' }, materials: [{ title: 'OCT-A', link: 'https://drive.google.com/file/d/1Y7gM_epmp2BQXAphM5RTU3HIUvtnKMMs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Retinopatia Diabética', link: 'https://drive.google.com/file/d/1Phr96mv3istalNkf7yvVeOy_p_IwHSxO/view?usp=sharing' }, materials: [{ title: 'Retinopatia Diabética', link: 'https://drive.google.com/file/d/1hw8btu6HbVqXhyVEcF15sMLwGgKbq0Z3/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Retinopatia Hipertensiva', link: 'https://drive.google.com/file/d/1jUkbyZpYYEEg-RO6R5_MIjkFqsRBefas/view?usp=sharing' }, materials: [{ title: 'Retinopatia Hipertensiva', link: 'https://drive.google.com/file/d/10l-EiUz3Q6sOyaX8_ZnRFSd0ReTUXDOg/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Oclusões Venosas', link: 'https://drive.google.com/file/d/1JG4ivfTnspYjVlT5MPQUldE9CQTY6Epo/view?usp=sharing' }, materials: [{ title: 'Oclusões Venosas da Retina', link: 'https://drive.google.com/file/d/189vYguaT_PhWMrFPiiw1g6P-vI1B4Qox/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Oclusões Arteriais', link: 'https://drive.google.com/file/d/1EOOAjnm3GvXnfoJRB7UgJMpyf-HCf744/view?usp=sharing' }, materials: [{ title: 'Oclusões Arteriais da Retina', link: 'https://drive.google.com/file/d/1VrJdYdG_Wd4ryw92dz8Kyl66znNjEG1y/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Retinopatia Falciforme', link: 'https://drive.google.com/file/d/16rbSCOrpbkJ1oTedYaHRdGUQ7WSCVGTS/view?usp=sharing' }, materials: [{ title: 'Retinopatia Falciforme', link: 'https://drive.google.com/file/d/1or-JyjmHvpMT2eMbDS48pS6ZkjCBdIfQ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Retinopatia da Prematuridade', link: 'https://drive.google.com/file/d/1Kze3s5vYCiQ-7AFPndvZVTdaXrqlP2nP/view?usp=sharing' }, materials: [{ title: 'Retinopatia da Prematuridade', link: 'https://drive.google.com/file/d/1F4wHVoKfFNwQXAZmymZx35sKaSsRJvgs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Outras Doenças Vasculares', link: 'https://drive.google.com/file/d/1T5e19BQu5Kn03soqOV906ZX8e8ezGw48/view?usp=sharing' }, materials: [{ title: 'Outras Doenças Vasculares da Retina', link: 'https://drive.google.com/file/d/1cSXRkNHNP4VGOOMmeUD9QjyH4FtgOplR/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - DMRI', link: 'https://drive.google.com/file/d/1CaZ6vFDp1hF9kl3TAlRFtiQIsVEIT2qr/view?usp=sharing' }, materials: [{ title: 'Degeneração Macular Relacionada à Idade', link: 'https://drive.google.com/file/d/1LlLgSUsqz9x3hb23OfWNA-vCNTBMCwUx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Anti-VEGF', link: 'https://drive.google.com/file/d/1viqiq274W3hSlIwyfwE2gXDChDyIAII5/view?usp=sharing' }, materials: [{ title: 'Anti-VEGF', link: 'https://drive.google.com/file/d/1zhNctxR2FbeBYVCTw6KHN6GUnn5HMyWz/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Miopia Patológica', link: 'https://drive.google.com/file/d/1sIZFfW1HUgsTeGGajhSrnWUl6JyBmKXl/view?usp=sharing' }, materials: [{ title: 'Miopia Patológica', link: 'https://drive.google.com/file/d/1HnkjH_EagMg8KI1_-3VoeU0O8XIac93V/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 18 - Estrias Angioides', link: 'https://drive.google.com/file/d/1HrM6dTxn-oML3CmbUqkVJu3P3uvgk9n9/view?usp=sharing' }, materials: [{ title: 'Estrias Angioides', link: 'https://drive.google.com/file/d/1X-rlnHXa8_rneYsXqP8QIG6zgT72rJTL/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 19 - Coriorretinopatia Serosa Central', link: 'https://drive.google.com/file/d/1OnTPacPMftjIwHBdC7CaNnLdqwPlF5a5/view?usp=sharing' }, materials: [{ title: 'Central Serosa', link: 'https://drive.google.com/file/d/1ZeUc18NYA9QCN9O_FwrsexAWCDHPazIt/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 20 - Anormalidades Periféricas da Retina', link: 'https://drive.google.com/file/d/1podcirlGd18FyP9GRyZCYqMjQWHNMCyz/view?usp=sharing' }, materials: [{ title: 'Slide Aula- Anormalidades Periféricas', link: 'https://drive.google.com/file/d/1NCoEMkOBHZReeP3s3CGcILu56v5_PQ8u/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 21 - Descolamento de Retina Regmatogênico', link: 'https://drive.google.com/file/d/1lQOe9G3REuk2ElxQHIoyY__JyHhhDmrf/view?usp=sharing' }, materials: [{ title: 'Slide Aula - DR Regmatogênico', link: 'https://drive.google.com/file/d/1Ukv4VAqB5Dzb25uISfhD3L5omVWR6HoL/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 22 - Retinopexia Pneumática', link: 'https://drive.google.com/file/d/1MBiE-XsHoniLTDRofLsG4ENrel5URE08/view?usp=sharing' }, materials: [{ title: 'Slide Aula - Retinopexia Pneumática', link: 'https://drive.google.com/file/d/19puhKUMltdJBIjjmyPlExeiueZGAGK3H/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 23 - Introflexão Escleral', link: 'https://drive.google.com/file/d/1rAdiUqCc-NPl9vpp7SojkEjEiKNWBSlA/view?usp=sharing' }, materials: [{ title: 'Slide Aula - Introflexão Escleral', link: 'https://drive.google.com/file/d/1EbChSS33eP8FU5wHwhpOtXIMB49dd_RN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 24 - Vitrectomia Posterior', link: 'https://drive.google.com/file/d/1l88XCinuSm7qvVCv7HbSJk4qKmXxjSIs/view?usp=sharing' }, materials: [{ title: 'Slide Aula - Vitrectomia Posterior', link: 'https://drive.google.com/file/d/1fRZjtdOv9oR7OMv_G-eZAu-E-oiBWVqn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 25 - Emergency: Trauma Aberto - Corpo Estranho Intraocular', link: 'https://drive.google.com/file/d/1HJbV7qWTFVwV3741eG3H81IWOkA2fn35/view?usp=sharing' }, materials: [{ title: 'Trauma Ocular CEIO', link: 'https://drive.google.com/file/d/1d_RPvgv-uiP4eaVNSBBMTQb38PZKDOsn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 26 - Eletrofisiologia', link: 'https://drive.google.com/file/d/1wVBULCzj28Zy0UlqIvuzfcujRqOJH2rS/view?usp=sharing' }, materials: [{ title: 'Eletrofisiologia', link: 'https://drive.google.com/file/d/1oERI1Z1b9-f_lt4hPqtgt3BWlQhJgv8A/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 27 - Toxicidade por Fármacos', link: 'https://drive.google.com/file/d/16K2NPE9W2RWuzwjI69y6OrD2HvkDn4UN/view?usp=sharing' }, materials: [{ title: 'Toxidade Medicamentosa', link: 'https://drive.google.com/file/d/1-9bml_jJxNVXnudE3ktmm2meSHJKlgY8/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 28 - Doenças da Interface Vitreorretiniana', link: 'https://drive.google.com/file/d/1N4YuM2PbBpo80APmMdARHEQ1HLUpp1kY/view?usp=sharing' }, materials: [{ title: 'Doenças da Interface Vitreorretiniana - 2024', link: 'https://drive.google.com/file/d/1CpaRJ0mWzrm1JE61tz74aHFGmT39hMBr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 29 - Distrofias Difusas da Retina e da Coroide', link: 'https://drive.google.com/file/d/1RNjKFq8o8otK7qIiUCFlraF5DfV-UJ2u/view?usp=sharing' }, materials: [{ title: 'Distrofias Difusas - Retina 2024', link: 'https://drive.google.com/file/d/12B_0vLqfBoWjRhvIrWN5-8ZSk91vBPD7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 30 - Distrofias Maculares', link: 'https://drive.google.com/file/d/1eIsd51JntOQB6PJ1HIaXvzUA1Gmdzjz2/view?usp=sharing' }, materials: [{ title: 'Distrofias Maculares - 2024', link: 'https://drive.google.com/file/d/1uDfiDgIo65e-jJT1BhnpP7azXnpazWQV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 31 - Emergency: Trauma Fechado do Segmento Posterior', link: 'https://drive.google.com/file/d/1AndjbD8TQ5NnmCEOTMqDvIn57rqWmG16/view?usp=sharing' }, materials: [{ title: 'Slide - Trauma Fechado do Segmento Posterior', link: 'https://drive.google.com/file/d/10oOv6vQNc6KlOADz17zoI6deO5CqIFDj/view?usp=sharing' }] },
+            ]},
+            { id: 'module_10', title: 'Módulo 10 - Oncologia Ocular', content: [
+                { type: 'pdf', title: 'Apostila - Oncologia Ocular', link: 'https://drive.google.com/file/d/1rGQFNBcuh4kJjZvw6rreKKozVP-57Xu2/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Retinoblastoma', link: 'https://drive.google.com/file/d/1a_GoxwlLl7VHTVLo-Za5oFh-j7VwAKhq/view?usp=sharing' }, materials: [{ title: 'Retinoblastoma', link: 'https://drive.google.com/file/d/1ISwwwm4iqjUxg9f7gPCLKjbUi2HQVX37/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Melanoma de Coroide', link: 'https://drive.google.com/file/d/18YeYrEKPeqVG1EpQJE-gWILIqD_zr6EO/view?usp=sharing' }, materials: [{ title: 'Melanoma de Coroide', link: 'https://drive.google.com/file/d/1ZxPkYpyn3qW1QeSDXkGgSJWZ99WxNvjY/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Facomatoses', link: 'https://drive.google.com/file/d/1KMJGMSchphrliVW_K9GI7_QxZ8xRFvpW/view?usp=sharing' }, materials: [{ title: 'Facomatoses', link: 'https://drive.google.com/file/d/1RH98zlRhtzQmd5AxyKzszs7B1-TmokQn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Lesões Pigmentadas do Segmento Posterior', link: 'https://drive.google.com/file/d/161QI8W_7sQuRcJCjQQIOLyL3QcudlF0t/view?usp=sharing' }, materials: [{ title: 'Lesões Pigmentadas do Segmento Posterior', link: 'https://drive.google.com/file/d/1ZhlCav3XFXkhbFbARNNuQClCf3LU8Sdr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Tumores Epibulbares Benignos', link: 'https://drive.google.com/file/d/1sbgQXPSocPwsSMH_UdIE1qkHhC-jQUfs/view?usp=sharing' }, materials: [{ title: 'Tumores Epibulbares Benignos', link: 'https://drive.google.com/file/d/1LzpS39NWNFgJV0H36sPWDYTOG9zD3Wl_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Tumores Epibulbares Malignos', link: 'https://drive.google.com/file/d/1Q1X_eFGHjz1z0aXkimtHiCSkhtNJbqAx/view?usp=sharing' }, materials: [{ title: 'Tumores Epibulbares Malignos', link: 'https://drive.google.com/file/d/1GQFfNRht7OzTe3tciDcwtRrXQa-CDZcZ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Lesões Pigmentadas da Superfície Ocular', link: 'https://drive.google.com/file/d/1aw3vKz5dIixQWeta0baLzTVh1qSgaFSX/view?usp=sharing' }, materials: [{ title: 'Tumores Pigmentados da Superfície Ocular', link: 'https://drive.google.com/file/d/19mbnYWbgMBhnoaQ9aoVFK7Q3AtrSt6Ad/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Metástase Intraocular', link: 'https://drive.google.com/file/d/11ayCBPGosoZOBu8k9hcQhqGqY3EU7mFU/view?usp=sharing' }, materials: [{ title: 'Linfoma Intraocular e Metástases', link: 'https://drive.google.com/file/d/1-Y-48JKqklyo6IqLV-tAgfWlf6K8JOTs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Linfoma Intraocular', link: 'https://drive.google.com/file/d/1sRkurXzYbMK3xldosSS9Rj3_0di2zaVn/view?usp=sharing' }, materials: [{ title: 'Linfoma Intraocular e Metástases', link: 'https://drive.google.com/file/d/1-Y-48JKqklyo6IqLV-tAgfWlf6K8JOTs/view?usp=sharing' }] },
+            ]},
+            { id: 'module_11', title: 'Módulo 11 - Plástica Ocular e Vias Lacrimais', content: [
+                { type: 'pdf', title: 'Apostila - Plástica Ocular V2', link: 'https://drive.google.com/file/d/1q_Szophc5JeFSQEriAHV4WMAF-YHop5r/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Bases de Plástica Ocular', link: 'https://drive.google.com/file/d/1Aplxbk2UOmmyLyF89il879VuEP3OMFUW/view?usp=sharing' }, materials: [{ title: 'Bases - Plástica Ocular', link: 'https://drive.google.com/file/d/1HyMBTICapQUa5L7KsT1iH3kOpIjQhJlq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Anomalias Congênitas das Pálpebras', link: 'https://drive.google.com/file/d/1zhty4JGIDNJokSxHt1uYimX1uHEOf84l/view?usp=sharing' }, materials: [{ title: 'Anomalias Congênitas das Pálpebras', link: 'https://drive.google.com/file/d/14g07718eVQoopJIAO0Z416JiZ33dfbNz/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Doenças dos Cílios e Inflamatórias das Pálpebras', link: 'https://drive.google.com/file/d/1EJurmz7M8FGpYrUCN6vGjEe88XlcH_W2/view?usp=sharing' }, materials: [{ title: 'Doenças dos Cílios e Inflamatórias das Pálpebras', link: 'https://drive.google.com/file/d/1prd8uZJ_G-1qxsd2Ffm-_t_K4MXSWV9p/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Entrópio', link: 'https://drive.google.com/file/d/1gfxgx2eWwAskIo3_990FKFQdFxS6uAnQ/view?usp=sharing' }, materials: [{ title: 'Entrópio', link: 'https://drive.google.com/file/d/1H6P1HIPVVsaoZxrbWLdO57Jr0xwP_RxQ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Ectrópio', link: 'https://drive.google.com/file/d/1b-wj7hZ1MnJKVxRWL_3a42LWXuwxbiy0/view?usp=sharing' }, materials: [{ title: 'Ectrópio', link: 'https://drive.google.com/file/d/1M0h6Y-9Yy4gufXIeWVz35HURLIvtsqyd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Sala de Cirurgia: Exérese de Calázio', link: 'https://drive.google.com/file/d/1YsN0QMDhkWARgQHScVUoFTut37uUVQ0-/view?usp=sharing' }, materials: [{ title: 'Sala de Cirurgia - Calázio', link: 'https://drive.google.com/file/d/1f3gePLWp0052E_fQs-JQk_XzB2MW2y0G/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 07 - Sala de Cirurgia: Entrópio', link: 'https://drive.google.com/file/d/1b2J3MPuSw0RqIiBOvgIcGB0oO3PtmI1k/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 08 - Sala de Cirurgia: Ectrópio', link: 'https://drive.google.com/file/d/1rKx7PBpcMrPmbeeEwou7fTvzBIXHlNkh/view?usp=sharing' }, materials: [{ title: 'Sala de Cirurgia - Ectrópio', link: 'https://drive.google.com/file/d/1y0leJV6ms-mJiUXATpe0ZhRvbUZ5lQJu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Sala de Cirurgia: Fios Cirúrgicos em Oftalmologia', link: 'https://drive.google.com/file/d/12E2Q_fzNfVrIC9WggzKAllk8A-CBQCb0/view?usp=sharing' }, materials: [{ title: 'Fios Cirúrgicos', link: 'https://drive.google.com/file/d/1BAIthlT8cCF4Smy5GgZKG6DK50WFNoKm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Sala de Cirurgia: Trauma e Reconstrução Palpebral', link: 'https://drive.google.com/file/d/1m8jUNaZE-XpKI-4ZFHMkuCPJawJejYIu/view?usp=sharing' }, materials: [{ title: 'Trauma Palpebral e Reconstrução', link: 'https://drive.google.com/file/d/1rr_yz8x62-T5AF0aS500YLeiLKmqlDcT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Ptose Palpebral e Pseudoptose', link: 'https://drive.google.com/file/d/13Ru4wVhDcj9eUrZUQc9biGffceMZF8Ti/view?usp=sharing' }, materials: [{ title: 'Ptose e Pseudoptose Palpebral', link: 'https://drive.google.com/file/d/1PwSQEnuacMC4-a9RplsF9dmEnWZsfHnA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Tumores Palpebrais Benignos', link: 'https://drive.google.com/file/d/19JkBQPUTMl7PnkSeQI7v7HpTcPIBp-kh/view?usp=sharing' }, materials: [{ title: 'Tumores Palpebrais Benignos', link: 'https://drive.google.com/file/d/1WbH0Z6KOAYvN7q1vWncUv55XelOSm33Q/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Tumores Palpebrais Malignos', link: 'https://drive.google.com/file/d/1r2dQMhzMZ8oF6kX0L-aOT2JYlL7jxGRK/view?usp=sharing' }, materials: [{ title: 'Tumores Palpebrais Malignos', link: 'https://drive.google.com/file/d/1po7OFRbMrhKOU0Lr3nqZfqAQO1CF7RdT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Sala de Cirurgia: Blefaroplastia Superior', link: 'https://drive.google.com/file/d/1pVv_riYUjgjbbs_bkhErg7l6Syp4IKsu/view?usp=sharing' }, materials: [{ title: 'Blefaroplastia', link: 'https://drive.google.com/file/d/1FQ_r01YCAPgO1gQppliPVCxT_OFyT4bE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Sala de Cirurgia: Refixação Anterior', link: 'https://drive.google.com/file/d/1m9jKeVxNlD3dJzOed5UIliMYEXtuGQK4/view?usp=sharing' }, materials: [{ title: 'Ptose - Via Anterior', link: 'https://drive.google.com/file/d/18w_EwINuGSxc3o2LFUZmYD9PG4zUOGnJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Bases do Sistema Lacrimal I: Produção da Lágrima', link: 'https://drive.google.com/file/d/1kBQe6URDLHA_Ux8jbwRYRnHxjy-vUiaZ/view?usp=sharing' }, materials: [{ title: 'Bases do Sistema Lacrimal - Produção da Lágrima', link: 'https://drive.google.com/file/d/1Cj4lOu9BoJ3UGEkdFNBpKCFSjibtSVvz/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Bases do Sistema Lacrimal II: Bioquímica da Lágrima', link: 'https://drive.google.com/file/d/1Q47Iri-jzOcJrd1-_et2yE-gRk9rFwvz/view?usp=sharing' }, materials: [{ title: 'Bases do Sistema Lacrimal - Bioquímica da Lágrima', link: 'https://drive.google.com/file/d/14c9uhBZ_GN1QKaAV_Uvwfu-CfNd5rGL8/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 18 - Olho Seco', link: 'https://drive.google.com/file/d/19Gpi6B_EpvPjKhIHG0j4U0YelXPXYq9t/view?usp=sharing' }, materials: [{ title: 'Olho Seco', link: 'https://drive.google.com/file/d/16HOXpUYSR5O7oq13nmjCoYhhBak-Bw6x/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 19 - Bases do Sistema Lacrimal III: Vias de Drenagem', link: 'https://drive.google.com/file/d/1199vwAZTkEKFHTbm7rn4M4uAgKfkFAzE/view?usp=sharing' }, materials: [{ title: 'Bases do Sistema Lacrimal - Vias de Drenagem', link: 'https://drive.google.com/file/d/12I3Sw5lWR1-oac6i5wI30fW2w8GomJwd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 20 - Propedêutica das Vias Lacrimais', link: 'https://drive.google.com/file/d/1TiU5UK56TZWbFRhowmbsy8awLQzLMVXw/view?usp=sharing' }, materials: [{ title: 'Propedêutica das Vias Lacrimais 2024', link: 'https://drive.google.com/file/d/1zYhbbEeFCOzK0_NGgkoXVPaabDFmDOep/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 21, 22, 23 - Patologias das Vias Lacrimais', link: 'https://drive.google.com/file/d/1fkBTt7usqT9Nzmw9J-ZgPlrwFJ7hjh0x/view?usp=sharing' }, materials: [{ title: 'Patologias das Vias Lacrimais', link: 'https://drive.google.com/file/d/1c45L2nn7DLRaPkeT0nP6IEMlRcCUUiDU/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 24 - Sala de Cirurgia: Vias Lacrimais', link: 'https://drive.google.com/file/d/1b7KL2ZM5HZtKIADxyTfjozO1TqApFuC3/view?usp=sharing' }, materials: [{ title: 'Vias Lacrimais', link: 'https://drive.google.com/file/d/1plyVrsICnk1jBAe-JmpV1ur_oFswJNjb/view?usp=sharing' }] },
+            ]},
+            { id: 'module_12', title: 'Módulo 12 - Estrabismo', content: [
+                { type: 'pdf', title: 'Apostila - Estrabismo V4', link: 'https://drive.google.com/file/d/1vQWctrJLZGSleeaKQWEidexa26LDgWFc/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Bases dos Músculos Extraoculares', link: 'https://drive.google.com/file/d/1s5LCi2toYpA-LrRqg4a9pRiNsIkFpR2l/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Bases', link: 'https://drive.google.com/file/d/1QOg94SA7exJ9USVjvIzxORfEzJZ0r7PS/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Propedêutica Motora', link: 'https://drive.google.com/file/d/1pIZPpYebRg0NMbQxMlIT70Y86-bUptMN/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Propedêutica', link: 'https://drive.google.com/file/d/1MGs7zwZ8V6AMOVdrzZhHhX1upsoLCsS5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Propedêutica Sensorial', link: 'https://drive.google.com/file/d/1Xwsl-NIT-jVrSc2Y47qrEGCLBDrVQDDJ/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Propedêutica Sensorial', link: 'https://drive.google.com/file/d/1uDFmAnOnN-BHA932Vt5W2-kmgF6YkCRq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Adaptações Sensoriais e Motoras', link: 'https://drive.google.com/file/d/16Oi61UnEgdlpZwLCRdoYnlDhTXYkpLnG/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Adaptações Sensoriais', link: 'https://drive.google.com/file/d/17gaD4QUndBbsMFKAmtEaV-VPhmarWNq0/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Ambliopia', link: 'https://drive.google.com/file/d/1k9nEeh9RJPUHpRAmrKtMK8Qf2aiyWMth/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Desenvolvimento Visual', link: 'https://drive.google.com/file/d/1nY4xALl7rE-FwrEeu86-5wJMj-wpOGkh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Esotropia', link: 'https://drive.google.com/file/d/1Mx51IufWUkUELfod-kbgouxSicUOePWU/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Esotropia', link: 'https://drive.google.com/file/d/1ToAiO6qZpH-a6PrK6gPHLi_PHUDEtsfq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Exotropia', link: 'https://drive.google.com/file/d/1EG3z-vUejrnJcRHDFFsX18WAVaotL6fP/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Exotropia', link: 'https://drive.google.com/file/d/1S_f0GcqkiaaPc2mwuZ02BndHf4wD70Xq/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 08 - Variações Alfabéticas e Desvios Verticais', link: 'https://drive.google.com/file/d/19xZFajPvIWePyf4epvb1vvVBn4EfshTp/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 09 - Síndromes Especiais', link: 'https://drive.google.com/file/d/1X5dgsbbT8PomeJqN6-cJnpJfCMFSUP_M/view?usp=sharing' }, materials: [{ title: 'Estrabismo - Síndromes Especiais', link: 'https://drive.google.com/file/d/1YAAnUFi_noNqsUk1N4KWJ2fxaxlbeKUp/view?usp=sharing' }] },
+                { type: 'video', title: 'Aula 10 - Noções Cirúrgicas em Estrabismo', link: 'https://drive.google.com/file/d/1sWTambZ60VnTKcgTnULmBnv5ADVNYWNC/view?usp=sharing' },
+            ]},
+            { id: 'module_13', title: 'Módulo 13 - Embriologia', content: [
+                { type: 'video', title: 'Aula 01 - Embriologia Segmento Anterior', link: 'https://drive.google.com/file/d/1qmvPDAFna3TP6ED_jDgDV9KuPWVVnKm-/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 02 - Embriologia Segmento Posterior', link: 'https://drive.google.com/file/d/1n2CTYinIJaKW87jPN3OwtUR8-4pQwWVN/view?usp=sharing' }, materials: [{ title: 'Embriologia Segmento Posterior', link: 'https://drive.google.com/file/d/1ztgN5YPoJagS0zlDnH7HnBv5jPchTOOj/view?usp=sharing' }] },
+            ]},
+            { id: 'module_14', title: 'Módulo 14 - Genética', content: [
+                { type: 'pdf', title: 'Apostila - Genética Ocular', link: 'https://drive.google.com/file/d/1jE-REsf1wwhgxEmxYqHl3KJNfX3J_cya/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Genética Ocular: Princípios Básicos', link: 'https://drive.google.com/file/d/1LrzMr8FnfqUPxWe3wLti5bp2bmcJkXOz/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Genética Ocular: Padrões de Herança', link: 'https://drive.google.com/file/d/1GHGzFkM-2KtubhagZYssFVqJUfEseeYX/view?usp=sharing' },
+                { type: 'pdf', title: 'Material Adicional: Genética Ocular', link: 'https://drive.google.com/file/d/1BBGZ7i1lOIdv8XbkUWNn9iZmqa3uR02j/view?usp=sharing' },
+            ]},
+            { id: 'module_15', title: 'Módulo 15 - Cirurgia Refrativa', content: [
+                { type: 'pdf', title: 'Apostila - Cirurgia Refrativa', link: 'https://drive.google.com/file/d/1P_Ey-5nmFjTRCpXvl0yVJKamGsPfY0es/view?usp=sharing' },
+                { type: 'pdf', title: 'Slides - Cirurgia Refrativa', link: 'https://drive.google.com/file/d/1ur2Y-7juxQaF7T0SXkhSsxn9AAZjz3-7/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Conceitos Básicos (Iniciais)', link: 'https://drive.google.com/file/d/13_vlorqrxCgwiOkbntDGERMn4eTr26hE/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Sala de Cirurgia: RK e PRK', link: 'https://drive.google.com/file/d/1qJrkiysHMz8AAcwx2i_KA0ZWuYijjwKC/view?usp=sharing' },
+                { type: 'video', title: 'Aula 03 - Sala de Cirurgia: LASIK', link: 'https://drive.google.com/file/d/1H8TFUe3ViCp58VKo1rrsexHYgwfxXwm6/view?usp=sharing' },
+                { type: 'video', title: 'Aula 04 - Sala de Cirurgia: SMILE', link: 'https://drive.google.com/file/d/13_iQFfGbjtsLCdybdoCqcVxi8gzCXDSt/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 05 - Emergency: Baixa Visual Aguda', link: 'https://drive.google.com/file/d/1-iv2v1aZb5wOybQeSbco_HCHNZkND5ue/view?usp=sharing' }, materials: [{ title: 'Emergency - Baixa Visual Aguda', link: 'https://drive.google.com/file/d/1YImanmPSb8jtpNo3RDODk46gv-Y3C8TU/view?usp=sharing' }] },
+            ]},
+            { id: 'module_16', title: 'Módulo 16 - Lentes de Contato', content: [
+                { type: 'pdf', title: 'Apostila - Lentes de Contato', link: 'https://drive.google.com/file/d/1390EgW8GfQr0wI5ZaDAODMsG3HBUQQRu/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Conceitos Básicos', link: 'https://drive.google.com/file/d/1_WuWd8hyLpupqTgBGNt6B7utsfDHDB2g/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 02 - Cuidados e Manutenção das Lentes de Contato', link: 'https://drive.google.com/file/d/1gx3k_aMwDONG4uBUkzMkieXHjCOi7JWX/view?usp=sharing' }, materials: [{ title: 'Cuidados e Manutenção das Lentes de Contato', link: 'https://drive.google.com/file/d/14BPNHlkusrIPYtI6wevMcbhs8YIDduxm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Lentes de Contato Rígidas', link: 'https://drive.google.com/file/d/1vei1vHABoUbav_dHV1bli9_4W2uBRaBx/view?usp=sharing' }, materials: [{ title: 'Lentes de Contato Rígidas', link: 'https://drive.google.com/file/d/1DEQdJaVrHLA6f6txTevqN3w6wZx3l04o/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Lentes de Contato no Ceratocone', link: 'https://drive.google.com/file/d/1Q8HNJuVmxOnHqHNsnAtm9KDDsjKowM0E/view?usp=sharing' }, materials: [{ title: 'Lentes de Contato no Ceratocone', link: 'https://drive.google.com/file/d/1K0PnYkraWMHbaxjnkIWdVNVVPXtbx5F6/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Lentes Gelatinosas e Lentes para Presbiopia', link: 'https://drive.google.com/file/d/1tRa6FIdC0ka0MSxqwULhsNWpZwKRKf5i/view?usp=sharing' }, materials: [{ title: 'Lentes Gelatinosas e Lentes para Presbiopia', link: 'https://drive.google.com/file/d/1jSn9GwvpYqvwk8nCaP2f7ZsJjMq4fQF5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Emergency: Olho Vermelho e Dor Ocular', link: 'https://drive.google.com/file/d/1VuNxrzLvle6DHP_870TWHdcAGzzcVx0L/view?usp=sharing' }, materials: [{ title: 'Emergency - Olho Vermelho e Dor Ocular', link: 'https://drive.google.com/file/d/1YcgZ0AgvXshsWSqBvLbWj5Vx5Ux_yfR8/view?usp=sharing' }] },
+            ]},
+            { id: 'module_17', title: 'Módulo 17 - Farmacologia', content: [
+                { type: 'pdf', title: 'Apostila - Farmacologia', link: 'https://drive.google.com/file/d/1NLKPGoSbMQwo3Yo6ikRYQY5E_YDYGYSu/view?usp=sharing' },
+                { type: 'group', video: { title: 'Aula 01 - Fármacos do Ambulatório: Conservantes e Corantes Vitais', link: 'https://drive.google.com/file/d/13juV5DfRlyeRdkaqAM8czLm3POGMCu1h/view?usp=sharing' }, materials: [{ title: 'Farmacologia - Conservantes e Corantes', link: 'https://drive.google.com/file/d/1fjmf01bkEOXjesHfDYBRIVeLZ-BEcFN9/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Fármacos do Ambulatório: Anestésicos Locais', link: 'https://drive.google.com/file/d/1oOVM0bj0pnhomSwpKWvBUrDQYVV4ZYAp/view?usp=sharing' }, materials: [{ title: 'Farmacologia - Anestésicos', link: 'https://drive.google.com/file/d/12Y1BPiALt7px9McG_CIHMffC3XyMDt9x/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Fármacos do Ambulatório: Cicloplégicos e Midriáticos', link: 'https://drive.google.com/file/d/1i-ta49AAJ8JsPHWk8vz1Pi9QmVS4eqYC/view?usp=sharing' }, materials: [{ title: 'Cicloplégicos e Midriáticos', link: 'https://drive.google.com/file/d/1UMaoezI3SWm8TZw-ybaGsDObCzfQ67jk/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Antibióticos', link: 'https://drive.google.com/file/d/1JxkEtvLBm2gdf3QuHwkDOvJOrxsPr5El/view?usp=sharing' }, materials: [{ title: 'Antibióticos 2024', link: 'https://drive.google.com/file/d/1Hm8hBcOjiqaf1-rwqQVFATBdM6vUbuWk/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Antivirais', link: 'https://drive.google.com/file/d/1UDVJ1dd_LQXBeQ9CxYkYPmK4XcFDXVCs/view?usp=sharing' }, materials: [{ title: 'Antivirais 2024', link: 'https://drive.google.com/file/d/1p5xkQYsAD3IXRo13B80d3neiSr_9X3xC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Antifúngicos', link: 'https://drive.google.com/file/d/1673wqhVAFv7LmZxhQq4OI_8yTEQ0IXI6/view?usp=sharing' }, materials: [{ title: 'Antifúngicos 2024', link: 'https://drive.google.com/file/d/15aSBIS9nGUDzHHzmAag21OrQzhD5uODF/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - EMERGENCY: Diplopia Aguda', link: 'https://drive.google.com/file/d/1WegOHV4MfgMDVFfAOE81L5szGv0Pq6Ti/view?usp=sharing' }, materials: [{ title: 'Emergency - Diplopia Aguda', link: 'https://drive.google.com/file/d/1Y1hqL6VQaW6Vakdh4linQ5Mw5eOAMrc4/view?usp=sharing' }] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') return;
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo', '');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            if (modulesData.length > 1) {
+                renderModuleContent(modulesData[0].id);
+            }
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[11].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[11].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Aula</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca de ícones Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* bg-gray-800 */
+            overflow: hidden; /* Evita a rolagem do body principal */
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        /* Scrollbar customizada para a playlist */
+        #playlist-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #playlist-container::-webkit-scrollbar-track {
+            background: #111827; /* bg-gray-900 */
+        }
+        #playlist-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        #playlist-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+        /* Estilo para a notificação */
+        #notification {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Visualização Principal (Playlist) -->
+    <div id="main-view" class="flex flex-col lg:flex-row h-screen">
+
+        <!-- Coluna Principal (Player de Vídeo ou Placeholder) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col bg-gray-800">
+             <header class="flex items-center justify-between mb-4">
+                <h2 id="current-view-title" class="text-2xl font-bold text-white"></h2>
+                <button id="back-to-playlist" class="hidden flex items-center text-pink-400 hover:text-pink-500 font-semibold transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i>
+                    Voltar para a playlist
+                </button>
+            </header>
+            <div id="player-container" class="flex-1 flex flex-col items-center justify-center">
+                 <!-- Placeholder inicial -->
+                <div id="initial-placeholder" class="text-center text-gray-500">
+                    <i data-lucide="play-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h3 class="text-2xl font-semibold">Selecione uma aula na playlist</h3>
+                    <p>O conteúdo será exibido aqui.</p>
+                </div>
+                <!-- Iframe para o vídeo -->
+                <div id="lesson-view" class="hidden w-full h-full flex flex-col">
+                     <h1 id="lesson-view-title" class="text-xl lg:text-2xl font-bold mb-4 text-center"></h1>
+                     <div class="relative w-full max-w-5xl mx-auto aspect-video bg-black rounded-lg shadow-2xl">
+                         <iframe id="lesson-view-iframe" class="w-full h-full rounded-lg" src="" allow="autoplay; fullscreen" frameborder="0"></iframe>
+                     </div>
+                </div>
+                <!-- Visualização do Quiz -->
+                <div id="quiz-view" class="hidden w-full h-full flex flex-col items-center justify-center text-center">
+                    <i data-lucide="help-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h1 id="quiz-view-title" class="text-2xl lg:text-3xl font-bold mb-4"></h1>
+                    <p class="text-lg text-gray-400">Este é um recurso de quiz.</p>
+                    <p class="text-gray-500 mt-2">A funcionalidade para responder ao quiz estará disponível em breve.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Coluna da Direita (Playlist) -->
+        <aside id="playlist-container" class="w-full lg:w-96 bg-gray-900 p-4 flex-shrink-0 flex flex-col overflow-y-auto">
+            <div id="course-playlist-content" class="space-y-4">
+                <!-- O conteúdo da playlist será gerado aqui pelo JavaScript -->
+            </div>
+        </aside>
+
+    </div>
+    
+    <!-- Notificação / Toast -->
+    <div id="notification" class="hidden fixed bottom-5 right-5 bg-red-600 text-white py-3 px-5 rounded-lg shadow-lg">
+        <p id="notification-message"></p>
+    </div>
+
+    <script>
+        // Função para converter links do Google Drive 'view' para 'preview' para incorporação
+        const convertToEmbedUrl = (url) => {
+            if (!url) return '';
+            return url.replace(/\/view(\?usp=sharing)?$/, '/preview');
+        };
+
+        const courseData = [
+            {
+                moduleTitle: "Emergências cardiológicas",
+                lessons: [
+                    { title: "Soft Skills: o que precisamos saber na emergência?", resources: [{ type: 'video', title: 'O que são soft skills?', duration: '5 min', src: 'https://drive.google.com/file/d/1IuFjew3s_ajMoNEWdxXVE1hNtWI-To-d/view?usp=sharing' }, { type: 'video', title: 'Emergência - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1LRto23uPMGzqe_olbTqMz1e-2gADnPx1/view?usp=sharing' }, { type: 'video', title: 'Emergência - parte 2', duration: '12 min', src: 'https://drive.google.com/file/d/1yLSZYjKDu8T4VyRmGEfU9w1l3UihMiup/view?usp=sharing' }] },
+                    { title: "ECG no paciente com dor torácica", resources: [ { type: 'video', title: 'Por que IAM gera supra de ST?', duration: '8 min', src: 'https://drive.google.com/file/d/1F_jtglTBM54wh00VPC0-G25b7THL6fpp/view?usp=sharing' }, { type: 'video', title: 'Fases evolutivas do IAM com supra de ST', duration: '9 min', src: 'https://drive.google.com/file/d/16nfQR0RCdLoH6HTOQJ0bAwGTwI4_a9RU/view?usp=sharing' }, { type: 'video', title: 'Como diagnosticar um IAM com supra?', duration: '11 min', src: 'https://drive.google.com/file/d/1yGhJdL5Af7jONpJHiaxTmQcbfuwGG4Cc/view?usp=sharing' }, { type: 'video', title: 'Supra isquêmico x supra não isquêmico', duration: '7 min', src: 'https://drive.google.com/file/d/1ZMxo3TSkd7Bxjs7xCrh0YI9GJXPBVylG/view?usp=sharing' }, { type: 'video', title: 'Pericardite e o ECG do supra', duration: '6 min' }, { type: 'video', title: 'Quais pontas em IAM de VD e em IAM inferior?', duration: '8 min', src: 'https://drive.google.com/file/d/1E-swHG2GllqCUvHl5x1JHR19MtTKWB3Q/view?usp=sharing' }, { type: 'video', title: 'Como diferenciar a isquemia miocárdica no IAM inferior?', duration: '9 min', src: 'https://drive.google.com/file/d/1IO5JNmg_jwaMK9wD-_DO9xE_nNhL0l5l/view?usp=sharing' }, { type: 'video', title: 'Curvas preditoras de risco para SCA?', duration: '5 min' }, { type: 'video', title: 'Diagnósticos diferenciais do supra de ST', duration: '10 min', src: 'https://drive.google.com/file/d/1sEulkmyfEF0lCSn2VrHGFqZYOMMOUFjY/view?usp=sharing' }, { type: 'video', title: 'O ECG na SCA sem supra de ST', duration: '8 min', src: 'https://drive.google.com/file/d/15BWRjVoWLIZC_6qHxp3DvIixECjIfj16/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' } ] },
+                    { title: "Dor torácica na emergência", resources: [ { type: 'video', title: 'Introdução', duration: '4 min', src: 'https://drive.google.com/file/d/1QGuvSv9arXIALe1EG8DbmwjA4LlgSvh_/view?usp=sharing' }, { type: 'video', title: 'O que preciso focar na história clínica?', duration: '10 min', src: 'https://drive.google.com/file/d/10tG__xQco0j5fSaGclBq21-DtKkYsFzy/view?usp=sharing' }, { type: 'video', title: 'Exame físico na dor torácica aguda', duration: '8 min', src: 'https://drive.google.com/file/d/1DNeswnc-fQLxf7PGK-ENYm6oR1XgeDx5/view?usp=sharing' }, { type: 'video', title: 'ECG na dor torácica aguda', duration: '9 min', src: 'https://drive.google.com/file/d/1ivoim-MT52CfqZbhINfvcxn8wFFvmWlI/view?usp=sharing' }, { type: 'video', title: 'Como troponina e raio x de tórax podem me ajudar?', duration: '7 min', src: 'https://drive.google.com/file/d/1oyLCPBFE9VCrv5yZx09d0We0za7P8iab/view?usp=sharing' }, { type: 'video', title: 'Como usar o Heart Score?', duration: '6 min', src: 'https://drive.google.com/file/d/1Ljc12DOclMLkZvposkJSKqgBt7yVxWwf/view?usp=sharing' }, { type: 'video', title: 'Quais as formas de investigar DAC na emergência?', duration: '11 min', src: 'https://drive.google.com/file/d/1yAP9uNyLtB7HrbM3SyPRBUyTTHt4pBkk/view?usp=sharing' }, { type: 'video', title: 'Outros diagnósticos de dor torácica aguda', duration: '8 min', src: 'https://drive.google.com/file/d/1vhGzL8sovOmJCa76u8Cw_Kqx6u_YT7gG/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (3/3 questões, 0h6min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (3/3 questões, 0h6min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' } ] },
+                    { title: "IAM com supra de ST", resources: [ { type: 'video', title: 'Introdução: síndrome de infarto com supra', duration: '5 min', src: 'https://drive.google.com/file/d/1kX_RahWvH0RWW9ADSfXpcZWGz8Lu3-8n/view?usp=sharing' }, { type: 'video', title: 'Avaliação inicial', duration: '10 min', src: 'https://drive.google.com/file/d/1u78OOsgV-b7iA7IcVnzWNuYIh2rhHsI0/view?usp=sharing' }, { type: 'video', title: 'Tratamento do IAM: AAS', duration: '7 min', src: 'https://drive.google.com/file/d/1uTXRM1MGKyzm-YvOXJZMCjOH1g__FJLr/view?usp=sharing' }, { type: 'video', title: 'Tratamento: outros antiagregantes', duration: '9 min', src: 'https://drive.google.com/file/d/1KkzwEsHx7SPSIefzhJ7mMlgiB1AR3GXe/view?usp=sharing' }, { type: 'video', title: 'Tratamento: heparinas', duration: '8 min', src: 'https://drive.google.com/file/d/1YlCe9yOj16yby6I-Mq0UIDeNJbD_pGgg/view?usp=sharing' }, { type: 'video', title: 'Tratamento: como vamos prescrever?', duration: '11 min', src: 'https://drive.google.com/file/d/1QIiTYpgtER7dXiAFvM7SWpq3mQnOG3fy/view?usp=sharing' }, { type: 'video', title: 'Tratamento: outras medicações - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1UhqTxya7cYsZuvkjv7RIghM9swt2UXms/view?usp=sharing' }, { type: 'video', title: 'Tratamento: outras medicações - parte 2', duration: '10 min', src: 'https://drive.google.com/file/d/1aJpLMmKQEYMSvLxTyntvjLBEsp6WwmPL/view?usp=sharing' }, { type: 'video', title: 'O que vamos fazer com o resultado do cateterismo?', duration: '12 min', src: 'https://drive.google.com/file/d/1zneMMT9IhI79pRaWAnq3QJUY2wpdIvEC/view?usp=sharing' }, { type: 'video', title: 'Qual stent utilizar? Qual o melhor acesso para o cateter?', duration: '8 min', src: 'https://drive.google.com/file/d/1Hc11529rrM2AQVjUmih_8pRpCv4bMg1_/view?usp=sharing' }, { type: 'video', title: 'O que aconteceu com o Sr. Antonio?', duration: '6 min', src: 'https://drive.google.com/file/d/11_ioxrM4kX9L_kLFOWQkfsgZNhbJ4PFm/view?usp=sharing' }, { type: 'video', title: 'Rotura de parede livre do VE', duration: '7 min', src: 'https://drive.google.com/file/d/1zcoet8HRFG9A4QBszCRYo6cejuLCzj_5/view?usp=sharing' }, { type: 'video', title: 'Rotura de septo IV', duration: '7 min', src: 'https://drive.google.com/file/d/1m864pyD0leJ34YtNlNimUEwM0JmhnkDP/view?usp=sharing' }, { type: 'video', title: 'Insuficiência mitral aguda', duration: '8 min', src: 'https://drive.google.com/file/d/1B0774rBHieKK-vaHdd__UYSfX3uTZ7YA/view?usp=sharing' } ] },
+                    { title: "IAM sem supra de ST", resources: [ { type: 'video', title: 'Introdução: síndrome coronariana aguda sem supra de ST', duration: '5 min', src: 'https://drive.google.com/file/d/1QUeMGU7yAZ1IZm3Pnx8O9J-n6d_X_Bbg/view?usp=sharing' }, { type: 'video', title: 'Aterosclerose e formação do trombo', duration: '8 min', src: 'https://drive.google.com/file/d/1IxKiYH2gdwb_XpifQW5Bc3D0WUAsl0LX/view?usp=sharing' }, { type: 'video', title: 'Avaliação inicial do paciente com dor torácica', duration: '10 min', src: 'https://drive.google.com/file/d/1VYRZ_lJLA8DRP5COYmVVYlRRXS7z69bb/view?usp=sharing' }, { type: 'video', title: 'História clínica', duration: '9 min', src: 'https://drive.google.com/file/d/15QCCKvy8V4Stp7KAma2M_WTf44U8RGS2/view?usp=sharing' }, { type: 'video', title: 'Avaliando o ECG', duration: '11 min', src: 'https://drive.google.com/file/d/1ByXgaxDTvPQlPRMGzB8veX4uNOownbUx/view?usp=sharing' }, { type: 'video', title: 'Marcadores de necrose miocárdica - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1DXcbIYI4E6b5_O20cBRSRDMCKxeLqNcs/view?usp=sharing' }, { type: 'video', title: 'Marcadores de necrose miocárdica - parte 2', duration: '10 min', src: 'https://drive.google.com/file/d/18ocQh_hVS9ZGzYhCDMKIXljhAuodl0Sk/view?usp=sharing' }, { type: 'video', title: 'Definindo diagnóstico e estratificação do risco', duration: '12 min', src: 'https://drive.google.com/file/d/1obODFuKh0Ah3mPs3vDaOPMBH_J4bWj-_/view?usp=sharing' }, { type: 'video', title: 'Tratamento inicial da SCA sem supra de ST', duration: '9 min', src: 'https://drive.google.com/file/d/1OXOCcBHaSbsTXKRV-UQLPTO26bB8Vo58/view?usp=sharing' }, { type: 'video', title: 'Antiplaquetários', duration: '8 min', src: 'https://drive.google.com/file/d/1WWv5ti30JMhEB8oc1XtAynYqX8pzw1CO/view?usp=sharing' }, { type: 'video', title: 'Anticoagulantes', duration: '8 min', src: 'https://drive.google.com/file/d/1iWN7v_1QR0p_6Y8CN-x0edLGvgSfaO85/view?usp=sharing' }, { type: 'video', title: 'Estratificação invasiva', duration: '10 min', src: 'https://drive.google.com/file/d/1R-SCJ2ovcnk_rDrloL0ZEgjq6d3Wqb71/view?usp=sharing' }, { type: 'video', title: 'Prescrição complementar', duration: '7 min', src: 'https://drive.google.com/file/d/1YTr43BeM3HTT0YEA1MmrfA2x0lWrkPiE/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (5/5 questões, 0h1min)' } ] },
+                    { title: "Emergências hipertensivas", resources: [ { type: 'video', title: 'Aspectos gerais de emergências hipertensivas', duration: '6 min', src: 'https://drive.google.com/file/d/1dB16Ad9m_234c32UdDoSn45BE_ms5LLO/view?usp=sharing' }, { type: 'video', title: 'Como abordar uma possível urgência hipertensiva?', duration: '9 min', src: 'https://drive.google.com/file/d/1y5VGcUDRsqBPwmbs1IqttNivAdOxS1_K/view?usp=sharing' }, { type: 'video', title: 'Como tratar uma urgência hipertensiva?', duration: '8 min', src: 'https://drive.google.com/file/d/1JKDfQE8STKXrEQ3VK0g7IhYPVj8q9zJF/view?usp=sharing' }, { type: 'video', title: 'Como tratar uma emergência hipertensiva?', duration: '10 min', src: 'https://drive.google.com/file/d/1HMMdoMyi8_wZRqhkEg6KLti-zMCbddsn/view?usp=sharing' }, { type: 'video', title: 'Como tratar uma encefalopatia hipertensiva?', duration: '11 min', src: 'https://drive.google.com/file/d/1HVaSqAnYA6xWBVQoz59mkzaX7AgpXNN1/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' } ] },
+                    { title: "Edema agudo de pulmão", resources: [ { type: 'video', title: 'Conceitos gerais EAP', duration: '7 min', src: 'https://drive.google.com/file/d/1vBDvWwe9DWLCADTw2jh66-PERfkWKv55/view?usp=sharing' }, { type: 'video', title: 'Como dar o diagnóstico de EAP?', duration: '10 min', src: 'https://drive.google.com/file/d/19_incOm8KnP7Xm33tdjBU6zOB_4GobGE/view?usp=sharing' }, { type: 'video', title: 'Exames complementares no EAP - parte 1', duration: '9 min', src: 'https://drive.google.com/file/d/1tIFkRK_BGKcOb28UwcPhh9hgNner0I2u/view?usp=sharing' }, { type: 'video', title: 'Exames complementares no EAP - parte 2', duration: '9 min', src: 'https://drive.google.com/file/d/1DYd25odbQyHGABnOrSaLrol1IKre0uF6/view?usp=sharing' }, { type: 'video', title: 'Tratamento do EAP', duration: '12 min', src: 'https://drive.google.com/file/d/1nSC-4Ps4witN_ntyLD0wN0d1TD-FbKEP/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' } ] },
+                    { title: "Diagnósticos diferenciais de dor torácica", resources: [ { type: 'video', title: 'Introdução: diagnóstico diferencial de dor torácica', duration: '5 min', src: 'https://drive.google.com/file/d/1QGuvSv9arXIALe1EG8DbmwjA4LlgSvh_/view?usp=sharing' }, { type: 'video', title: 'Dissecação de aorta', duration: '10 min', src: 'https://drive.google.com/file/d/1flCKMS9FEsbd4nrl-0dWr36xFIlSbUrd/view?usp=sharing' }, { type: 'video', title: 'SAA: exames de imagem', duration: '8 min', src: 'https://drive.google.com/file/d/1YrjmVyWSsBM-GUTX8eCkGej1TRb-GNgx/view?usp=sharing' }, { type: 'video', title: 'Diagnóstico', duration: '7 min', src: 'https://drive.google.com/file/d/1SW5UwFxTlK02ftwyC7qMNl1apf12lLRq/view?usp=sharing' }, { type: 'video', title: 'Tratamento', duration: '9 min', src: 'https://drive.google.com/file/d/1vPKmV89tyBexLDCRxHdRU5hOy0a3vOGd/view?usp=sharing' }, { type: 'video', title: 'TEP: introdução', duration: '6 min', src: 'https://drive.google.com/file/d/1G14Sf3v4uzdt-rl3xYPJdZ3O0xi72EMI/view?usp=sharing' }, { type: 'video', title: 'TEP: quadro clínico', duration: '9 min', src: 'https://drive.google.com/file/d/1So2UwWvDq4vfotWwnJ2KQJbBQjai05IH/view?usp=sharing' }, { type: 'video', title: 'TEP: exames de imagem', duration: '8 min', src: 'https://drive.google.com/file/d/1UzVbUTQSCvbdqUySOc6miOsvnb6AIC9c/view?usp=sharing' }, { type: 'video', title: 'TEP: diagnóstico', duration: '7 min', src: 'https://drive.google.com/file/d/1PydTt-5MJSo4HYrSMpEwhCHy0NbxkBpX/view?usp=sharing' }, { type: 'video', title: 'TEP: tratamento', duration: '10 min', src: 'https://drive.google.com/file/d/1MFZ2s2CpYISjA_6vzouIXAKIN90rZyO-/view?usp=sharing' }, { type: 'video', title: 'TEP: Takotsubo', duration: '8 min', src: 'https://drive.google.com/file/d/1soBfsa8i-7MqKOTLHbjJmVyloHuAOuAN/view?usp=sharing' } ] },
+                    { title: "Pericardite aguda", resources: [ { type: 'video', title: 'Introdução: pericardite aguda', duration: '6 min', src: 'https://drive.google.com/file/d/1ET1J5LGo9GO1xw27RF1iDQ2yA6htHGVF/view?usp=sharing' }, { type: 'video', title: 'Exames laboratoriais na pericardite aguda', duration: '8 min', src: 'https://drive.google.com/file/d/1IGbTlVn05ihAhgLNcljP4mGH-TfYRJoe/view?usp=sharing' }, { type: 'video', title: 'Exames de imagem na pericardite aguda', duration: '9 min', src: 'https://drive.google.com/file/d/1y9sa2Y1BlDNIXBlxA4fallCnSSpeGRjB/view?usp=sharing' }, { type: 'video', title: 'Tratamento da pericardite aguda: AINH e colchicina - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1ZQNFyRxxOFczzcG0Bob6bNFdrzx6E6tz/view?usp=sharing' }, { type: 'video', title: 'Tratamento da pericardite aguda - parte 2', duration: '9 min', src: 'https://drive.google.com/file/d/1xyIuEXHMioZCgfxXPlAWBzklrVaGLTrV/view?usp=sharing' }, { type: 'video', title: 'Derrames pericárdicos específicos', duration: '8 min', src: 'https://drive.google.com/file/d/1kTXEcKshZGdhFuZeng0nlWZusOBHtMh6/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' } ] },
+                    { title: "Tamponamento cardíaco", resources: [ { type: 'video', title: 'Tamponamento cardíaco', duration: '10 min', src: 'https://drive.google.com/file/d/1DkClinHf2S1L7R0Rkk6osFni2NB90_PN/view?usp=sharing' }, { type: 'video', title: 'Exames no tamponamento cardíaco', duration: '9 min', src: 'https://drive.google.com/file/d/1HxEpfzvg9MwijfFGY9MZbib8NTrCvV8W/view?usp=sharing' }, { type: 'video', title: 'Tratamento do tamponamento cardíaco', duration: '11 min', src: 'https://drive.google.com/file/d/1smrCnGQp89aqp7Bw_7M731QlOxOBK4yj/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' } ] },
+                    { title: "Interpretação de Troponina no PS", resources: [ { type: 'video', title: 'Troponina: aspectos gerais', duration: '7 min', src: 'https://drive.google.com/file/d/1POWJvxuDaPuaRjO6xkE3Z1aOf41EuKfP/view?usp=sharing' }, { type: 'video', title: 'Troponina: aspectos práticos', duration: '9 min', src: 'https://drive.google.com/file/d/1lWnzmwjGTh_LMMjR8Z8cm-5jc5gVTJxw/view?usp=sharing' }, { type: 'video', title: 'Troponina ultrassensível', duration: '10 min', src: 'https://drive.google.com/file/d/1xzlGYUHUQmjEufyUCCtP3JG5TyLwq1jv/view?usp=sharing' }, { type: 'video', title: 'Outras dicas de troponina', duration: '8 min', src: 'https://drive.google.com/file/d/1v2Qyw3jbgtqEk_PogcqVdDPfm1BTuczL/view?usp=sharing' }, { type: 'video', title: 'Como os europeus usam a troponina ultrassensível?', duration: '11 min', src: 'https://drive.google.com/file/d/1ZnDfqundMccOqfBhYUUKHhcMvy0H-H7s/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (5/4 questões, 0h8min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' } ] },
+                    { title: "Definição universal de Infarto", resources: [ { type: 'video', title: 'IAMs tipo 1 e 2', duration: '10 min', src: 'https://drive.google.com/file/d/1c1MpwH6nJYnf10S3o9mQNd-efOG4GG31/view?usp=sharing' }, { type: 'video', title: 'IAMs tipos 3, 4 e 5', duration: '9 min', src: 'https://drive.google.com/file/d/1MjXRtY-u5YtXjaEMjLJlu1MCAap7OTvn/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' } ] },
+                    { title: "Insuficiência cardíaca descompensada", resources: [ { type: 'video', title: 'IC descompensada: introdução', duration: '6 min', src: 'https://drive.google.com/file/d/1KXOuSjDkTQ3zyhYoi2cS7lB5l3qUoD8s/view?usp=sharing' }, { type: 'video', title: 'IC perfil A', duration: '8 min', src: 'https://drive.google.com/file/d/1xaurKtOHjdOK0MCZtqIJromV_oa-uFQo/view?usp=sharing' }, { type: 'video', title: 'IC perfil B', duration: '9 min', src: 'https://drive.google.com/file/d/1y6yJfSDrW5l-920G2UsZIlBD79swMb3g/view?usp=sharing' }, { type: 'video', title: 'IC perfil C', duration: '10 min', src: 'https://drive.google.com/file/d/11mwjP-mq54_zxh1n4Pr8Gv_CT4PJFkcq/view?usp=sharing' }, { type: 'video', title: 'IC perfil L e uso de betabloqueador na IC descompensada', duration: '11 min', src: 'https://drive.google.com/file/d/1Jz5dy9vPFaCY9ku_ajs_pNgcynicb0Tb/view?usp=sharing' }, { type: 'video', title: 'IC descompensada: cuidados na alta', duration: '9 min', src: 'https://drive.google.com/file/d/1PuPaGB2pBOiUS8NEOfKlR65DujvG9y1N/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h4min)' } ] },
+                    { title: "Choque cardiogênico e drogas vasoativas", resources: [ { type: 'video', title: 'Introdução', duration: '4 min', src: 'https://drive.google.com/file/d/1EQZRuOgCYcsiyLu4pSOscyxgPCV3NaHJ/view?usp=sharing' }, { type: 'video', title: 'Definição', duration: '6 min', src: 'https://drive.google.com/file/d/1Lp-sN54KoAC7Vlz7fw2cDASeYgZWJPNy/view?usp=sharing' }, { type: 'video', title: 'Fisiopatologia', duration: '8 min', src: 'https://drive.google.com/file/d/1i2ej3yyaiHxgCAKyPaIJwklRYz_qUDBd/view?usp=sharing' }, { type: 'video', title: 'Avaliação inicial', duration: '9 min', src: 'https://drive.google.com/file/d/1zQhNW7lZDU7Ytm0dP82_nELQDIiadbDf/view?usp=sharing' }, { type: 'video', title: 'Delivery de oxigênio e macrohemodinâmica', duration: '11 min', src: 'https://drive.google.com/file/d/1d3xsz2JwQwMCfOGyPVkaiwS5W6f9Vr3Y/view?usp=sharing' }, { type: 'video', title: 'Microhemodinâmica - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1udbSGZHaw3D9OwNgvywh0RBJycZRnm-o/view?usp=sharing' }, { type: 'video', title: 'Microhemodinâmica - parte 2', duration: '10 min', src: 'https://drive.google.com/file/d/16zJ4WE4BVWSsJfvBU-h8Koz2OgmS0Fg-/view?usp=sharing' }, { type: 'video', title: 'Microhemodinâmica - parte 3', duration: '10 min', src: 'https://drive.google.com/file/d/1bz24J1D1jANL8XKm_sYUqyQE26xsu0GT/view?usp=sharing' }, { type: 'video', title: 'Manejo inicial do choque cardiogênico', duration: '12 min', src: 'https://drive.google.com/file/d/1N9IZtVG4vz3rBEFy2KBRSXMY_8OTKpre/view?usp=sharing' }, { type: 'video', title: 'Estágios do choque (pirâmide)', duration: '8 min', src: 'https://drive.google.com/file/d/1qzf6mSLDVCHDIG-a4zDRISM_-UTfLnOI/view?usp=sharing' }, { type: 'video', title: 'Drogas vasoativas', duration: '9 min', src: 'https://drive.google.com/file/d/1Jw-Dn9JUPUhJuygDOCfl84JYMhKvHdz5/view?usp=sharing' }, { type: 'video', title: 'Inotrópicos - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1GZIGqRVUhT22lprmkdAodd8a3r08utJ3/view?usp=sharing' }, { type: 'video', title: 'Inotrópicos - parte 2', duration: '10 min', src: 'https://drive.google.com/file/d/1vz6glbS1Kp9Hhu7GeH7_8QY-euEyAhzQ/view?usp=sharing' }, { type: 'video', title: 'Vasopressores', duration: '9 min', src: 'https://drive.google.com/file/d/11F2N8IiNxjMRRvdVWJceQ_9dj6b49TiS/view?usp=sharing' }, { type: 'video', title: 'Choque cardiogênico refratário', duration: '11 min', src: 'https://drive.google.com/file/d/1E5dHeRg1azvjTm3SHJVJEy5VY3R_0_o_/view?usp=sharing' }, { type: 'video', title: 'Dispositivos de assistência ventricular temporários', duration: '12 min', src: 'https://drive.google.com/file/d/1dUsRAP3VpxJAwIdbYg5QyF69SVXwY0if/view?usp=sharing' }, { type: 'video', title: 'Ajuste de volemia', duration: '8 min', src: 'https://drive.google.com/file/d/12BilvZ1VBmzp9nSthHqIzKzUwx9ZM2Et/view?usp=sharing' } ] },
+                    { title: "Taquiarritmias", resources: [ { type: 'video', title: 'Introdução', duration: '5 min', src: 'https://drive.google.com/file/d/1obroOyidYNTKOurJXW3VWft9TPX6PYSr/view?usp=sharing' }, { type: 'video', title: 'Como diferenciar as taquicardias supraventriculares?', duration: '11 min', src: 'https://drive.google.com/file/d/11Cu8mlP6fTkYpd-u3OjqOGcvOZfehhwv/view?usp=sharing' }, { type: 'video', title: 'Vamos treinar um pouco, parte 1', duration: '9 min', src: 'https://drive.google.com/file/d/1PclBIBxZBDOPpks3VFz2G4CldJZ0EMc3/view?usp=sharing' }, { type: 'video', title: 'Vamos treinar um pouco, parte 2', duration: '9 min', src: 'https://drive.google.com/file/d/1bd8nTDN0M4hopS9ar8Mc5A6H-FmYSyf7/view?usp=sharing' }, { type: 'video', title: 'Tratamento das taquicardias', duration: '10 min', src: 'https://drive.google.com/file/d/1Wzf1RPHhWdOGLVxWOtcHaz_y-xkr0SHV/view?usp=sharing' }, { type: 'video', title: 'Tratamento medicamentoso das taquicardias', duration: '11 min', src: 'https://drive.google.com/file/d/1-KBl7i39WD5oKCAvgmLF5SBAMLUWV4Aj/view?usp=sharing' }, { type: 'video', title: 'Taquicardia por reentrada nodal (TRN)', duration: '9 min', src: 'https://drive.google.com/file/d/15c1ArhVUn4gLH2c2gNC5A9fDuCsyUvUC/view?usp=sharing' }, { type: 'video', title: 'Taquicardia atrioventricular (TAV)', duration: '9 min', src: 'https://drive.google.com/file/d/1slNX1eY2QzIalTGVtUBlgUZJcwbWjlpJ/view?usp=sharing' }, { type: 'video', title: 'Arritmias ventriculares', duration: '10 min', src: 'https://drive.google.com/file/d/1FWO-VNh3cRawStFQg_ixYMLpKlLlHjXf/view?usp=sharing' }, { type: 'video', title: 'Como diferenciar taquicardias ventriculares de taquicardias supraventriculares?', duration: '11 min', src: 'https://drive.google.com/file/d/1k4QsotUvS1a6q7-NOBRamJNBEfSdl9lN/view?usp=sharing' }, { type: 'video', title: 'Vamos treinar um pouco TV ou TSV?', duration: '9 min', src: 'https://drive.google.com/file/d/1Ooqqda4jPh5dh7Uq7rkE_2KzdJNRAXwn/view?usp=sharing' }, { type: 'video', title: 'Taquicardia ventricular sem pulso', duration: '10 min' }, { type: 'video', title: 'Taquicardias ventriculares com coração estruturalmente normal', duration: '11 min', src: 'https://drive.google.com/file/d/1mMHmJS2gGtWQCvR9N_cT-iXTnjP82bZF/view?usp=sharing' }, { type: 'video', title: 'Torsades de Pointes', duration: '9 min', src: 'https://drive.google.com/file/d/14d-ILBN_OkJbjASa_XAAFDIYJh9snaum/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (2/2 questões, 0h2min)' } ] },
+                    { title: "Fibrilação atrial e flutter", resources: [ { type: 'video', title: 'Introdução', duration: '6 min', src: 'https://drive.google.com/file/d/1Kqdl2_bPa8JkdWTJjscgQdCchQMBFVyu/view?usp=sharing' }, { type: 'video', title: 'Fisiopatologia', duration: '8 min', src: 'https://drive.google.com/file/d/1fj5_C31kI1F8lXJ6mfzYQDO80_IMuDo0/view?usp=sharing' }, { type: 'video', title: 'Classificações', duration: '7 min', src: 'https://drive.google.com/file/d/1CeBACtuQImqQak78c5fwKDlpVKkFYGAs/view?usp=sharing' }, { type: 'video', title: 'Cardioembolismo e estratificação', duration: '10 min', src: 'https://drive.google.com/file/d/1ufJR7orJfbH7BWeDuIXLVK3qgiSkJBtH/view?usp=sharing' }, { type: 'video', title: 'Investigação', duration: '9 min', src: 'https://drive.google.com/file/d/1W8OJpNa7l6t6gAjqavi5HjeX4Q84ipIT/view?usp=sharing' }, { type: 'video', title: 'Manejo no pronto-socorro', duration: '11 min', src: 'https://drive.google.com/file/d/1GraDvL3Qxuzcp6_hW1WnUECsedTykcZH/view?usp=sharing' }, { type: 'video', title: 'Cardioversão elétrica - parte 1', duration: '10 min', src: 'https://drive.google.com/file/d/1LBcWAjcrOc5hmOOPQZdTVmh9679K8_eQ/view?usp=sharing' }, { type: 'video', title: 'Cardioversão elétrica - parte 2', duration: '10 min', src: 'https://drive.google.com/file/d/1toINbl94oYre7ikCtwsnC8r9QYiZ-5qG/view?usp=sharing' }, { type: 'video', title: 'Tutorial de cardioversão elétrica', duration: '12 min', src: 'https://drive.google.com/file/d/1LV9xPHaNoKeiOZTAacT9LXE6D80RSGJK/view?usp=sharing' }, { type: 'video', title: 'Estratégia eletiva de controle de ritmo', duration: '10 min', src: 'https://drive.google.com/file/d/1w76D5f40RWcQhh1-9C96iHyDl9cl8CLk/view?usp=sharing' }, { type: 'video', title: 'Cardioversão química', duration: '9 min', src: 'https://drive.google.com/file/d/1WtK-3aguZLRO5-s3QsNFiZT3kL0u9ldU/view?usp=sharing' }, { type: 'video', title: 'Controle de FC', duration: '8 min', src: 'https://drive.google.com/file/d/17hTAZrAI-JDYXmiyU2GtfMjW-odiBPar/view?usp=sharing' }, { type: 'video', title: 'FA + WPW', duration: '9 min', src: 'https://drive.google.com/file/d/19lRRLypbccDTn7f1ylLmTleqNeF9-LRA/view?usp=sharing' }, { type: 'video', title: 'Flutter atrial', duration: '8 min', src: 'https://drive.google.com/file/d/1jkr8Q1ey9SIix-tSi4C8WW-Oi_xV4FPQ/view?usp=sharing' } ] },
+                    { title: "Bradiarritmias e marca-passo", resources: [ { type: 'video', title: 'Introdução', duration: '5 min', src: 'https://drive.google.com/file/d/1RW9O0RHJERd6sZE0EoxvFqSb5uVJkTx5/view?usp=sharing' }, { type: 'video', title: 'Sistema de condução cardíaca', duration: '8 min', src: 'https://drive.google.com/file/d/14kTn54ZnJpO4Jnw6wpDl4Vgcbh3XJ2Tk/view?usp=sharing' }, { type: 'video', title: 'Ritmo sinusal', duration: '6 min', src: 'https://drive.google.com/file/d/1CVfh-CKH0B8_IXVASKXKnyA9ceODt5ug/view?usp=sharing' }, { type: 'video', title: 'Cálculo da FC', duration: '5 min', src: 'https://drive.google.com/file/d/1yEQZngbcg0DMGg1hdsIQIdNynWPzPHTe/view?usp=sharing' }, { type: 'video', title: 'Disfunção do nó sinusal', duration: '9 min', src: 'https://drive.google.com/file/d/13XIkOEk7fGWrQDNcmUBLirdNX_RZ5loZ/view?usp=sharing' }, { type: 'video', title: 'Bloqueios atrioventriculares', duration: '10 min', src: 'https://drive.google.com/file/d/1nWq3a8S-lS6WRiPgf8u68EzL0AjKvU4A/view?usp=sharing' }, { type: 'video', title: 'Resumo BAV', duration: '7 min', src: 'https://drive.google.com/file/d/1ggkS086y6ztGCVe0PBnexIzCJqpIiCx_/view?usp=sharing' }, { type: 'video', title: 'Manejo das bradiarritmias', duration: '11 min', src: 'https://drive.google.com/file/d/1pEwmxQ7gX3BTeAt7aLWWdBGKEScYxAz1/view?usp=sharing' }, { type: 'video', title: 'Marca-passos provisórios', duration: '9 min', src: 'https://drive.google.com/file/d/1O87sOqT3XbdMRuPSr22UPm6A_pZ6OOGK/view?usp=sharing' }, { type: 'video', title: 'Marca-passo transvenoso', duration: '10 min', src: 'https://drive.google.com/file/d/1-FluDiDMd6a2ot4Tqvi2MWQVhaCa89G8/view?usp=sharing' }, { type: 'video', title: 'Demonstração de implante de marca-passo transvenoso', duration: '12 min', src: 'https://drive.google.com/file/d/1HqG1vEcj0HJFHxp4eIou7KnfWb58qczx/view?usp=sharing' }, { type: 'video', title: 'Ajustes de marca-passos', duration: '9 min', src: 'https://drive.google.com/file/d/10uZetOKlaoaK2Abj1YCaLILzjEI58yke/view?usp=sharing' }, { type: 'video', title: 'Marca-passo transcutâneo', duration: '10 min', src: 'https://drive.google.com/file/d/1F6eRpQa1ppTBPwAiXdtIFd14xq-tO1iB/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (2 questões, 0h4min)' } ] },
+                    { title: "Manejo da parada cardiorrespiratória", resources: [ { type: 'video', title: 'Introdução', duration: '5 min', src: 'https://drive.google.com/file/d/1TeKeZLG_prkn5WHtuxDyYayzj7oq4g61/view?usp=sharing' }, { type: 'video', title: 'Corrente de vida', duration: '7 min', src: 'https://drive.google.com/file/d/1b--_B3hkduHdsKMK0vTz9w0ZNPO8JXzd/view?usp=sharing' }, { type: 'video', title: 'Suporte básico de vida: algoritmo geral', duration: '10 min', src: 'https://drive.google.com/file/d/1ZIC2jLCURLsxa6XP14gMB9tvBBq_zfGI/view?usp=sharing' }, { type: 'video', title: 'Suporte básico de vida: via aérea', duration: '9 min', src: 'https://drive.google.com/file/d/14McgPyh-4rRfNnMANV5um7MzK5CeZuyS/view?usp=sharing' }, { type: 'video', title: 'Suporte básico de vida: compressões de alta qualidade', duration: '11 min', src: 'https://drive.google.com/file/d/1D8sn7B5LaNdxprvLmT-0dKcvBo4YBOpP/view?usp=sharing' }, { type: 'video', title: 'Suporte básico de vida: compilação', duration: '8 min', src: 'https://drive.google.com/file/d/1EEd_69jGzEow-Y7U0Mpsj08DfcMJL2C9/view?usp=sharing' }, { type: 'video', title: 'Extra: SBV no COVID', duration: '7 min', src: 'https://drive.google.com/file/d/1c79mdP5uAiyWz1ou1_SZR0krixxZBtR1/view?usp=sharing' }, { type: 'video', title: 'Suporte avançado de vida', duration: '10 min', src: 'https://drive.google.com/file/d/16FY38CQbW1ZX9QH4pKeBA2bahbTAztgQ/view?usp=sharing' }, { type: 'video', title: 'ACLS: desfibrilador manual', duration: '9 min', src: 'https://drive.google.com/file/d/1vZjwZJsl4KAvTYHjDb9_Mewx0037FY4F/view?usp=sharing' }, { type: 'video', title: 'ACLS: via aérea', duration: '9 min', src: 'https://drive.google.com/file/d/1Y1lQ9eH-26fNihTsTVSCdRtUwWVjvqG9/view?usp=sharing' }, { type: 'video', title: 'ACLS: boa ventilação', duration: '8 min', src: 'https://drive.google.com/file/d/1VSdf19t5TOf8-DuhFUEPYnKUtIKU2tRQ/view?usp=sharing' }, { type: 'video', title: 'ACLS: capnografia e PAI', duration: '10 min', src: 'https://drive.google.com/file/d/1iz8t5x9h99MTRBcjgdLYmtmFqDioDsTL/view?usp=sharing' }, { type: 'video', title: 'ACLS: monitorização da PCR', duration: '9 min', src: 'https://drive.google.com/file/d/1sWzQDBZvmgZspdOYDmLrTFsWfPXXoJUg/view?usp=sharing' }, { type: 'video', title: 'ACLS: circulação', duration: '8 min', src: 'https://drive.google.com/file/d/1fGhKA5e9r4TQPNGEbJIf-YwMDGGN33k8/view?usp=sharing' }, { type: 'video', title: 'ACLS: FV e TVSP', duration: '10 min', src: 'https://drive.google.com/file/d/1bO19Q4HaejNbI5SP-yGMoYBWYk5UrRJ1/view?usp=sharing' }, { type: 'video', title: 'ACLS: AESP e assistolia', duration: '10 min', src: 'https://drive.google.com/file/d/18hRJc8PGoxtmxBcxV-58bIGspIEkJi55/view?usp=sharing' }, { type: 'video', title: 'ACLS: situações especiais', duration: '11 min', src: 'https://drive.google.com/file/d/19lskcgCqQk9sEuuhIGEN_bNNyNaiYIsc/view?usp=sharing' }, { type: 'video', title: 'ACLS: cuidados pós PCR', duration: '12 min', src: 'https://drive.google.com/file/d/1KQddMRoGmuDzDpkicMj3vbGuWApROoBw/view?usp=sharing' } ] },
+                    { title: "Síncope", resources: [ { type: 'video', title: 'Aspectos gerais da síncope', duration: '7 min', src: 'https://drive.google.com/file/d/1mSmCtKVgcUlok9aVRCpdWdiv0PX712IL/view?usp=sharing' }, { type: 'video', title: 'Causas da síncope', duration: '9 min', src: 'https://drive.google.com/file/d/1CxgNYRBWqQCl2LIOav4m2C9LFNxfVHRG/view?usp=sharing' }, { type: 'video', title: 'Investigação básica da síncope', duration: '10 min', src: 'https://drive.google.com/file/d/1kAYnw5edlUPt2-oL3hmHn_vVk1Knpm4x/view?usp=sharing' }, { type: 'video', title: 'Exames adicionais na síncope', duration: '9 min', src: 'https://drive.google.com/file/d/1VjEOBb_GdfzCvUskYc2wnAyffeTy7OfR/view?usp=sharing' }, { type: 'video', title: 'Tilt test', duration: '8 min', src: 'https://drive.google.com/file/d/1CS2_hDKl-QvPFuHkEOwniNDKB3jmrNWT/view?usp=sharing' }, { type: 'video', title: 'Estudo eletrofisiológico', duration: '10 min', src: 'https://drive.google.com/file/d/1ioP6Ham7RvfKm3DiMxRX0PZIwZLSfV_U/view?usp=sharing' }, { type: 'video', title: 'Outras dicas sobre síncope', duration: '8 min', src: 'https://drive.google.com/file/d/185UgKjmD6n1keH_NmJkJ7TjoVCtjcuQP/view?usp=sharing' }, { type: 'video', title: 'Tratamento não farmacológico', duration: '9 min', src: 'https://drive.google.com/file/d/1BOjSlmk1kfHmUnTkprM2IMsm1Hra4SFt/view?usp=sharing' }, { type: 'video', title: 'Tratamento farmacológico da síncope', duration: '10 min', src: 'https://drive.google.com/file/d/1vQfhHmtmjt_9PzB1NvzT9TkIKydQEgKv/view?usp=sharing' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' } ] },
+                    { title: "Acidente Vascular Cerebral (AVC)", resources: [ { type: 'video', title: 'Introdução', duration: '6 min', src: 'https://drive.google.com/file/d/1VvMA1ZUEEoxadywLvhyrhcGlD_dqUhg4/view?usp=sharing' }, { type: 'video', title: 'A escala de NIH', duration: '9 min', src: 'https://drive.google.com/file/d/1xYF7MAVpGlMcwVMm8kEO1MmYxlJlvOz5/view?usp=sharing' }, { type: 'video', title: 'Exames complementares no AVC', duration: '10 min', src: 'https://drive.google.com/file/d/1hkHPvVhbWTmR5X3an8fU9rwP4Sj5VNVm/view?usp=sharing' }, { type: 'video', title: 'Trombólise endovenosa', duration: '11 min', src: 'https://drive.google.com/file/d/191I8foPBZaFv2ZnwXw0faL6nwjuiJTay/view?usp=sharing' }, { type: 'video', title: 'Tratamento do AVCI: demais medidas', duration: '10 min', src: 'https://drive.google.com/file/d/1yJ7QBUS3Bj2LAWou_4eh_qQNOopOeNB1/view?usp=sharing' }, { type: 'video', title: 'Qual etiologia do AVC?', duration: '9 min', src: 'https://drive.google.com/file/d/14pvwCjGqoC8_YsEbC5jEPzoWOc0I8L-Y/view?usp=sharing' } ] },
+                    { title: "Endocardite Infecciosa", resources: [ { type: 'video', title: 'Endocardite Infecciosa', duration: '8 min', src: 'https://drive.google.com/file/d/1q_N63mAvAvBg-BfgBGu-OAmLgSgZ8_iy/view?usp=sharing' }, { type: 'video', title: 'Exame físico na endocardite Infecciosa', duration: '10 min', src: 'https://drive.google.com/file/d/1fIL2Vm0v3BLGvKPVg-P8gKr6UNgVltNw/view?usp=sharing' }, { type: 'video', title: 'Exames laboratoriais na endocardite', duration: '9 min', src: 'https://drive.google.com/file/d/1wG2Biy1kpE-LlbzwBqOe9aj5Sw4vhjNt/view?usp=sharing' }, { type: 'video', title: 'Exames de Imagem na endocardite', duration: '10 min', src: 'https://drive.google.com/file/d/1qvAYk23J-UObBgDOGGAnTOLofapvtyUk/view?usp=sharing' }, { type: 'video', title: 'Como fechar o diagnóstico de endocardite Infecciosa?', duration: '11 min', src: 'https://drive.google.com/file/d/13zfU0gziPiExgBA_SAySE62V78glAQt_/view?usp=sharing' }, { type: 'video', title: 'Tratamento da endocardite Infecciosa', duration: '12 min', src: 'https://drive.google.com/file/d/11CpyB3VkhLjq9FsoX69Qmt8lXDFuagE4/view?usp=sharing' }, { type: 'video', title: 'Quando indicar cirurgia na endocardite Infecciosa?', duration: '10 min', src: 'https://drive.google.com/file/d/1JD6n9U8kakKvzWw90ucNiKtP3G5zpEOt/view?usp=sharing' }, { type: 'video', title: 'Complicações da endocardite Infecciosa', duration: '9 min', src: 'https://drive.google.com/file/d/1IDqjuk2-yIpCmpO3Zq97tVS2LpfKCDRl/view?usp=sharing' } ] },
+                    { title: "Emergências cardiovasculares na gestação", resources: [ { type: 'video', title: 'Introdução', duration: '6 min', src: 'https://drive.google.com/file/d/1iRcFz45aZEi6Ssnk8XcRyq5nw9_-4CQ5/view?usp=sharing' }, { type: 'video', title: 'IC descompensada na gestação', duration: '10 min', src: 'https://drive.google.com/file/d/1mlMRVXoaEpcJ63zeRzhUOB-hvuBn-90D/view?usp=sharing' }, { type: 'video', title: 'Manejo de anticoagulantes em gestação', duration: '9 min', src: 'https://drive.google.com/file/d/1QYX1qdbHbIi0zDDK28mi2BZn1Zms18xO/view?usp=sharing' }, { type: 'video', title: 'Síndrome coronariana aguda na gestação', duration: '11 min', src: 'https://drive.google.com/file/d/1PAAl_2GZhXuTRCEojffgDOIKmtPzGfAK/view?usp=sharing' }, { type: 'video', title: 'Síndromes hipertensivas gestacionais', duration: '10 min', src: 'https://drive.google.com/file/d/1q4NiVnRndxcwmC3xHjiBF0opxFyrTOEq/view?usp=sharing' }, { type: 'video', title: 'Medida da pressão arterial na gestante', duration: '8 min', src: 'https://drive.google.com/file/d/1zxKuU9L4iQdjnhQljJKg3AXWW6SLHV6p/view?usp=sharing' }, { type: 'video', title: 'Manifestações de pior prognóstico', duration: '9 min', src: 'https://drive.google.com/file/d/1VWIzPE6V-YkzUxyghozxxo5cwI25GeQF/view?usp=sharing' }, { type: 'video', title: 'Prevenção de PE', duration: '8 min', src: 'https://drive.google.com/file/d/1zL2xa7dWdwtMdGNH713VaWeGi5afmXjO/view?usp=sharing' }, { type: 'video', title: 'Tratamento medicamentoso', duration: '10 min', src: 'https://drive.google.com/file/d/1f9taMUIPNUMJDZlbxr4jkpxUb05q2iA1/view?usp=sharing' }, { type: 'video', title: 'Hipertensão grave e tratamento', duration: '11 min', src: 'https://drive.google.com/file/d/1PPlm5abgBci3LASCmpLQk2oH0LHrGTz4/view?usp=sharing' }, { type: 'video', title: 'Sulfatação', duration: '9 min', src: 'https://drive.google.com/file/d/1mcoNmFuL5Gn2j4Euy_kXGdzXmVSmVBX3/view?usp=sharing' }, { type: 'video', title: 'Controle pressórico no puerpério', duration: '10 min', src: 'https://drive.google.com/file/d/1Fi4UZwuHYGgmcUQB-IplpZoidQrV_-b1/view?usp=sharing' } ] },
+                    { title: "Procedimentos", resources: [ { type: 'video', title: 'Introdução: cateter venoso central', duration: '6 min', src: 'https://drive.google.com/file/d/1cxLLJOHkipK3tEkYKHAQ9U3mHMPeY1bd/view?usp=sharing' }, { type: 'video', title: 'Passagem do CVC (Cateter Venoso Central)', duration: '12 min', src: 'https://drive.google.com/file/d/1v6VpN1aIvuvSK89p5Ui9Cq_Obc_83vLs/view?usp=sharing' }, { type: 'video', title: 'Dicas: cateter venoso central', duration: '8 min', src: 'https://drive.google.com/file/d/1-jDRWKvhw0EpV_PnNcJSPnH4PQ0QQVOg/view?usp=sharing' }, { type: 'video', title: 'Cardioversão elétrica sincronizada', duration: '10 min', src: 'https://drive.google.com/file/d/1MdCt8-nf_DBqACrUy4g1eGUGQEcDir1Q/view?usp=sharing' }, { type: 'video', title: 'Pericardiocentese', duration: '11 min', src: 'https://drive.google.com/file/d/1R5ZoCDLn3zBsmO93VblecTzrM3PbEWPZ/view?usp=sharing' }, { type: 'video', title: 'Introdução: balão intra-aórtico', duration: '7 min', src: 'https://drive.google.com/file/d/19eUS0gCEdPcS0LOtjxyZIVxCxzzA2hLD/view?usp=sharing' }, { type: 'video', title: 'Passagem do BIA (Balão Intra-Aórtico)', duration: '12 min', src: 'https://drive.google.com/file/d/1Io9yxXzWPqoVsizS-MPN-YeGHkmbSaGN/view?usp=sharing' }, { type: 'video', title: 'Manejo do dispositivo: balão intra-aórtico', duration: '10 min', src: 'https://drive.google.com/file/d/13Zm8N7Ua6QWVFXBkZ0WH3mGOB6RWKi-b/view?usp=sharing' }, { type: 'video', title: 'Assincronias: balão intra-aórtico', duration: '9 min', src: 'https://drive.google.com/file/d/1V18BM_t8WtII9qrFJ1COUWT0ur8OEUff/view?usp=sharing' } ] },
+                ]
+            },
+            {
+                moduleTitle: "Bônus",
+                lessons: [
+                    { title: "20 Padrões de ECG na Emergência que você deve conhecer", resources: [ { type: 'video', title: 'Introdução: 20 Padrões de ECG na Emergência Que Você Deve Conhecer', duration: '5 min', src: 'https://drive.google.com/file/d/1W_GUjWYANqy89aZVIKbSYHygTiP2jci2/view?usp=sharing'}, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'video', title: 'Aula - Questão 1', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 2', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 3', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 4', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 5', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 6', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 7', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 8', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 9', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 10', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 11', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 12', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 13', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 14', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 15', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 16', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 17', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 18', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 19', duration: '5 min' }, { type: 'video', title: 'Aula - Questão 20', duration: '5 min' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, { type: 'quiz', title: 'Simulado (1/1 questões, 0h2min)' }, ] },
+                    { title: "Imersão em emergências cardiológicas", resources: [ { type: 'video', title: '7 erros que você comete ao interpretar troponina', duration: '15 min', src: 'https://drive.google.com/file/d/1pSlU3IdrHqEDArw_RvyGykMeUCywmTJY/view?usp=sharing' }, { type: 'video', title: 'Como usar drogas vasoativas com segurança?', duration: '18 min', src: 'https://drive.google.com/file/d/1huO6vaLwKM42oIePxISJ6lWpPrZDSY_Z/view?usp=sharing' }, { type: 'video', title: 'Dor torácica na emergência: como eu investigo?', duration: '20 min', src: 'https://drive.google.com/file/d/1OBal-sxhwTEnwd7OSG65YQCMoZmF_kPs/view?usp=sharing' }, { type: 'video', title: 'Discussão de casos', duration: '25 min', src: 'https://drive.google.com/file/d/1DeCFvfvLtWvRtRUASnMVFn6km40MNpEc/view?usp=sharing' } ] }
+                ]
+            },
+            {
+                moduleTitle: "Introdução à Inteligência Artificial na Medicina",
+                lessons: [
+                     { title: "Inteligência Artificial na Medicina", resources: [{ type: 'video', title: 'Conceitos Fundamentais de IA', duration: '15 min', src: 'https://drive.google.com/file/d/1kupnjlUkXABdVOGT0vRmOpr9EPbmS_9x/view?usp=sharing' }, { type: 'video', title: 'Bem-vindo ao futuro', duration: '17 min', src: 'https://drive.google.com/file/d/1uSL-iY70TEqVWYSGP9PHL8_7AX-9erjP/view?usp=sharing' }, { type: 'video', title: 'Visão inicial de como usar IA na Medicina', duration: '14 min', src: 'https://drive.google.com/file/d/1J3Dlmw7i6o1Bz_Cs4YPv9ZnDRcjA-JRk/view?usp=sharing' }, { type: 'video', title: 'IA e aprendizado', duration: '19 min', src: 'https://drive.google.com/file/d/1jeNiUrsw5mOg0PD59e_xfbX6Boz9ozep/view?usp=sharing' }, { type: 'video', title: 'Encerramento', duration: '4 min', src: 'https://drive.google.com/file/d/1xziP5Cgkywz5ItGcu4hLjWJH_nNgD2i_/view?usp=sharing' }] },
+                ]
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elementos da UI
+            const playlistContainer = document.getElementById('course-playlist-content');
+            const initialPlaceholder = document.getElementById('initial-placeholder');
+            const lessonView = document.getElementById('lesson-view');
+            const quizView = document.getElementById('quiz-view');
+            const backToPlaylistBtn = document.getElementById('back-to-playlist');
+            const currentViewTitle = document.getElementById('current-view-title');
+            const lessonViewTitle = document.getElementById('lesson-view-title');
+            const lessonViewIframe = document.getElementById('lesson-view-iframe');
+            const quizViewTitle = document.getElementById('quiz-view-title');
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+            let notificationTimeout;
+            let activeResourceItem = null;
+
+            // Função para mostrar notificação
+            const showNotification = (message) => {
+                notificationMessage.textContent = message;
+                notification.classList.remove('hidden', 'opacity-0');
+                notification.classList.add('opacity-100');
+                if(notificationTimeout) clearTimeout(notificationTimeout);
+                notificationTimeout = setTimeout(() => {
+                    notification.classList.remove('opacity-100');
+                    notification.classList.add('opacity-0');
+                    setTimeout(() => notification.classList.add('hidden'), 300);
+                }, 3000);
+            };
+            
+            // Função para resetar a visualização principal
+            const resetMainView = () => {
+                lessonView.classList.add('hidden');
+                quizView.classList.add('hidden');
+                initialPlaceholder.classList.remove('hidden');
+                currentViewTitle.textContent = '';
+                backToPlaylistBtn.classList.add('hidden');
+                lessonViewIframe.src = 'about:blank';
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = null;
+                }
+            };
+
+            // Função para abrir a visualização do recurso (vídeo ou quiz)
+            const openResourceView = (resource, resourceElement) => {
+                // Esconde o placeholder inicial
+                initialPlaceholder.classList.add('hidden');
+                
+                // Remove o destaque do item ativo anterior
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                }
+                
+                // Adiciona destaque ao novo item clicado
+                if (resourceElement) {
+                    resourceElement.classList.add('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = resourceElement;
+                }
+
+                if (resource.type === 'video' && resource.src) {
+                    lessonViewTitle.textContent = resource.title;
+                    lessonViewIframe.src = convertToEmbedUrl(resource.src);
+                    quizView.classList.add('hidden');
+                    lessonView.classList.remove('hidden');
+                } else if (resource.type === 'quiz') {
+                    quizViewTitle.textContent = resource.title;
+                    lessonView.classList.add('hidden');
+                    quizView.classList.remove('hidden');
+                } else {
+                    showNotification('Este recurso não está disponível no momento.');
+                    // Se o recurso não estiver disponível, remove o destaque
+                    if(activeResourceItem) {
+                         activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                         activeResourceItem = null;
+                    }
+                    // E se nenhuma outra aula estiver sendo exibida, mostra o placeholder
+                    if (lessonView.classList.contains('hidden') && quizView.classList.contains('hidden')) {
+                         initialPlaceholder.classList.remove('hidden');
+                    }
+                }
+            };
+            
+            // Gerar o HTML da playlist
+            playlistContainer.innerHTML = courseData.map((module, moduleIdx) => `
+                <div>
+                    <h3 class="font-bold text-lg px-2 pt-4 pb-2 text-pink-400">${module.moduleTitle}</h3>
+                    <div class="space-y-2">
+                        ${module.lessons.map((lesson, lessonIdx) => `
+                            <div class="lesson-group bg-gray-800 rounded-lg">
+                                <button class="accordion-header w-full flex justify-between items-center p-3 text-left font-semibold text-gray-300 hover:bg-gray-700/50 transition-colors"
+                                        data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}">
+                                    <span class="truncate">${lesson.title}</span>
+                                    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform flex-shrink-0 ml-2"></i>
+                                </button>
+                                <div class="accordion-content" style="max-height: 0px;">
+                                    <div class="p-2 space-y-1 border-t border-gray-700">
+                                        ${lesson.resources.map((resource, resourceIdx) => {
+                                            const icon = resource.type === 'video' ? 'play-circle' : 'help-circle';
+                                            return `
+                                            <div class="resource-item flex justify-between items-center p-3 rounded-md text-sm hover:bg-pink-600/20 cursor-pointer transition-colors" 
+                                                 data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}" data-resource-idx="${resourceIdx}">
+                                                <div class="flex items-center overflow-hidden">
+                                                    <i data-lucide="${icon}" class="w-5 h-5 mr-3 text-gray-400 flex-shrink-0"></i>
+                                                    <div class="truncate">
+                                                        <p class="truncate">${resource.title}</p>
+                                                        ${resource.duration ? `<p class="text-xs text-gray-500">${resource.duration}</p>` : ''}
+                                                    </div>
+                                                </div>
+                                                <div class="completion-marker ml-2">
+                                                    <i data-lucide="circle" class="w-4 h-4 text-gray-600"></i>
+                                                </div>
+                                            </div>`
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Adicionar event listeners
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const { moduleIdx, lessonIdx, resourceIdx } = item.dataset;
+                    const resource = courseData[moduleIdx].lessons[lessonIdx].resources[resourceIdx];
+                    openResourceView(resource, item);
+                });
+            });
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const { moduleIdx, lessonIdx } = header.dataset;
+                    const lesson = courseData[moduleIdx].lessons[lessonIdx];
+                    
+                    // --- NOVA FUNCIONALIDADE ---
+                    // Encontra o primeiro vídeo disponível na aula
+                    const firstVideo = lesson.resources.find(res => res.type === 'video' && res.src);
+                    if (firstVideo) {
+                        // Encontra o elemento DOM correspondente para destacar
+                        const resourceElement = header.nextElementSibling.querySelector(`.resource-item[data-resource-idx="${lesson.resources.indexOf(firstVideo)}"]`);
+                        openResourceView(firstVideo, resourceElement);
+                    } else {
+                        // Se não houver vídeo, apenas notifica ou não faz nada
+                        showNotification('Nenhum vídeo disponível para esta aula.');
+                    }
+                    // --- FIM DA NOVA FUNCIONALIDADE ---
+
+                    // Lógica para expandir/recolher o accordion
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i[data-lucide]');
+                    const isExpanded = content.style.maxHeight !== '0px';
+
+                    // Fecha todos os outros accordions
+                    document.querySelectorAll('.accordion-content').forEach(otherContent => {
+                        if (otherContent !== content) {
+                            otherContent.style.maxHeight = '0px';
+                            otherContent.previousElementSibling.querySelector('i[data-lucide]').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    // Abre ou fecha o accordion clicado
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+            
+            // O botão de voltar agora reseta a view
+            backToPlaylistBtn.addEventListener('click', resetMainView); 
+
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

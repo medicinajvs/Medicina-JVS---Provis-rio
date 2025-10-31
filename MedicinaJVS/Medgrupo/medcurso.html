@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Estudos por Especialidade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+            overflow-x: hidden;
+        }
+        .module-list-item {
+            background-color: #2d3748; /* Slightly lighter dark shade */
+            border-radius: 0.5rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+            border: 1px solid #4a5568; /* Subtle border */
+        }
+        .module-list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .module-list-item.active {
+            border-left: 4px solid #63b3ed; /* Blue accent for active */
+            background-color: #4a5568; /* Darker shade for active */
+        }
+        .details-section-container {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            border: 1px solid #4a5568;
+            height: calc(100vh - 84px); /* Full height minus header and padding */
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Scroll for content list */
+            scrollbar-width: thin;
+            scrollbar-color: #718096 #2d3748;
+        }
+        .details-section-container::-webkit-scrollbar { width: 6px; }
+        .details-section-container::-webkit-scrollbar-track { background: #2d3748; border-radius: 10px; }
+        .details-section-container::-webkit-scrollbar-thumb { background: #718096; border-radius: 10px; }
+        .details-section-container::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+
+        .content-viewer-wrapper { /* Parent for player and overlay topics menu */
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            background-color: #000;
+            border-radius: 0.375rem;
+            overflow: hidden; /* Important for absolute children if they are larger */
+            flex-shrink: 0;
+        }
+        #player-div, #module-content-viewer { /* Player and GDrive iframe */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        #details-content-list-container { flex-grow: 1; overflow-y: auto; min-height: 120px; }
+        .content-item { border-bottom: 1px solid #4a5568; transition: background-color 0.15s ease-in-out; }
+        .content-item:hover { background-color: #4a5568; }
+        .content-item:last-child { border-bottom: none; }
+        .content-item.active-content { background-color: #3b82f6; color: white; }
+        .content-item.active-content .content-title,
+        .content-item.active-content .content-status,
+        .content-item.active-content svg { color: white; stroke: white; }
+
+        .module-icon-box { width: 60px; height: 60px; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 0.875rem; color: white; font-weight: 600; flex-shrink: 0; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #2d3748; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #718096; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+        .specialty-header { font-size: 0.875rem; font-weight: 700; color: #cbd5e1; margin-bottom: 0.75rem; padding-top: 0.5rem; text-align: center; text-transform: uppercase; border-bottom: 1px solid #4a5568; padding-bottom: 0.25rem; }
+        .label-icon-container { min-height: 2.25rem; display: flex; align-items: center; justify-content: center; }
+        .item-count { font-size: 0.875rem; font-weight: 600; color: #e2e8f0; display: block; margin-top: 0.125rem; text-align: center; }
+        .module-title { text-align: center; }
+        
+        /* Styles for the topics menu - overlay */
+        #topics-menu {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0; /* Full height of parent */
+            width: 300px; /* Example fixed width, adjust as needed */
+            background-color: rgba(45, 55, 72, 0.95); /* #2d3748 with opacity */
+            z-index: 20; /* Below toggle button, above player */
+            padding: 1rem; /* Tailwind p-4 */
+            border-left: 1px solid #4a5568; /* Optional separator */
+            overflow-y: auto;
+        }
+        .topics-item { 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.3rem; 
+            border-bottom: 1px solid #4a5568; 
+            color: #cbd5e1; 
+        }
+        .topics-item:last-child { border-bottom: none; }
+        .topics-item.clickable { cursor: pointer; }
+        .topics-item.clickable:hover { background-color: #4a5568; }
+        .topics-item.clickable:hover .topic-title,
+        .topics-item.clickable:hover .topic-time { color: #90cdf4; } 
+        .topics-item.clickable:hover .play-icon { fill: #90cdf4; stroke: #90cdf4; }
+
+
+        .topic-title-container {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            margin-right: 0.5rem; 
+        }
+        .play-icon {
+            width: 1rem; 
+            height: 1rem; 
+            margin-right: 0.5rem; 
+            fill: #9ca3af; /* Fill for solid icon */
+            stroke: #9ca3af; /* Keep stroke for consistency or remove if fill is enough */
+        }
+        .topic-title {
+            font-size: 0.875rem; 
+            font-weight: 500; 
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .topic-time { 
+            font-size: 0.75rem; 
+            color: #9ca3af; 
+            flex-shrink: 0;
+        }
+
+        /* Gradient classes for module icons */
+        .gradient-gray { background-image: linear-gradient(to bottom right, #6b7280, #4b5563); } 
+        .gradient-red-pink { background-image: linear-gradient(to bottom right, #ef4444, #ec4899); } 
+        .gradient-sky-blue { background-image: linear-gradient(to bottom right, #38bdf8, #0ea5e9); } 
+        .gradient-amber-orange { background-image: linear-gradient(to bottom right, #f59e0b, #f97316); } 
+        .gradient-lime-emerald { background-image: linear-gradient(to bottom right, #84cc16, #10b981); } 
+        .gradient-fuchsia-pink-alt { background-image: linear-gradient(to bottom right, #c026d3, #db2777); } 
+        .gradient-yellow-orange-dark { background-image: linear-gradient(to bottom right, #eab308, #d97706); } 
+        .gradient-violet-grape { background-image: linear-gradient(to bottom right, #8b5cf6, #7c3aed); } 
+        .gradient-cyan-sky { background-image: linear-gradient(to bottom right, #06b6d4, #0ea5e9); } 
+        .gradient-indigo-deepPurple { background-image: linear-gradient(to bottom right, #6366f1, #8b5cf6); } 
+        .gradient-lightGreen-green { background-image: linear-gradient(to bottom right, #86efac, #22c55e); } 
+        .gradient-blueGray-slate { background-image: linear-gradient(to bottom right, #64748b, #475569); } 
+        .gradient-cyan-lightBlue { background-image: linear-gradient(to bottom right, #22d3ee, #38bdf8); } 
+        .gradient-indigo-violet { background-image: linear-gradient(to bottom right, #6366f1, #7c3aed); } 
+        .gradient-magenta-purple { background-image: linear-gradient(to bottom right, #d946ef, #a855f7); } 
+        .gradient-green-teal { background-image: linear-gradient(to bottom right, #10b981, #14b8a6); }  
+        .gradient-pink-purple { background-image: linear-gradient(to bottom right, #ec4899, #a855f7); } 
+        .gradient-rose-fuchsia { background-image: linear-gradient(to bottom right, #f43f5e, #d946ef); } 
+        .gradient-yellow-amber { background-image: linear-gradient(to bottom right, #f59e0b, #facc15); } 
+        .gradient-teal-cyan { background-image: linear-gradient(to bottom right, #14b8a6, #06b6d4); } 
+
+        /* Responsive adjustments for overall layout */
+        @media (max-width: 1023px) { 
+            .main-content-flex { flex-direction: column; height: auto; }
+            #modules-list-column { width: 100%; max-height: 45vh; margin-bottom: 1rem; height: auto; }
+            #details-column { width: 100%; height: auto; }
+            .details-section-container { height: auto; max-height: none; }
+            .content-viewer-wrapper { min-height: 250px; } /* Ensure player has some height */
+            #details-content-list-container{ max-height: 200px; height: auto; }
+            #topics-menu {
+                width: 80%; 
+                max-width: 300px; /* Ensure overlay menu is not too wide on mobile */
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <header class="bg-gray-800 shadow-md py-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+        <div class="container mx-auto flex justify-between items-center max-w-full px-4">
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-100">Plataforma de Estudos</h1>
+            <div class="relative">
+                <input type="search" id="search-input" placeholder="Pesquisar módulos ou especialidades..." class="pl-10 pr-4 py-2 rounded-lg border bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:px-8 max-w-full" style="height: calc(100vh - 60px);">
+        <div class="flex flex-col lg:flex-row gap-6 main-content-flex h-full">
+            <div id="modules-list-column" class="w-full lg:w-1/3 xl:w-1/4 h-full overflow-hidden">
+                <div id="modules-list-container" class="custom-scrollbar pr-2 h-full overflow-y-auto">
+                    </div>
+            </div>
+
+            <div id="details-column" class="w-full lg:w-2/3 xl:w-3/4 h-full">
+                <div id="details-panel" class="details-section-container p-4 sm:p-6">
+                    
+                    <div class="content-viewer-wrapper w-full mb-4">
+                        <div id="player-div"></div>
+                        <iframe 
+                            id="module-content-viewer" 
+                            class="hidden"
+                            src="about:blank" 
+                            title="Visualizador de Conteúdo do Módulo"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allowfullscreen>
+                        </iframe>
+                        <button id="toggle-topics-button" title="Opções" class="absolute top-2 right-2 z-30 bg-gray-700 hover:bg-gray-600 text-white text-sm py-1.5 px-3 rounded-md flex items-center focus:outline-none hidden">
+                            <span class="mr-2">Opções</span>
+                            <svg id="topics-icon-open" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <svg id="topics-icon-close" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <div id="topics-menu" class="custom-scrollbar hidden"> 
+                             <h4 class="text-base font-semibold text-gray-100 mb-3 sticky top-0 py-2" style="background-color: rgba(45, 55, 72, 0.95);">Assuntos desse vídeo</h4>
+                             <ul id="topics-list" class="space-y-1">
+                                 </ul>
+                             <p id="no-topics-message" class="text-gray-400 text-xs hidden p-2">Nenhum tópico disponível para esta aula.</p>
+                        </div>
+                    </div>
+                                    
+                    <h3 id="materials-header" class="text-sm font-semibold text-gray-300 mb-2 flex-shrink-0 text-center">MATERIAIS DO MÓDULO:</h3>
+                    <div id="details-content-list-container" class="custom-scrollbar">
+                        <div id="details-content-list">
+                             <p class="text-gray-400 initial-details-message">Selecione um módulo para ver os materiais.</p>
+                             </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <template id="module-list-item-template">
+        <div class="module-list-item p-3 flex items-center gap-3">
+            <div class="module-icon-box flex-shrink-0">
+                </div>
+            <div class="flex-grow overflow-hidden flex flex-col items-center"> 
+                <h3 class="module-title relative text-sm font-semibold text-gray-100" style="white-space: normal; overflow-wrap: break-word; line-height: 1.4; left: -36px;">Título do Módulo</h3>
+                <div class="mt-2 grid grid-cols-3 gap-x-2 sm:gap-x-3 w-full"> 
+                    <div class="progress-item text-center">
+                        <div class="label-icon-container text-xs text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1 text-blue-400"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Aulas
+                        </div>
+                        <span class="item-count aulas-count">0</span>
+                    </div>
+                    <div class="progress-item text-center">
+                        <div class="label-icon-container text-xs text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1 text-green-400"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                            Apostilas
+                        </div>
+                        <span class="item-count apostilas-count">0</span>
+                    </div>
+                    <div class="progress-item text-center"> 
+                        <div class="label-icon-container text-xs text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1 text-yellow-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path></svg>
+                            Aulas Bônus
+                        </div>
+                        <span class="item-count aulasBonus-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="content-item-template">
+        <div class="content-item py-2.5 px-2 hover:bg-gray-700 rounded-md cursor-pointer">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="content-title text-sm text-gray-300 font-medium truncate">Título do Conteúdo</span>
+                </div>
+                <span class="content-status text-xs text-gray-400"></span>
+            </div>
+        </div>
+    </template>
+    
+    <script src="https://www.youtube.com/iframe_api"></script> <script>
+        // Constants for DOM elements
+        const modulesListContainer = document.getElementById('modules-list-container');
+        const moduleListItemTemplate = document.getElementById('module-list-item-template');
+        const gDriveViewer = document.getElementById('module-content-viewer'); 
+        const playerDiv = document.getElementById('player-div'); 
+        const detailsContentList = document.getElementById('details-content-list');
+        const contentItemTemplate = document.getElementById('content-item-template');
+        const searchInput = document.getElementById('search-input');
+        const materialsHeader = document.getElementById('materials-header'); 
+        const toggleTopicsButton = document.getElementById('toggle-topics-button');
+        const topicsMenuDiv = document.getElementById('topics-menu');
+        const topicsListUl = document.getElementById('topics-list'); 
+        const noTopicsMessage = document.getElementById('no-topics-message');
+        const topicsIconOpen = document.getElementById('topics-icon-open');
+        const topicsIconClose = document.getElementById('topics-icon-close');
+
+        // Global state variables
+        let currentModuleId = 0;
+        let ytPlayer; // This will hold the current YouTube player instance
+        let youtubeApiReady = false;
+        let activeModuleCard = null; 
+        let activeContentItem = null; 
+
+        // Icons for content types in the details list
+        const contentIcons = { 
+            aulas: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400 mr-2 flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>',
+            apostilas: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400 mr-2 flex-shrink-0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
+            aulasbonus: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-400 mr-2 flex-shrink-0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path></svg>', 
+        };
+        const subItemOrder = ['aulas', 'apostilas', 'aulasBonus']; 
+
+        // Gradient classes for module icons
+        const gradientClasses = [
+            'gradient-red-pink', 'gradient-sky-blue', 'gradient-amber-orange', 'gradient-lime-emerald',
+            'gradient-fuchsia-pink-alt', 'gradient-yellow-orange-dark', 'gradient-violet-grape', 'gradient-cyan-sky',
+            'gradient-indigo-deepPurple', 'gradient-lightGreen-green', 'gradient-blueGray-slate', 'gradient-cyan-lightBlue',
+            'gradient-indigo-violet', 'gradient-magenta-purple', 'gradient-green-teal', 'gradient-pink-purple',
+            'gradient-rose-fuchsia', 'gradient-yellow-amber', 'gradient-teal-cyan', 'gradient-gray'
+        ];
+        
+        // Sample topics to be used as placeholders - kept for aulas/aulasBonus that don't have specific topics defined
+        const genericSampleTopics = [];
+
+        // --- YouTube API and Player Functions ---
+        function onYouTubeIframeAPIReady() {
+            youtubeApiReady = true;
+            console.log("YouTube IFrame API Ready");
+        }
+
+        function destroyYouTubePlayer() {
+            if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+                console.log("Destroying previous YouTube player instance");
+                ytPlayer.destroy();
+            }
+            ytPlayer = null; // Reset the global player variable
+            if (playerDiv) playerDiv.innerHTML = ''; 
+        }
+        
+        function loadYouTubeVideo(videoId, topicsData) {
+            destroyYouTubePlayer(); 
+            gDriveViewer.classList.add('hidden'); 
+            gDriveViewer.src = 'about:blank';    
+            playerDiv.classList.remove('hidden'); 
+            playerDiv.innerHTML = ''; 
+
+            // Initial population for button visibility, topics won't be clickable yet.
+            // Pass null for playerInstance as it's not ready.
+            if (topicsData && topicsData.length > 0) {
+                populateTopicsMenu(topicsData, true, null); 
+            } else {
+                clearTopicsMenu('Nenhum tópico definido para esta aula.'); 
+            }
+
+            if (videoId && (videoId.startsWith("ID_YOUTUBE_") || videoId.startsWith("LINK_GOOGLE_DRIVE_") )) { 
+                playerDiv.innerHTML = `<div class="w-full h-full flex items-center justify-center text-gray-400 p-4">Substitua o placeholder '${videoId}' pela URL real do conteúdo.</div>`;
+                return;
+            }
+            
+            if (!youtubeApiReady) {
+                console.warn("YouTube API not ready. Player creation deferred. Waiting...");
+                playerDiv.innerHTML = '<p class="text-gray-400 p-4">Carregando API do YouTube...</p>';
+                const checkReadyAndLoad = () => {
+                    if (youtubeApiReady) {
+                        console.log("YouTube API is now ready. Proceeding to load video.");
+                        loadYouTubeVideo(videoId, topicsData); // Re-call the function now that API is ready
+                    } else {
+                        console.log("Still waiting for YouTube API...");
+                        setTimeout(checkReadyAndLoad, 500); 
+                    }
+                };
+                setTimeout(checkReadyAndLoad, 500);
+                return;
+            }
+            
+            console.log("Attempting to create YouTube player for videoId:", videoId);
+            // Assign to global ytPlayer. The specific instance is passed to populateTopicsMenu via onReady.
+            ytPlayer = new YT.Player('player-div', { 
+                height: '100%', 
+                width: '100%', 
+                videoId: videoId,
+                playerVars: { 
+                    'playsinline': 1, 
+                    'autoplay': 1, 
+                    'rel': 0,
+                    'controls': 1,        
+                    'modestbranding': 1,  
+                    'iv_load_policy': 3,  
+                    'fs': 1               
+                }, 
+                events: {
+                    'onReady': (event) => { 
+                        console.log("YouTube Player Ready. Video ID:", videoId, "Player instance:", event.target);
+                        // Re-populate topics with the now ready player instance to make them clickable
+                        if (topicsData && topicsData.length > 0) {
+                            populateTopicsMenu(topicsData, true, event.target); // Pass the specific player instance
+                        }
+                    },
+                    'onError': (event) => {
+                        console.error("YouTube Player Error:", event.data, "Video ID:", videoId);
+                        playerDiv.innerHTML = `<p class="text-red-400 p-4">Erro ao carregar o vídeo do YouTube. Verifique o ID do vídeo ('${videoId}') ou a conexão.</p>`;
+                    }
+                }
+            });
+        }
+
+        // --- Utility Functions ---
+        const gDriveTransformLink = (link) => { 
+            if (link && typeof link === 'string' && link.includes('drive.google.com') && !link.startsWith("LINK_GOOGLE_DRIVE_")) { 
+                return link.replace('/view?usp=drive_link', '/preview?usp=drive_link')
+                           .replace('/view?usp=sharing', '/preview?usp=sharing');
+            }
+            return link; 
+        };
+
+        function parseYouTubeVideoId(url) {
+            if (!url) return null;
+            const patterns = [
+                /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                /googleusercontent\.com\/youtube\.com\/(\d+)/, 
+                /^ID_YOUTUBE_AULA(?:_BONUS)?_MODULO_([a-zA-Z0-9_]+)_(\d+)$/ 
+            ];
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match && match[1]) {
+                    if (pattern.source.includes('googleusercontent')) { 
+                        return match[1]; 
+                    } else if (pattern.source.startsWith("^ID_YOUTUBE_AULA")){ 
+                        return url; 
+                    } else if (match[1].length === 11) { 
+                        return match[1]; 
+                    }
+                }
+            }
+            return null;
+        }
+        
+        function parseTimeToSeconds(timeStr) { 
+            if (!timeStr || typeof timeStr !== 'string') return 0;
+            const parts = timeStr.split(':').map(Number);
+            let seconds = 0;
+            if (parts.length === 3) { 
+                seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else if (parts.length === 2) { 
+                seconds = parts[0] * 60 + parts[1];
+            } else if (parts.length === 1) { 
+                seconds = parts[0];
+            }
+            return seconds;
+        }
+
+        // --- Module and Content Creation ---
+        const createModule = (specialty, shortcode, title, subtitle, contentCounts, iconType, contentLinks) => {
+            currentModuleId++; 
+            
+            const aulasPlaceholders = Array(contentCounts.aulas).fill(null).map((_, i) => {
+                const linkData = contentLinks.aulas && contentLinks.aulas[i];
+                let url, type, topics, displayTitle;
+
+                if (linkData && typeof linkData === 'object') { 
+                    url = linkData.url || `ID_YOUTUBE_AULA_MODULO_${title.replace(/\s+/g, '_')}_${i + 1}`;
+                    topics = linkData.topics || genericSampleTopics; 
+                    displayTitle = linkData.customTitle || `Aula ${i + 1}`;
+                    
+                    const ytId = parseYouTubeVideoId(url);
+                    if (ytId && (ytId.length === 11 || ytId.startsWith("ID_YOUTUBE_") || !isNaN(parseInt(ytId)))) {
+                        url = ytId; 
+                        type = 'youtube';
+                    } else { 
+                        url = gDriveTransformLink(url);
+                        type = 'gdrive'; 
+                    }
+                } else { 
+                    displayTitle = `Aula ${i + 1}`;
+                    url = (typeof linkData === 'string' && linkData) ? linkData : `ID_YOUTUBE_AULA_MODULO_${title.replace(/\s+/g, '_')}_${i + 1}`;
+                    const ytId = parseYouTubeVideoId(url);
+                     if (ytId && (ytId.length === 11 || ytId.startsWith("ID_YOUTUBE_") || !isNaN(parseInt(ytId)))) {
+                        type = 'youtube';
+                        url = ytId;
+                    } else {
+                        type = 'gdrive';
+                        url = gDriveTransformLink(url);
+                    }
+                    topics = genericSampleTopics; 
+                }
+                return { title: displayTitle, url: url, type: type, topics: topics };
+            });
+
+            const aulasBonusPlaceholders = Array(contentCounts.aulasBonus).fill(null).map((_, i) => {
+                const linkData = contentLinks.aulasBonus && contentLinks.aulasBonus[i];
+                let url, type, topics, displayTitle;
+
+                if (linkData && typeof linkData === 'object') {
+                    url = linkData.url || `LINK_GOOGLE_DRIVE_AULA_BONUS_MODULO_${title.replace(/\s+/g, '_')}_${i + 1}`; // Default to GDrive placeholder
+                    topics = linkData.topics || []; // Default to empty topics for GDrive type
+                    displayTitle = linkData.customTitle || `Aula Bônus ${i + 1}`;
+                    
+                    const ytId = parseYouTubeVideoId(url);
+                     // If it's explicitly a YouTube ID or a YouTube placeholder, treat as YouTube
+                    if (ytId && (ytId.length === 11 || ytId.startsWith("ID_YOUTUBE_")) && !url.startsWith("LINK_GOOGLE_DRIVE_")) {
+                        url = ytId;
+                        type = 'youtube';
+                        topics = linkData.topics || genericSampleTopics; // YouTube can have generic topics if specific are missing
+                    } else { // Otherwise, treat as Google Drive
+                        url = gDriveTransformLink(url);
+                        type = 'gdrive';
+                    }
+                } else { // Fallback: No specific linkData object, create GDrive placeholder
+                    displayTitle = `Aula Bônus ${i + 1}`;
+                    url = (typeof linkData === 'string' && linkData) ? gDriveTransformLink(linkData) : `LINK_GOOGLE_DRIVE_AULA_BONUS_MODULO_${title.replace(/\s+/g, '_')}_${i + 1}`;
+                    type = 'gdrive';
+                    topics = [];
+                }
+                return { title: displayTitle, url: url, type: type, topics: topics };
+            });
+
+            const apostilasPlaceholders = Array(contentCounts.apostilas).fill(null).map((_, i) => {
+                const linkData = contentLinks.apostilas && contentLinks.apostilas[i];
+                let url, displayTitle;
+
+                if (linkData && typeof linkData === 'object') {
+                    url = linkData.url || `LINK_GOOGLE_DRIVE_APOSTILA_MODULO_${title.replace(/\s+/g, '_')}_${i + 1}`;
+                    displayTitle = linkData.customTitle || `Apostila ${i + 1}`;
+                } else {
+                    displayTitle = `Apostila ${i + 1}`;
+                     url = (typeof linkData === 'string' && linkData) ? linkData : `LINK_GOOGLE_DRIVE_APOSTILA_MODULO_${title.replace(/\s+/g, '_')}_${i + 1}`;
+                }
+                return { 
+                    title: displayTitle, 
+                    url: gDriveTransformLink(url), 
+                    type: 'gdrive', 
+                    topics: [] 
+                };
+            });
+
+            return { 
+                specialty, id: currentModuleId, shortcode, title, subtitle, iconType, 
+                content: { aulas: aulasPlaceholders, apostilas: apostilasPlaceholders, aulasBonus: aulasBonusPlaceholders },
+                contentCounts: contentCounts 
+            };
+        };
+        
+        // --- Data Definition ---
+        // User should manually populate contentLinks.aulas, .apostilas, .aulasBonus with objects
+        // containing url, topics (if applicable), and customTitle (if desired).
+        // createModule will use these or generate defaults if arrays are empty/sparse.
+        let gradientIconIndex = 0;
+        const newSpecialtiesWithModules = [
+            {
+                name: "Introdução",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Introdução",
+                        shortcode: "INT",
+                        contentCounts: { aulas: 1, apostilas: 0, aulasBonus: 0 },
+                        contentLinks: {
+                            aulas: [{ url: "https://drive.google.com/file/d/1Rtt3SvLT8r4jCrNDvucCbzPkovI5_jFO/preview?usp=drive_link", customTitle: "Aula 01 - Princípios Fundamentais da Medicina" }],
+                            apostilas: [],
+                            aulasBonus: []
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Cardiologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Cardiologia I",
+                        shortcode: "CAR I",
+                        contentCounts: { aulas: 7, apostilas: 1, aulasBonus: 4 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1eBZ0HvP8as1UlEPQ2gwoJSyy35VZU0Ua/preview?usp=drive_link", customTitle: "Aula 01 - Eletrocardiograma Normal" },
+                                { url: "https://drive.google.com/file/d/1eGI_lwqEDUJQ9ok0MvBjDFTnamwaE2dM/preview?usp=drive_link", customTitle: "Aula 02 - Eletrocardiograma das Taquiarritmias" },
+                                { url: "https://drive.google.com/file/d/1eHJdCXD0knD1HohAnFkCq_vnr0Q_FsPT/preview?usp=drive_link", customTitle: "Aula 03 - Fibrilação e Flutter Atrial" },
+                                { url: "https://drive.google.com/file/d/1eH4HOYw2iEoykzr_yaC8O8tZuvgbLyQ4/preview?usp=drive_link", customTitle: "Aula 04 - Taquicardia Supraventricular Paroxística" },
+                                { url: "https://drive.google.com/file/d/1eCNnlH-Me5UiiRreKbKi8n_zO3EChxrh/preview?usp=drive_link", customTitle: "Aula 05 - Taquicardia Ventricular" },
+                                { url: "https://drive.google.com/file/d/1eC0Jxk3wQ6oYcVbBJSZu20ZHnDcA6vbp/preview?usp=drive_link", customTitle: "Aula 06 - Bradiarritmias e PCR: Parte I" },
+                                { url: "https://drive.google.com/file/d/1PiEHxD7OQvclMlLhVbFb0t2KuiZ3lBL_/preview?usp=drive_link", customTitle: "Aula 07 - Bradiarritmias e PCR: Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1NN1am0Na78eXWsdy-z491UAXhqkbgDy7/preview?usp=drive_link", customTitle: "Apostila - Arritmias Cardíacas e Morte Súbita" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1e9ziV4cg7xeg7K68f8IJVXxO19eyrDHn/preview?usp=drive_link", customTitle: "Aula 01 - Anatomia Cardíaca" },
+                                { url: "https://drive.google.com/file/d/1e8Iq0mXD-BmqUpntzEsTNGXfoTJa2Pyd/preview?usp=drive_link", customTitle: "Aula 02 - Marca-Passo: Conceitos Básicos" },
+                                { url: "https://drive.google.com/file/d/1QDf7rbUscVQdHdeyl-BJP9iZDFhZaBRz/preview?usp=drive_link", customTitle: "Aula 03 - Marca-Passo: Funcionamento do Marca-Passo Definitivo" },
+                                { url: "https://drive.google.com/file/d/1e8bH1fgIRTzRa10KivEsmuBXjzOZlEA2/preview?usp=drive_link", customTitle: "Aula 04 - Bloqueios de Ramo" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Cardiologia II",
+                        shortcode: "CAR II",
+                        contentCounts: { aulas: 11, apostilas: 1, aulasBonus: 7 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1dw19f7BRJPvXgfnRSmuHkBYAyEAyQjg3/preview?usp=drive_link", customTitle: "Aula 01 - Insuficiência Cardíaca: Parte I" },
+                                { url: "https://drive.google.com/file/d/1dv6spBEL3Cg0A07Hm2ZOboy7wjZ0XScS/preview?usp=drive_link", customTitle: "Aula 02 - Insuficiência Cardíaca: Parte II" },
+                                { url: "https://drive.google.com/file/d/1dsb36rx3rIOZLjqGgioUlZGD4yFl7UfZ/preview?usp=drive_link", customTitle: "Aula 03 - Aula Especial: Insuficiência Cardíaca Aguda" },
+                                { url: "https://drive.google.com/file/d/1dt2mnIdgn8AtyTkQgwaAw68KKSj3U98z/preview?usp=drive_link", customTitle: "Aula 04 - Hipertensão Arterial Sistêmica: Abordagem Principal" },
+                                { url: "https://drive.google.com/file/d/1dqv6ULCODDsfvj1uJxQy0TEMY89qRF6x/preview?usp=drive_link", customTitle: "Aula 05 - Hipertensão Arterial Sistêmica: Hipertensão Secundária" },
+                                { url: "https://drive.google.com/file/d/1dr0vv5OzLSfdpTzwkmzeGzvNSUNBgWoB/preview?usp=drive_link", customTitle: "Aula 06 - Hipertensão Arterial Sistêmica: Crise Hipertensiva" },
+                                { url: "https://drive.google.com/file/d/1dtoqHjj23qJG4xC4GMUp5k-z5vm0lYGC/preview?usp=drive_link", customTitle: "Aula 07 - Valvopatias: Conceitos Iniciais" },
+                                { url: "https://drive.google.com/file/d/1drRpoYSY9Ck8RIcJrMu-MsjL2Z5gY8Ox/preview?usp=drive_link", customTitle: "Aula 08 - Valvopatias: Estenose Mitral" },
+                                { url: "https://drive.google.com/file/d/1drLQn2Z2FadZ1wLFdX_v9vymee_IeUVV/preview?usp=drive_link", customTitle: "Aula 09 - Valvopatias: Estenose Aórtica" },
+                                { url: "https://drive.google.com/file/d/1PIe_sEFF80I3tdaqrBDjE2q8jPJnvezO/preview?usp=drive_link", customTitle: "Aula 10 - Valvopatias: Insuficiência Mitral" },
+                                { url: "https://drive.google.com/file/d/1dvfQIx0CLR0S9JKUPIzJiN6jNw07EPRF/preview?usp=drive_link", customTitle: "Aula 11 - Valvopatias: Insuficiência Aórtica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1dxHu1ODiCxlmcwdpb3I9oZPXvA-A7MTM/preview?usp=drive_link", customTitle: "Apostila - Insuficiência Cardíaca e Suas Causas" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1dzSpsSEz93cyXcIfJQwbsewpoMrXjyEa/preview?usp=drive_link", customTitle: "Aula 01 - Insuficiência Cardíaca Aguda" },
+                                { url: "https://drive.google.com/file/d/1dxai-lESPGfa7CYAoUbQio_wA6h68ggP/preview?usp=drive_link", customTitle: "Aula 02 - Cardiomiopatia Dilatada" },
+                                { url: "https://drive.google.com/file/d/1dyh6Ppy5GcKVuTCKgK6unLKBA57c31Rg/preview?usp=drive_link", customTitle: "Aula 03 - Cardiomiopatia Hipertrófica" },
+                                { url: "https://drive.google.com/file/d/1dxja9tQmT_Zkv7KZfqBcQeC3X9eAit5d/preview?usp=drive_link", customTitle: "Aula 04 - Cardiomiopatia Restritiva" },
+                                { url: "https://drive.google.com/file/d/1dz0yXO5O0BWL3lqtQeukU152jIUFBtkD/preview?usp=drive_link", customTitle: "Aula 05 - Cardiomiopatia de Estresse" },
+                                { url: "https://drive.google.com/file/d/1dxoN0Ex9C3KyT3MyOlAumdmkib4ZSMKF/preview?usp=drive_link", customTitle: "Aula 06 - Pericardiopatias" },
+                                { url: "https://drive.google.com/file/d/1e08WkBSTEKYTX1g3CA4OXtUNyesM44vq/preview?usp=drive_link", customTitle: "Aula 07 - Hipertensão Pulmonar" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Cardiologia III",
+                        shortcode: "CAR III",
+                        contentCounts: { aulas: 2, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1dgcZ0Ulc8LGMlRvEmb38J7tt2Np2qOdy/preview?usp=drive_link", customTitle: "Aula 01 - Síndromes Coronarianas: Parte I" },
+                                { url: "https://drive.google.com/file/d/1QTugnXkpJlLkWxYsr7c3SFiGo5WeXjpU/preview?usp=drive_link", customTitle: "Aula 02 - Síndromes Coronarianas: Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1IgWPKpiQW-Axh6lDwK8gewGLfpYdhSB3/view?usp=drive_link", customTitle: "Apostila - Doença Coronariana" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1dfHtzThX9YRm5mbOjYWS6uGNmqrC0Q-n/view?usp=drive_link", customTitle: "Aula 01 - Complicações Pós-IAM" }]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Dermatologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Dermatologia Único",
+                        shortcode: "DER",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 2 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1eRNTrN-NbhoEi4iK6jnuJF6JCCydMmFj/preview?usp=drive_link", customTitle: "Aula 01 - Dermatologia I: Parte I" },
+                                { url: "https://drive.google.com/file/d/1eSpoVueyXKDH55B1CqbxO7aa3vIMrU4j/preview?usp=drive_link", customTitle: "Aula 02 - Dermatologia I: Parte II" },
+                                { url: "https://drive.google.com/file/d/1eQymytupRXJZp4YrcHP_jC4VadIypiq8/preview?usp=drive_link", customTitle: "Aula 03 - Dermatologia II: Parte I" },
+                                { url: "https://drive.google.com/file/d/1eTm_EkZpFtktW7anOzBHet0Vy3Qh14U2/preview?usp=drive_link", customTitle: "Aula 04 - Dermatologia II: Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1eIuBliDnyp73D3UXP1G__sm6723EsJGe/preview?usp=drive_link", customTitle: "Apostila - Doenças Infectoparasitárias da Pele, Dermatoses Inflamatória e Oncologia Dermatológica" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1eR5DYslpvJykFaqVKPAItDlnoXAYs7cO/preview?usp=drive_link", customTitle: "Aula 01 - Acne" },
+                                { url: "https://drive.google.com/file/d/1eR0BtcNp7Kl7s_nqzeiZY7CeKr9yoAHA/preview?usp=drive_link", customTitle: "Aula 02 - MPOX" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Endocrinologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Endocrinologia I",
+                        shortcode: "END I",
+                        contentCounts: { aulas: 7, apostilas: 1, aulasBonus: 15 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1mSkx7SMJuth1aoSZejxiHRaMDxtGVlj5/preview?usp=drive_link", customTitle: "Aula 01 - Tireoide: Parte I" },
+                                { url: "https://drive.google.com/file/d/1mSUrbO6XizfIUQOcW54zZJp_zUY7hpk0/preview?usp=drive_link", customTitle: "Aula 02 - Doenças da Tireoide: Parte II - Introdução" },
+                                { url: "https://drive.google.com/file/d/1mZe0VAFDPk1ct95blFtJn2cp7f0iDXAr/preview?usp=drive_link", customTitle: "Aula 03 - Doenças da Tireoide: Parte II - Tireoidite e Hipotireoidismo" },
+                                { url: "https://drive.google.com/file/d/1mZc7AOYYABHAoZU63JgFnLMW7Opo-EDU/preview?usp=drive_link", customTitle: "Aula 04 - Doenças da Tireoide: Parte II - Hashimoto e Hipotireoidismo" },
+                                { url: "https://drive.google.com/file/d/1mZbYRe78s55djdd7HqtQjIm6SYBAJibO/preview?usp=drive_link", customTitle: "Aula 05 - Doenças da Tireoide: Parte II - Nódulo de Tireoide" },
+                                { url: "https://drive.google.com/file/d/1mZqmrcl2VP_s6CgZ_Li1C7J0Bu_9oxS5/preview?usp=drive_link", customTitle: "Aula 06 - Doenças da Tireoide: Parte II - Câncer de Tireoide" },
+                                { url: "https://drive.google.com/file/d/1m_BoaF9gBZA9JmwKVbrDlh9DaLRBbYVp/preview?usp=drive_link", customTitle: "Aula 07 - Doenças da Adrenal" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1morz-tCCWXvcj36iME4AHWRA8bATSlyT/view?usp=drive_link", customTitle: "Apostila - Principais Doenças Endócrinas" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1mRJLdNEHmzu587OjrdXRl9A-w0T9LAiG/preview?usp=drive_link", customTitle: "Aula 01 - Anatomia da Tireoide I" },
+                                { url: "https://drive.google.com/file/d/1mQGiUcRh4xIMRUiz0tMgPDBIbXuITfmA/preview?usp=drive_link", customTitle: "Aula 02 - Anatomia da Tireoide II" },
+                                { url: "https://drive.google.com/file/d/1msIpNBTdUGklNeMIa6DNZYJ9LfS5Brau/preview?usp=drive_link", customTitle: "Aula 03 - Hiperparatireoidismo Primário" },
+                                { url: "https://drive.google.com/file/d/1mpqwlYv33W1uwirHEdwx_rmkKiyZOPib/preview?usp=drive_link", customTitle: "Aula 04 - Hiperparatireoidismo Secundário e Terciário" },
+                                { url: "https://drive.google.com/file/d/1mtnwFeSqdiqph-GcyA2XvaNI7Zq2lUCz/preview?usp=drive_link", customTitle: "Aula 05 - Anatomia da Hipófise e do Hipotálamo" },
+                                { url: "https://drive.google.com/file/d/1muZvyS3L3DyzW5o-1101zvENdE2gTPRB/preview?usp=drive_link", customTitle: "Aula 06 - Hipófise e Hipotálamo I" },
+                                { url: "https://drive.google.com/file/d/1mqgoxj715AAKwTXUMHUj-5NZUxJ3Y2Br/preview?usp=drive_link", customTitle: "Aula 07 - Hipófise e Hipotálamo II" },
+                                { url: "https://drive.google.com/file/d/1mt34FX33RKrNGki6nfTjI3oD9T1Ttm8T/preview?usp=drive_link", customTitle: "Aula 08 - Incidentaloma Adrenal" },
+                                { url: "https://drive.google.com/file/d/1mvzl1132SPFPmWMqiWYW48utiqVrNjcz/preview?usp=drive_link", customTitle: "Aula 09 - Hiperplasia Adrenal Congênita" },
+                                { url: "https://drive.google.com/file/d/1mv2gJOduOl0KJ70rqvoLXZIXqkT_6k5l/preview?usp=drive_link", customTitle: "Aula 10 - Neoplasia Endócrina Múltipla" },
+                                { url: "https://drive.google.com/file/d/1muz78cH3tTxw05ZW-WtHfXGMkCXo0QxY/preview?usp=drive_link", customTitle: "Aula 11 - Hipoparatireoidismo" },
+                                { url: "https://drive.google.com/file/d/1mpc-IuPDosVe0ep2PnTKcU0wbzz5PI9-/preview?usp=drive_link", customTitle: "Aula 12 - Hipotireoidismo Congênito" },
+                                { url: "https://drive.google.com/file/d/1mttcx6wnRjYxs0bOt7_B4PrYG8eMp9gS/preview?usp=drive_link", customTitle: "Aula 13 - Eutireoideo Doente" },
+                                { url: "https://drive.google.com/file/d/1mp6eBTaPbNedWMDO7yo-jsqmFV_0MEAK/preview?usp=drive_link", customTitle: "Aula 14 - Anatomia da Adrenal" },
+                                { url: "https://drive.google.com/file/d/1mr_SQKPfJimkFyGmN58iAjXpXrXXWId/preview?usp=drive_link", customTitle: "Aula 15 - Raquitismo e Osteomalacia" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Endocrinogia II",
+                        shortcode: "END II",
+                        contentCounts: { aulas: 3, apostilas: 1, aulasBonus: 9 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1mVp177m42eyZV8jwy3B-aJf75NxcX9bP/preview?usp=drive_link", customTitle: "Aula 01 - Diabetes: Introdução e Diagnóstico" },
+                                { url: "https://drive.google.com/file/d/1mVZLFEe_VeGxGfENQ9K1slXQEy9Q2kHa/preview?usp=drive_link", customTitle: "Aula 02 - Diabetes: Tratamento" },
+                                { url: "https://drive.google.com/file/d/1mWsuLocQBmBBikVrt9EzjDnmv1-rBljF/preview?usp=drive_link", customTitle: "Aula 03 - Diabetes: Complicações Agudas" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1mYiwcHc1JoI0m_-4Wzo4lZmL2rt6Ok8G/view?usp=drive_link", customTitle: "Apostila - Diabetes Mellitus e Dislipidemia" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1mUNFQAkyL3jXhCURfrfGP-bBK0aPZsA5/preview?usp=drive_link", customTitle: "Aula 01 - Obesidade: Introdução" },
+                                { url: "https://drive.google.com/file/d/1mUoYuMERXw5dWqEVaTCn2GlATLCV-Voo/preview?usp=drive_link", customTitle: "Aula 02 - Obesidade: Fisiopatologia e Tratamento Clínico" },
+                                { url: "https://drive.google.com/file/d/1mTNYxLfRdtX8_Fdwa80KPkHPFHXd_7Ur/preview?usp=drive_link", customTitle: "Aula 03 - Obesidade: Cirurgia Bariátrica" },
+                                { url: "https://drive.google.com/file/d/1mVL3HA3d7KWa4XO-HdyEQh6sINy3pe9k/preview?usp=drive_link", customTitle: "Aula 04 - Obesidade: Alterações Funcionais Pós-Bariátrica" },
+                                { url: "https://drive.google.com/file/d/1mUAlW3sCqksKlXQi36gCo8CVKArIC-xF/preview?usp=drive_link", customTitle: "Aula 05 - Hipófise e Hipotálamo" },
+                                { url: "https://drive.google.com/file/d/1mSyCsOyJPZApjwmhfrujkGVUHCFBv7aS/preview?usp=drive_link", customTitle: "Aula 06 - Hipoglicemia" },
+                                { url: "https://drive.google.com/file/d/1mU5fLC2rMUQ8K7AtBr1prWn0gyc_EAMX/preview?usp=drive_link", customTitle: "Aula 07 - Hiperparatireoidismo Primário" },
+                                { url: "https://drive.google.com/file/d/1lyy3upcXB9HLLDsYu4Rb23TNVtvPEKSy/preview?usp=drive_link", customTitle: "Aula 08 - Dislipidemia" },
+                                { url: "https://drive.google.com/file/d/1lyy5lfXZusbb64LOUKXOAuQHRm1SIvV-/preview?usp=drive_link", customTitle: "Aula 09 - Pé-Diabético" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Gastrologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Gastrologia I",
+                        shortcode: "GAS I",
+                        contentCounts: { aulas: 10, apostilas: 2, aulasBonus: 12 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1_V2A8GO5kpbtxS4NXrwxQgB60tNsAAHL/preview?usp=drive_link", customTitle: "Aula 01 - Doenças do Esôfago: Acalasia" },
+                                { url: "https://drive.google.com/file/d/1VbrVctg3RPVDnj4iYN2AzanrGnelOZa6/preview?usp=drive_link", customTitle: "Aula 02 - Doenças do Esôfago: Câncer de Esôfago" },
+                                { url: "https://drive.google.com/file/d/1C701hojmM0aNL4UJK3OCNpw0vsHqZ9Gy/preview?usp=drive_link", customTitle: "Aula 03 - Doenças do Esôfago: Divertículo de Zenker" },
+                                { url: "https://drive.google.com/file/d/17qowdJxpuovL5XUadlm_seXuDYx1yHj5/preview?usp=drive_link", customTitle: "Aula 04 - Doenças do Esôfago: Doença do Refluxo Gastroesofágico (DRGE) e Esôfago de Barrett" },
+                                { url: "https://drive.google.com/file/d/141Djn9RO-BfjwOHcuw5Fc9fw41YSQK3R/preview?usp=drive_link", customTitle: "Aula 05 - Doenças do Estômago e Duodeno: Doença Ulcerosa Péptica - Noções Gerais" },
+                                { url: "https://drive.google.com/file/d/18KDxAlWJa4gJqqKoXiHjwfzQnzW4Zrnv/preview?usp=drive_link", customTitle: "Aula 06 - Doenças do Estômago e Duodeno: Doença Ulcerosa Péptica - Clínica, Diagnóstico e Tratamento" },
+                                { url: "https://drive.google.com/file/d/1FmIEwh2T0G-tf86pThnXG52NnOEKvzdK/preview?usp=drive_link", customTitle: "Aula 07 - Doenças do Estômago e Duodeno: Doença Ulcerosa Péptica - As Cirurgias" },
+                                { url: "https://drive.google.com/file/d/1XWoX6O39vwdOv6zu16OTYniF5m8LYaID/preview?usp=drive_link", customTitle: "Aula 08 - Doenças do Estômago e Duodeno: Síndromes Pós-Gastrectomias" },
+                                { url: "https://drive.google.com/file/d/1PfqPpIxcw5Og3E4thJzhLUlOqToFhbkQ/preview?usp=drive_link", customTitle: "Aula 09 - Doenças do Estômago e Duodeno: Câncer Gástrico" },
+                                { url: "https://drive.google.com/file/d/1h4rynFETjV0H2m2riiutlA4u5bMX1CC0/preview?usp=drive_link", customTitle: "Aula 10 - Aula Especial: Hemorragia Digestiva Alta" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1WXD1YaKzH5mbtYu7K9ODBfVgdCsJRycZ/preview?usp=drive_link", customTitle: "Apêndice - GAS I" }, { url: "https://drive.google.com/file/d/1lJ8EuqeluDD2cEnPv6Dc7-qXlmMAdp40/preview?usp=drive_link", customTitle: "Apostila - Esôfago, Estômago e Duodeno" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1dfh8uC84I6xXPDuypQKdgE4DnoUg-wsA/preview?usp=drive_link", customTitle: "Aula 01 - Anatomia do Esôfago" },
+                                { url: "https://drive.google.com/file/d/1BCPqrJ-sl_cQqaNPDpsd4ZBA2wU0X3vo/preview?usp=drive_link", customTitle: "Aula 02 - Anatomia do Estômago" },
+                                { url: "https://drive.google.com/file/d/1V4cQ9-k0m1BEUY7x6_CTaM-Vj9otWUUQ/preview?usp=drive_link", customTitle: "Aula 03 - Divertículos de Esôfago" },
+                                { url: "https://drive.google.com/file/d/1XcQhCbjEAxbhCc57WVt8nifgDCrBplto/preview?usp=drive_link", customTitle: "Aula 04 - Hemorragia Digestiva Alta" },
+                                { url: "https://drive.google.com/file/d/15dZjgiIChAF4BESy11Um98tSNyGd7xNg/preview?usp=drive_link", customTitle: "Aula 05 - Hemorragia Digestiva Baixa" },
+                                { url: "https://drive.google.com/file/d/1xYy-0eH4rvEkeSGnxchdSbShmaMhcxX3/preview?usp=drive_link", customTitle: "Aula 06 - Perfuração de Esôfago" },
+                                { url: "https://drive.google.com/file/d/1CXSYovhagQK-5LYF7jrjc-pkkVSYNmr9/preview?usp=drive_link", customTitle: "Aula 07 - Hérnias de Hiato" },
+                                { url: "https://drive.google.com/file/d/1bgvV1iPV-7HwxMMsaLRqBxVSDXt3VYKY/preview?usp=drive_link", customTitle: "Aula 08 - Esofagites" },
+                                { url: "https://drive.google.com/file/d/1ooIrX7WtGTWAjrqk9KX9nz1hVxztivja/preview?usp=drive_link", customTitle: "Aula 09 - Ingestão de Corpo Estranho" },
+                                { url: "https://drive.google.com/file/d/1jw6DKmy9PzibcFLtU0sgnnyWDykyuJ4z/preview?usp=drive_link", customTitle: "Aula 10 - Linfoma Gástrico" },
+                                { url: "https://drive.google.com/file/d/1iEv-FgdYbjCdDgieLKwhaLTYk34uXnx8/preview?usp=drive_link", customTitle: "Aula 11 - Síndrome de Zollinger-Ellison" },
+                                { url: "https://drive.google.com/file/d/19JyejWuknatrdpEAcabPMrAIL9FqmL8F/preview?usp=drive_link", customTitle: "Aula 12 - GIST" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Gastrologia II",
+                        shortcode: "GAS II",
+                        contentCounts: { aulas: 11, apostilas: 1, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1gbQuspqPcy4LsGO9oxWRyHmjinCo2D50/preview?usp=drive_link", customTitle: "Aula 01 - Síndromes Disabsortivas e DII: Parte I" },
+                                { url: "https://drive.google.com/file/d/1gZyI0xT1KZJgXeUWCvOWyCvSk06g3kis/preview?usp=drive_link", customTitle: "Aula 02 - Síndromes Disabsortivas e DII: Parte II" },
+                                { url: "https://drive.google.com/file/d/1gbmuj5BGEP8WwDQuotPnSrSadHbNDM3m/preview?usp=drive_link", customTitle: "Aula 03 - Obstrução Intestinal: Abordagem Sindrômica" },
+                                { url: "https://drive.google.com/file/d/1gZioEcv28aA6Rf1iMR7Gnns3GfNRKdF4/preview?usp=drive_link", customTitle: "Aula 04 - Obstrução Intestinal: Causas" },
+                                { url: "https://drive.google.com/file/d/1gaxYSQuig4AzY6DdaERh9mb3ZzoaHbTO/preview?usp=drive_link", customTitle: "Aula 05 - Isquemia Intestinal" },
+                                { url: "https://drive.google.com/file/d/1ga-47gfSz5dDyzmD322GsZPalgPjMsZ-/preview?usp=drive_link", customTitle: "Aula 06 - Apendicite Aguda" },
+                                { url: "https://drive.google.com/file/d/1ga-nmIGi48HUmtdMliYWREh_ooTqN4T7/preview?usp=drive_link", customTitle: "Aula 07 - Doença Diverticular dos Cólon" },
+                                { url: "https://drive.google.com/file/d/1gaHtV23lHG9NzeqIvGhbEGhwelK6vLfB/preview?usp=drive_link", customTitle: "Aula 08 - Diverticulite Aguda" },
+                                { url: "https://drive.google.com/file/d/1gaOwbDwvWPyv0V68t1kHdb-S56DtdOxp/preview?usp=drive_link", customTitle: "Aula 09 - Pólipos Intestinais e Síndromes de Polipose" },
+                                { url: "https://drive.google.com/file/d/1gbrt4mMlcsQNhyfq_yhuVAx6sfTKYyCL/preview?usp=drive_link", customTitle: "Aula 10 - Câncer Colorretal" },
+                                { url: "https://drive.google.com/file/d/1g_QCwwxqjMLSHxcoWZLAd7aa8SxfCwnn/preview?usp=drive_link", customTitle: "Aula 11 - Aula Especial: Hemorragia Digestiva Baixa" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1gZ9jm8Rff0-S6XDlFaFa2Zk6C258WeeH/view?usp=drive_link", customTitle: "Apostila - Doenças Intestinais" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1gDtFp67Pprh1OPffmUqsb2T7UnexkH-9/preview?usp=drive_link", customTitle: "Aula 01 - Colite Pseudomembranosa" },
+                                { url: "https://drive.google.com/file/d/1gDl8dyZme4LJI-WpDGarq-yjjOH4FlXV/preview?usp=drive_link", customTitle: "Aula 02 - Síndrome do Intestino Irritável" },
+                                { url: "https://drive.google.com/file/d/1gDRqYg_N7AHGRickC7_ib_4zPf5KKmK2/preview?usp=drive_link", customTitle: "Aula 03 - Tumores Carcinoides" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Gastrologia III",
+                        shortcode: "GAS III",
+                        contentCounts: { aulas: 8, apostilas: 1, aulasBonus: 12 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1hDWRQBDuRPnx1JsHqPZKgmr-SThmoMpH/preview?usp=drive_link", customTitle: "Aula 01 - Pâncreas: Pancreatite Aguda" },
+                                { url: "https://drive.google.com/file/d/1hEauQRRNLHSzJbH6LjSKzfJU1vbxmRhb/preview?usp=drive_link", customTitle: "Aula 02 - Pâncreas: Pancreatite Crônica e Câncer de Pâncreas" },
+                                { url: "https://drive.google.com/file/d/1hE1wjxCSFPuRRJGBQp_0uIKKeeWe10AH/preview?usp=drive_link", customTitle: "Aula 03 - Doenças das Vias Biliares: Noções Gerais" },
+                                { url: "https://drive.google.com/file/d/1hFsGP-20DGOUkHQnBdXoG2RHknCYolT8/preview?usp=drive_link", customTitle: "Aula 04 - Doenças das Vias Biliares: Colelitíase" },
+                                { url: "https://drive.google.com/file/d/1hFd5n3YoB6B3f_s9ae4twTZeOIFW1X3z/preview?usp=drive_link", customTitle: "Aula 05 - Doenças das Vias Biliares: Colecistite Aguda" },
+                                { url: "https://drive.google.com/file/d/1hEx9nyka08q2DkFVTiZkFOJwS12e7Dth/preview?usp=drive_link", customTitle: "Aula 06 - Doenças das Vias Biliares: Outras Colecistites" },
+                                { url: "https://drive.google.com/file/d/1hEBl1aIKHGulz6-KFJn95-wTehAXLwOU/preview?usp=drive_link", customTitle: "Aula 07 - Doenças das Vias Biliares: Coledocolitíase" },
+                                { url: "https://drive.google.com/file/d/1hFtJtlvjPfG7GthTiw3CXTXQd08n8KeU/preview?usp=drive_link", customTitle: "Aula 08 - Doenças das Vias Biliares: Colangite Aguda" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1hWYfaK9I0kA-Ytwm-kQROiUIdTOvVKRz/view?usp=drive_link", customTitle: "Apostila - Tumores Hepáticos, Doenças do Pâncreas e Vias Biliares" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1hXmnRMnxkZB_xH6GsGU90xVAZBDZfY-j/preview?usp=drive_link", customTitle: "Aula 01 - Anatomia do Cólon" },
+                                { url: "https://drive.google.com/file/d/1hWgV0sDrT72-aeGvD8YdXztmEUU17dce/preview?usp=drive_link", customTitle: "Aula 02 - Anatomia do Pâncreas" },
+                                { url: "https://drive.google.com/file/d/1h_bpI75R9NAqnwN2yGlpS5oMs3Hz1JhG/preview?usp=drive_link", customTitle: "Aula 03 - Anatomia das Vias Biliares" },
+                                { url: "https://drive.google.com/file/d/1hYV02K6Z5_8agwKvZSCn6SgsFCgHnrlJ/preview?usp=drive_link", customTitle: "Aula 04 - Tumores Neuroendócrinos do Pâncreas" },
+                                { url: "https://drive.google.com/file/d/1h_-9FwYQx7jJXp3ZY03unI_xaaHqSUdR/preview?usp=drive_link", customTitle: "Aula 05 - Tumores Hepáticos Benignos" },
+                                { url: "https://drive.google.com/file/d/1hYhrSa0jWY3FBqDHR2Q8HFVwjSAR-7Yf/preview?usp=drive_link", customTitle: "Aula 06 - Tumores Hepáticos Malignos" },
+                                { url: "https://drive.google.com/file/d/1hZFAOgSb9hy5dlnrHearaYvPxEw3qM2-/preview?usp=drive_link", customTitle: "Aula 07 - Cirurgias Pancreáticas" },
+                                { url: "https://drive.google.com/file/d/1h_zjP0NwtjX8OV5Zx4DSWejA-MaQvyHy/preview?usp=drive_link", customTitle: "Aula 08 - Neoplasias Císticas do Pâncreas" },
+                                { url: "https://drive.google.com/file/d/1hXOYnohoSIy7n16F7DSovUaXDSeqMOTq/preview?usp=drive_link", customTitle: "Aula 09 - Neoplasias das Vias Biliares" },
+                                { url: "https://drive.google.com/file/d/1hYvYFPcamP_UWaKXDkJmOdcAl857cxT5/preview?usp=drive_link", customTitle: "Aula 10 - Cistos de Via Biliar" },
+                                { url: "https://drive.google.com/file/d/1hZhyNjio9SVssjqqnzIxrOS03kdYA6g7/preview?usp=drive_link", customTitle: "Aula 11 - Lesão Iatrogênica das Vias Biliares" },
+                                { url: "https://drive.google.com/file/d/1hYgj3SWphbb26mdnMizv2qp-e9mcTGZb/preview?usp=drive_link", customTitle: "Aula 12 - Abscesso Hepático" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Hematologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Hematologia I",
+                        shortcode: "HEM I",
+                        contentCounts: { aulas: 6, apostilas: 2, aulasBonus: 5 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1Rc5GVRI0iY2FoF9OlQ75T-087vRxX5pb/preview?usp=drive_link", customTitle: "Aula 01 - Anemias: Introdução às Anemias - Abordagem Inicial da Anemia" },
+                                { url: "https://drive.google.com/file/d/1FDKEmsqz2vDaocC0RgsW8IcNNbVyEDu-/preview?usp=drive_link", customTitle: "Aula 02 - Anemias: Anemia Ferropriva" },
+                                { url: "https://drive.google.com/file/d/1B7muBUjog9my7f8dWff-iY22ye-I8Rj_/preview?usp=drive_link", customTitle: "Aula 03 - Anemias: Anemia nas Desordens Sistêmicas - Anemia de Doença Crônica" },
+                                { url: "https://drive.google.com/file/d/1D9ZOHQsLdF5AL-LnR7dres_GWudf-gi-/preview?usp=drive_link", customTitle: "Aula 04 - Anemias: Anemia Megaloblástica" },
+                                { url: "https://drive.google.com/file/d/1jSpuesauZjKL9CiOtFIVxlfmdCMAw3B0/preview?usp=drive_link", customTitle: "Aula 05 - Anemias: Anemias Hemolíticas - Parte I" },
+                                { url: "https://drive.google.com/file/d/1ytsfeRTyL1fWWvbODZLosYtC0ScvBj4o/preview?usp=drive_link", customTitle: "Aula 06 - Anemias: Anemias Hemolíticas - Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1Y-atWpc1jOor1m9Yfi_UKH34_WmVtulH/preview?usp=drive_link", customTitle: "Apêndice - HEM I" }, { url: "https://drive.google.com/file/d/1YxFeEoTS-9Mb9boLeixIy9dbB6BVNBjh/preview?usp=drive_link", customTitle: "Apostila - Anemias" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1nSunrMm0rZqYi5YUyLxXnGSh-KH40Wjg/preview?usp=drive_link", customTitle: "Aula 01 - Hemoglobinúria Paroxística Noturna" },
+                                { url: "https://drive.google.com/file/d/1Dz6-6vHQ7hmNRnuiVBcGGP2iXX5pufYZ/preview?usp=drive_link", customTitle: "Aula 02 - Mielodisplasias" },
+                                { url: "https://drive.google.com/file/d/1OBW0UMnGLyUAFMaijANn0SB8JssJ6LXi/preview?usp=drive_link", customTitle: "Aula 03 - Anemia Sideroblástica" },
+                                { url: "https://drive.google.com/file/d/17ueRxVpqgzRCP-pPn1S9bbj_d_GpKT--/preview?usp=drive_link", customTitle: "Aula 04 - Anemia Aplásica" },
+                                { url: "https://drive.google.com/file/d/19PpmQ85uiVg1BICEVkykX5zEE0Soy07S/preview?usp=drive_link", customTitle: "Aula 05 - Alfa-Talassemia" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Hematologia II",
+                        shortcode: "HEM II",
+                        contentCounts: { aulas: 11, apostilas: 2, aulasBonus: 4 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1pex4NZmpKfuh9PxfzowMjzv9DkJAML_o/preview?usp=drive_link", customTitle: "Aula 01 - Leucemias Agudas e Crônicas: Introdução às Leucemias" },
+                                { url: "https://drive.google.com/file/d/1kJDc21ckKA48BBlBYaPPSNaUlKjS96qN/preview?usp=drive_link", customTitle: "Aula 02 - Leucemias Agudas e Crônicas: Leucemias Agudas" },
+                                { url: "https://drive.google.com/file/d/1Lvb_Hr9K_8M6KYTnLFH79lCntlNDGStz/preview?usp=drive_link", customTitle: "Aula 03 - Leucemias Agudas e Crônicas: Leucemia Mieloide Aguda (LMA)" },
+                                { url: "https://drive.google.com/file/d/1Hz-By0to3pVNag5nF7ulhMPi_cicWZrc/preview?usp=drive_link", customTitle: "Aula 04 - Leucemias Agudas e Crônicas: Leucemia Linfoide Aguda (LLA)" },
+                                { url: "https://drive.google.com/file/d/1YNyG37Bl4j3uziFWCxDG2IYWzVSODt1d/preview?usp=drive_link", customTitle: "Aula 05 - Leucemias Agudas e Crônicas: Leucemias Crônicas" },
+                                { url: "https://drive.google.com/file/d/1vaj3_QDcYxvY8jSdXyyc4gzfUp_RdZIR/preview?usp=drive_link", customTitle: "Aula 06 - Leucemias Agudas e Crônicas: Leucemia Mieloide Crônica (LMC)" },
+                                { url: "https://drive.google.com/file/d/1aUCCygF2zvLVDkfb7GxCDWoubKiHDnWW/preview?usp=drive_link", customTitle: "Aula 07 - Leucemias Agudas e Crônicas: Leucemia Linfoide Crônica (LLC)" },
+                                { url: "https://drive.google.com/file/d/18DIMnQC9QXCkJImlcQBYVAXvm0B4TtFk/preview?usp=drive_link", customTitle: "Aula 08 - Linfomas e Mieloma: Linfomas" },
+                                { url: "https://drive.google.com/file/d/1-1bwbi7TP3dE3hlGe2YOj1VZYiYcTCa2/preview?usp=drive_link", customTitle: "Aula 09 - Linfomas e Mieloma: Mieloma" },
+                                { url: "https://drive.google.com/file/d/17ZtItgjDj_5t286s0Iv_eTapThdU4c_y/preview?usp=drive_link", customTitle: "Aula 10 - Distúrbios da Hemostasia: Hemostasia - Parte I" },
+                                { url: "https://drive.google.com/file/d/15qqEyrgTw9YrcCVcA58P7Qedp0o1t-2g/preview?usp=drive_link", customTitle: "Aula 11 - Distúrbios da Hemostasia: Hemostasia - Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1RmpTqfI5obnQbrG9q8LGJdow7ZsSnvKz/preview?usp=drive_link", customTitle: "Apêndice - HEM II" }, { url: "https://drive.google.com/file/d/1R4WEtZsiGQCLQrw9CkvBsWiCinLWjG_A/preview?usp=drive_link", customTitle: "Apostila - Neoplasias Hematológicas e Distúrbios da Hemostasia" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1mNMvtBIL7KpodfTLgUMInDXx4rWrWcNv/preview?usp=drive_link", customTitle: "Aula 01 - Hemofilias" },
+                                { url: "https://drive.google.com/file/d/1nChpqR3R85Y43ELcW_5AtBLQwyfTaDzN/preview?usp=drive_link", customTitle: "Aula 02 - Doenças Mieloproliferativas" },
+                                { url: "https://drive.google.com/file/d/1mLPvloqUopcAPxEaI1skJJbp8doWGqmK/preview?usp=drive_link", customTitle: "Aula 03 - Esplenomegalia" },
+                                { url: "https://drive.google.com/file/d/1mMMQQd2WDV6fT_zj1OGRoO4sWuFOz_83/preview?usp=drive_link", customTitle: "Aula 04 - Tromboelastrograma" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Hepatologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Hepatologia I",
+                        shortcode: "HEP I",
+                        contentCounts: { aulas: 5, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1fFuDuyxqJalHxh3H57H1iFmzz-rtXMNT/preview?usp=drive_link", customTitle: "Aula 01 - Hepatites Virais: Introdução à Hepatologia" },
+                                { url: "https://drive.google.com/file/d/1fF_w_efliMMSo89wKT8Zr095RfVBCw7G/preview?usp=drive_link", customTitle: "Aula 02 - Hepatites Virais: Hepatite B - Aguda" },
+                                { url: "https://drive.google.com/file/d/1fCsWM3OAULH2XhOs7VmCW2IshVpHqDJq/preview?usp=drive_link", customTitle: "Aula 03 - Hepatites Virais: Hepatite A e E" },
+                                { url: "https://drive.google.com/file/d/1fG9uhNEy91j2cPAajs-t0Jm5zb_CAfSi/preview?usp=drive_link", customTitle: "Aula 04 - Hepatites Virais: Hepatite B - Crônica" },
+                                { url: "https://drive.google.com/file/d/1fCp48g7NduUW9_SUUQRKhr1DwR3ERfsr/preview?usp=drive_link", customTitle: "Aula 05 - Hepatites Virais: Hepatite C - Crônica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1fI6j5ZpQyuK-pLhVfPLzw7g8gbrBckLo/view?usp=drive_link", customTitle: "Apostila - Introdução à Hepatologia, Hepatites Virais Agudas, Hepatites Virais Crônicas e Insuficiência Hepática Fulminante" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1eymsRrVjfyxIVuStTIMWH-J90vgjX0m-/view?usp=drive_link", customTitle: "Aula 01 - Insuficiência Hepática Aguda" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Hepatologia II",
+                        shortcode: "HEP II",
+                        contentCounts: { aulas: 7, apostilas: 1, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1eyAQofhh2H4Rh82vQqC-OQ6KVapgNGxg/preview?usp=drive_link", customTitle: "Aula 01 - Cirrose e Causas: Cirrose Hepática" },
+                                { url: "https://drive.google.com/file/d/1eyCyZ9TKx-W9bg7xpT19d_YNXPAP1Pi-/preview?usp=drive_link", customTitle: "Aula 02 - Cirrose e Causas: Doença Hepática Alcoólica" },
+                                { url: "https://drive.google.com/file/d/1ewdaqvtBScEmQSRh1KAagiCriYSS6D47/preview?usp=drive_link", customTitle: "Aula 03 - Cirrose e Causas: Esteatose Hepática Metabólica" },
+                                { url: "https://drive.google.com/file/d/1eyIiDR5zLFzGX3yVsYY96IJ9VgrOp_QW/preview?usp=drive_link", customTitle: "Aula 04 - Cirrose e Causas: Hepatopatias Autoimunes" },
+                                { url: "https://drive.google.com/file/d/1ext3qj35BaS-g41A9QvOBKg0xo9iV2am/preview?usp=drive_link", customTitle: "Aula 05 - Cirrose e Causas: Hepatopatias Hereditárias" },
+                                { url: "https://drive.google.com/file/d/1exEUj9Rcm9SZaKhOw_RYYSJ1nQA2pyrM/preview?usp=drive_link", customTitle: "Aula 06 - Cirrose e Complicações: Parte I" },
+                                { url: "https://drive.google.com/file/d/1ewhl8tSwXUVwy7NWXmQ53XzK1Zvlv-5n/preview?usp=drive_link", customTitle: "Aula 07 - Cirrose e Complicações: Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1evEoyhTOHbz20_uPQleaBG6BZBuksO97/view?usp=drive_link", customTitle: "Apostila - Cirrose Hepática" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1euwbAuKsedkEqwwNjHOwbqvOB6fSeuEh/preview?usp=drive_link", customTitle: "Aula 01 - Anatomia do Fígado" },
+                                { url: "https://drive.google.com/file/d/1eucqU676pE8DJm83NKRVUBWeEFsQNY2W/preview?usp=drive_link", customTitle: "Aula 02 - Transplante Hepático" },
+                                { url: "https://drive.google.com/file/d/1ev5CjasdM1b9RtC5FoQd-mWdB7Xo4eiS/preview?usp=drive_link", customTitle: "Aula 03 - Cirurgias de Hipertensão Porta" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Infectologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Infectologia I",
+                        shortcode: "INFEC I",
+                        contentCounts: { aulas: 3, apostilas: 1, aulasBonus: 5 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1hwdhkVI0AQWGHGFTCSJ-Ivhs5a8o4Hnc/preview?usp=drive_link", customTitle: "Aula 01 - HIV: Patogênese, História Natural e Diagnóstico" },
+                                { url: "https://drive.google.com/file/d/1hvUNhntycqN8roViu5d4Gi6fOAkeNoNF/preview?usp=drive_link", customTitle: "Aula 02 - HIV: Tratamento e Profilaxia" },
+                                { url: "https://drive.google.com/file/d/1hvjoZupr0jDCqHRl1XoupoDrhLizH-EO/preview?usp=drive_link", customTitle: "Aula 03 - HIV: Respiratória e Neurológicas" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1hwxs1vqfAh5AJo69eykCxGaaKRETFWle/view?usp=drive_link", customTitle: "Apostila - Síndrome da Imunodeficiência Adquirida / AIDS" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1hxFx5wb4F4AwBoitcvQv1udMS3nbjckn/preview?usp=drive_link", customTitle: "Aula 01 - Sepse e Choque Séptico" },
+                                { url: "https://drive.google.com/file/d/1hxRn4Hml1PeajXl1_oIIQhRRfkHJwgPt/preview?usp=drive_link", customTitle: "Aula 02 - Abscesso Pulmonar" },
+                                { url: "https://drive.google.com/file/d/1hyK7DocBAgs4OhTwBReZtbJe_-Za1xdW/preview?usp=drive_link", customTitle: "Aula 03 - Derrame Pleural Parapneumônico" },
+                                { url: "https://drive.google.com/file/d/1hxKzhJZAeg7hily0u2iW_mNemeS97lto/preview?usp=drive_link", customTitle: "Aula 04 - Profilaxia da Transmissão Vertical do HIV" },
+                                { url: "https://drive.google.com/file/d/1hy07E1NYwyKi9L8LxabULfJaC-mbcq0W/preview?usp=drive_link", customTitle: "Aula 05 - HTLV" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Infectologia II",
+                        shortcode: "INFEC II",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 7 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1htHdMCKw8VtD8JzsneR_1MWPyQjY_my9/preview?usp=drive_link", customTitle: "Aula 01 - Endocardite Infecciosa e Meningites: Endocardite Infecciosa" },
+                                { url: "https://drive.google.com/file/d/1hsbr2y2QrWzpjNg8m9dfCHOtnguzkgY5/preview?usp=drive_link", customTitle: "Aula 02 - Endocardite Infecciosa e Meningites: Meningite" },
+                                { url: "https://drive.google.com/file/d/1hsPde-GQvMTJZlEk7mh-FYpr7wjyoJdg/preview?usp=drive_link", customTitle: "Aula 03 - Parasitose Intestinal: Helmintos" },
+                                { url: "https://drive.google.com/file/d/1hstPEZtmE7_ZAZmBUbslSGZ_Qn0XOm28/preview?usp=drive_link", customTitle: "Aula 04 - Parasitose Intestinal: Protozoários" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1hb9_5MTIDROppqI5AkxVJM-pKMD8_nIQ/view?usp=drive_link", customTitle: "Apostila - Infecções Bacterianas e Parasitárias" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1ho4FWLXp40qYxbxb8PnFtc-HS-Z6E_7i/preview?usp=drive_link", customTitle: "Aula 01 - Protozoários" },
+                                { url: "https://drive.google.com/file/d/1hqnwm1IrMFyEvyKFYt4ujOldGJ4GRVTV/preview?usp=drive_link", customTitle: "Aula 02 - Nematelmintos" },
+                                { url: "https://drive.google.com/file/d/1hpQrlSUm-6WD_XrCiXZskEfU3LVf94Ry/preview?usp=drive_link", customTitle: "Aula 03 - Platelmintos" },
+                                { url: "https://drive.google.com/file/d/1hp5Px_8FxgNTGxPHwrXDeH-MV6_C6Ene/preview?usp=drive_link", customTitle: "Aula 04 - Infecção Relacionada a Cateter" },
+                                { url: "https://drive.google.com/file/d/1hpEYjn8RJo0s9gjIQIPg1Pnvvi7jLc06/preview?usp=drive_link", customTitle: "Aula 05 - Acidente por Animais Peçonhentos" },
+                                { url: "https://drive.google.com/file/d/1ho6VwummeVskq3vmUXpmeY7lv-apjMt2/preview?usp=drive_link", customTitle: "Aula 06 - Leishmaniose Visceral" },
+                                { url: "https://drive.google.com/file/d/1hrHvwXa-XvCxxo0lXcumDRLtNiuLsaVz/preview?usp=drive_link", customTitle: "Aula 07 - Monkeypox" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Infectologia III",
+                        shortcode: "INFEC III",
+                        contentCounts: { aulas: 2, apostilas: 1, aulasBonus: 6 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1i6QV8vbqX9EpFA3qQOVfBSaFDBr1SCL5/preview?usp=drive_link", customTitle: "Aula 01 - Síndromes Febris: Dengue, Chikungunya e Zika" },
+                                { url: "https://drive.google.com/file/d/1i5esXOWylDAOgUzwR_C3QpVtMF00s9aT/preview?usp=drive_link", customTitle: "Aula 02 - Síndromes Febris: Febre do Oropouche, Febre Amarela e Leptospirose" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1i4KsEtJTCuf9PuNQqNFfBRL0Wm3G_AMN/view?usp=drive_link", customTitle: "Apostila - Síndromes Febris" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1i2sLvD3Ck66dy-Bc5z4EpTw16mvmExwo/preview?usp=drive_link", customTitle: "Aula 01 - Monkeypox" },
+                                { url: "https://drive.google.com/file/d/1i2GP2F7iMMZG1aH3U1dXJYEUDfJQRiC-/preview?usp=drive_link", customTitle: "Aula 02 - Leishmaniose Visceral" },
+                                { url: "https://drive.google.com/file/d/1i0etVHrZUzEjQqp8UPNRs5tO7Gx3HeUx/preview?usp=drive_link", customTitle: "Aula 03 - Malária" },
+                                { url: "https://drive.google.com/file/d/1hzwSVXh0eFd59U1I974LG_XRIoCl84sO/preview?usp=drive_link", customTitle: "Aula 04 - Febre Maculosa Brasileira" },
+                                { url: "https://drive.google.com/file/d/1i35mnBwU-LWqRcllibgJ12z7HvwoSUC3/preview?usp=drive_link", customTitle: "Aula 05 - Covid-19" },
+                                { url: "https://drive.google.com/file/d/1i2xMxMxddpuPFrywUwMgd-III0f94Zud/preview?usp=drive_link", customTitle: "Aula 06 - ITU (Infecção do Trato Urinário)" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Nefrologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Nefrologia I",
+                        shortcode: "NEF I",
+                        contentCounts: { aulas: 8, apostilas: 1, aulasBonus: 6 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1L7-FzhVQr8DjbFBBohj3KbG29Jix6Q1O/preview?usp=drive_link", customTitle: "Aula 01 - Nefrologia: Introdução" },
+                                { url: "https://drive.google.com/file/d/1d8OW-GjXwdcuo7QgwwvXCx0po2uQjMnH/preview?usp=drive_link", customTitle: "Aula 02 - Síndrome Nefrítica: Conceitos Básicos" },
+                                { url: "https://drive.google.com/file/d/1WM153JC25YivZzCKWbV9stKic0yLrilc/preview?usp=drive_link", customTitle: "Aula 03 - As Doenças dos Glomérulos: Síndrome Nefrítica" },
+                                { url: "https://drive.google.com/file/d/1OrDkvhaRCSDYholPBHcuuSydgaxOwfy9/preview?usp=drive_link", customTitle: "Aula 04 - As Doenças dos Glomérulos: Alteração Urinária Assintomática" },
+                                { url: "https://drive.google.com/file/d/1e0NZIj_3trULLQws-d50REsh18diw-Km/preview?usp=drive_link", customTitle: "Aula 05 - As Doenças dos Glomérulos: GNRP" },
+                                { url: "https://drive.google.com/file/d/17dQaEtd7rmByS5M4X7WzDzio1FRqWNbG/preview?usp=drive_link", customTitle: "Aula 06 - As Doenças dos Glomérulos: Síndrome Hemolítico-Urêmica" },
+                                { url: "https://drive.google.com/file/d/1VLwzGr3XL-ecesslpSUaMYsH0apZyifA/preview?usp=drive_link", customTitle: "Aula 07 - As Doenças dos Glomérulos: Síndrome Nefrótica - Conceito de Manifestação Clínica" },
+                                { url: "https://drive.google.com/file/d/1RP7bvIw68Yx6lQCodlw2RtO8uAB0U4Hl/preview?usp=drive_link", customTitle: "Aula 08 - As Doenças dos Glomérulos: Síndrome Nefrótica - Etiologias" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1fsVz0G08euSXmbNiXY0eEdFcirW3cU8O/view?usp=drive_link", customTitle: "Apostila - Introdução a Nefrologia e as Doenças Glomerulares" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/11HUAB8JhAdu5G3-Eh0f8lEpTIH5jIC8j/preview?usp=drive_link", customTitle: "Aula 01 - Lesão Renal na Hipertensão e nas Doenças Hematológicas" },
+                                { url: "https://drive.google.com/file/d/1xP6IbIkdTOH3ValuIeM3ZAOImk6BQVFF/preview?usp=drive_link", customTitle: "Aula 02 - O Rim e o Diabetes" },
+                                { url: "https://drive.google.com/file/d/1LGK_2Pj5jIMGtmN9Ys53GTItiWZmOrgF/preview?usp=drive_link", customTitle: "Aula 03 - O Rim e as Colagenoses" },
+                                { url: "https://drive.google.com/file/d/1w-BlAwu7YXPOOaEcO6mHwrt7IJN0xdiO/preview?usp=drive_link", customTitle: "Aula 04 - O Rim e as Vasculites" },
+                                { url: "https://drive.google.com/file/d/1gNcp0eYLDhpGri0NYP6wyH6FVxf_Zh-N/preview?usp=drive_link", customTitle: "Aula 05 - O Rim e as Doenças Infecciosas Sistêmicas" },
+                                { url: "https://drive.google.com/file/d/1qzJclz50WznWc-ZlzTtg7cB_7NBomgFO/preview?usp=drive_link", customTitle: "Aula 06 - O Rim e Situações Diversas" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Nefrologia II",
+                        shortcode: "NEF II",
+                        contentCounts: { aulas: 6, apostilas: 2, aulasBonus: 6 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1oKrUT2urEYW3_fCBnF8MndVD3Q5ROGgK/preview?usp=drive_link", customTitle: "Aula 01 - Doenças Túbulo-Intersticiais e Vasculares: Nefrite Intersticial Aguda" },
+                                { url: "https://drive.google.com/file/d/1tB3N7QpheqBXjatJDrdU_2ZjZzXtFdoO/preview?usp=drive_link", customTitle: "Aula 02 - Doenças Tubulointersticiais: Necrose Tubular Aguda" },
+                                { url: "https://drive.google.com/file/d/1bBFkhwjkdSyVIk-ecKqF6Pu3g29v2_jo/preview?usp=drive_link", customTitle: "Aula 03 - Doença Tubulointersticiais: Necrose de Papila" },
+                                { url: "https://drive.google.com/file/d/1_gP4gW8i-4pPO22H0qJmjIjLtKJeFORX/preview?usp=drive_link", customTitle: "Aula 04 - Doenças Tubulointersticiais: Distúrbios Tubulares Específicos" },
+                                { url: "https://drive.google.com/file/d/1LINXj6STHw9Bgg5sxj6YjbxQBWAorQyI/preview?usp=drive_link", customTitle: "Aula 05 - Doença Vascular Isquêmica dos Rins: Estenose de Artéria Renal" },
+                                { url: "https://drive.google.com/file/d/1bHblgfaNOdCEO8EYVT2qVA_U0SORDvAh/preview?usp=drive_link", customTitle: "Aula 06 - Doença Vascular Isquêmica dos Rins: Ateroembolismo" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1H7rf9YR2VgH1YizkzUWCO_OHVETkmEaW/preview?usp=drive_link", customTitle: "Apêndice - NEF II" }, { url: "https://drive.google.com/file/d/1w7KBh0BVgF0zDbKDdFEM9LrMOyLvN2G6/preview?usp=drive_link", customTitle: "Apostila - Doenças Tubulointersticiais e Vasculares dos Rins" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1DQ1wYyU0erHJuZHsfA84xnJQhfVU0TDq/preview?usp=drive_link", customTitle: "Aula 01 - Doenças Tubulointersticiais: Rabdomiólise" },
+                                { url: "https://drive.google.com/file/d/1AXJo3FoIezWgse-ncmTBOfpHNSNbACdj/preview?usp=drive_link", customTitle: "Aula 02 - Doenças Tubulointersticiais: Acidose Tubular Renal" },
+                                { url: "https://drive.google.com/file/d/1Caf1sK2i-KIKUDw11L1WRMJTfDXx_TfQ/preview?usp=drive_link", customTitle: "Aula 03 - Nefrotoxicidade por Antimicrobianos" },
+                                { url: "https://drive.google.com/file/d/1pWIB6i2gvb89lNLLkAq60B_9j2cpbKVc/preview?usp=drive_link", customTitle: "Aula 04 - Nefrotoxicidade por Analgésicos" },
+                                { url: "https://drive.google.com/file/d/1ziXQni4H5NQIann_EAa8r7GeB5WPiLuQ/preview?usp=drive_link", customTitle: "Aula 05 - Nefrotoxicidade por Contraste" },
+                                { url: "https://drive.google.com/file/d/11JX8i9-Wo6uifTylEsEzXWa3dzNYx9X8/preview?usp=drive_link", customTitle: "Aula 06 - Nefrotoxicidade por Metais Pesados" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Nefrologia III",
+                        shortcode: "NEF III",
+                        contentCounts: { aulas: 11, apostilas: 2, aulasBonus: 4 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1gY4BZ_NHXr6hLZXhBFhFh988h60rLn58/preview?usp=drive_link", customTitle: "Aula 01 - Distúrbios Hidroeletrolíticos: Introdução" },
+                                { url: "https://drive.google.com/file/d/14SVjMqzSwyYblo1MzwEKV0yDMOe417lj/preview?usp=drive_link", customTitle: "Aula 02 - Distúrbios Hidroeletrolíticos: Distúrbios do Sódio" },
+                                { url: "https://drive.google.com/file/d/1yh4e0TcAQYVdYReszcedAiHBQ4RGGGSz/preview?usp=drive_link", customTitle: "Aula 03 - Distúrbios Hidroeletrolíticos: Distúrbios do Sódio - Hiponatremia" },
+                                { url: "https://drive.google.com/file/d/1PxQ2JJSx12NYbQvwMvIyW6LiAu2GPna6/preview?usp=drive_link", customTitle: "Aula 04 - Distúrbios Hidroeletrolíticos: Distúrbios do Potássio" },
+                                { url: "https://drive.google.com/file/d/162h04Q6flSXl9AY5A1Pt4WOpYfkXql1r/preview?usp=drive_link", customTitle: "Aula 05 - Distúrbios Hidroeletrolíticos: Distúrbios do Potássio - Hipocalemia" },
+                                { url: "https://drive.google.com/file/d/1gtT13fvHVoJtXbc1N-JBiEF8i2_s1jba/preview?usp=drive_link", customTitle: "Aula 06 - Distúrbios Hidroeletrolíticos: Distúrbios do Potássio - Hipercalemia" },
+                                { url: "https://drive.google.com/file/d/1vP5CezcI-XS398NdU5iFcIYIODYYn7Ba/preview?usp=drive_link", customTitle: "Aula 07 - Distúrbio Ácido-Básico: Introdução e Definições" },
+                                { url: "https://drive.google.com/file/d/1BiZgkd0STH2XB_-rZ294ZyaQyxv4FdT7/preview?usp=drive_link", customTitle: "Aula 08 - Distúrbio Ácido-Básico: Acidose e Alcalose Metabólica" },
+                                { url: "https://drive.google.com/file/d/19suqZlj-98fESVVESagS9g9yjVPG6NFw/preview?usp=drive_link", customTitle: "Aula 09 - Insuficiência Renal: Lesão Renal Aguda - As Funções Renais" },
+                                { url: "https://drive.google.com/file/d/1uBGZ_m9THWyEIda1KP4fx_F8cOGqbQ2J/preview?usp=drive_link", customTitle: "Aula 10 - Insuficiência Renal: Lesão Renal Aguda" },
+                                { url: "https://drive.google.com/file/d/1RnrK8uwQGvs6DssqOec4U16lT1wxfx5f/preview?usp=drive_link", customTitle: "Aula 11 - Insuficiência Renal: Doença Renal Crônica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1zMe4Gac1TXee0hGuEGNo-gE895slR6WY/preview?usp=drive_link", customTitle: "Apêndice - NEF III" }, { url: "https://drive.google.com/file/d/1xQYQcrAZDkTFKYTiLPlbO0VY5nwPqNVm/preview?usp=drive_link", customTitle: "Apostila - Insuficiência Renal e Distúrbios Hidroeletrolíticos e Ácido-Básico" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/132mYLS-bH0N7DA7o_x1sGv11MBm5Ck8A/preview?usp=drive_link", customTitle: "Aula 01 - Relação Delta-Delta" },
+                                { url: "https://drive.google.com/file/d/18KaUcvwyi71-mdFr7AnDXdowoyeH9bp0/preview?usp=drive_link", customTitle: "Aula 02 - Aspectos Práticos no Tratamento da Hiponatremia" },
+                                { url: "https://drive.google.com/file/d/1fRW8ZJ3a_VBxcaYBsgSCYJPwVfwKDABI/preview?usp=drive_link", customTitle: "Aula 03 - Terapia de Substituição Renal: HD e DP (Hemodiálise e Diálise Peritoneal)" },
+                                { url: "https://drive.google.com/file/d/1fS84zvK2fvdFAnBwwtdbTOf7da0Pu_J2/preview?usp=drive_link", customTitle: "Aula 04 - Terapia de Substituição Renal: Transplante" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Neurologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Neurologia Único",
+                        shortcode: "NEURO",
+                        contentCounts: { aulas: 9, apostilas: 1, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1ligq-YaqjvTU9sOZWtiTtNaabhlayJY0/preview?usp=drive_link", customTitle: "Aula 01 - Síndromes Neurológicas | AVE" },
+                                { url: "https://drive.google.com/file/d/1ljBj1nnn1wNbMyIArYW9roBiirOvPjz5/preview?usp=drive_link", customTitle: "Aula 02 - Síndromes Neurológicas | AVE: Neuroanatomia" },
+                                { url: "https://drive.google.com/file/d/1liSS5xMC01m2KyWfXBNX2iFx1sRdQJFa/preview?usp=drive_link", customTitle: "Aula 03 - Síndromes Neurológicas | AVE: AVE Hemorrágico" },
+                                { url: "https://drive.google.com/file/d/1lkOuGCZTGMtc_WC1bCtiJfFPt_3cgfYY/preview?usp=drive_link", customTitle: "Aula 04 - Síndromes Neurológicas | AVE: AVE Hemorrágico" },
+                                { url: "https://drive.google.com/file/d/1ljMmRlN7wL0MpWp844CeU5DKd_c6ofy_/preview?usp=drive_link", customTitle: "Aula 05 - Cefaleias, Epilepsia e Crise Febril: Cefaleia" },
+                                { url: "https://drive.google.com/file/d/1lktfHKS7pW42GE67W_f4LEUlKy6tmkak/preview?usp=drive_link", customTitle: "Aula 06 - Cefaleias, Epilepsia e Crise Febril: Epilepsia e Crises Febris" },
+                                { url: "https://drive.google.com/file/d/1ljZ-31GqUYf_k4pCm-XDRLZj7SjM2cg_/preview?usp=drive_link", customTitle: "Aula 07 - Causas de Fraqueza Muscular" },
+                                { url: "https://drive.google.com/file/d/1ljadm53yGL9SZVD6luY-IzJSop8pj7z-/preview?usp=drive_link", customTitle: "Aula 08 - Doença de Parkinson" },
+                                { url: "https://drive.google.com/file/d/1ljI-IWvxAait2YlM5TytBUtU4M5jdSG9/preview?usp=drive_link", customTitle: "Aula 09 - Demência" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1liMl0N5WE5E0QY-NwcSEHir_Ps2Vp1BP/view?usp=drive_link", customTitle: "Apostila - Neurologia" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1lgOPb11KdewkldGFmKBk408Ot0PKm7lN/preview?usp=drive_link", customTitle: "Aula 01 - Doenças da Placa Motora" },
+                                { url: "https://drive.google.com/file/d/1lhoi6fYCaICQCM1sTGBw7gdDHCoAGeJ2/preview?usp=drive_link", customTitle: "Aula 02 - Intoxicações Exógenas" },
+                                { url: "https://drive.google.com/file/d/1lgtO1h-B7VBKCkVkbyFZ3NQGjjZOUP-0/preview?usp=drive_link", customTitle: "Aula 03 - Hipertensão Intracraniana" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Oftalmologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Oftalmologia Único",
+                        shortcode: "OFT",
+                        contentCounts: { aulas: 6, apostilas: 1, aulasBonus: 0 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1KK8u0L8U4aGEvxmiEpsAoSB2i7pjsBBH/preview?usp=drive_link", customTitle: "Aula 01 - Oftalmologia: Anatomia" },
+                                { url: "https://drive.google.com/file/d/13-ZU8hS2-l6Pxxhhof06fRPAcNtLy00J/preview?usp=drive_link", customTitle: "Aula 02 - Oftalmologia: Retinopatias" },
+                                { url: "https://drive.google.com/file/d/1OPPrRYhTuPGZ_8SumKfHBCVWntSThibt/preview?usp=drive_link", customTitle: "Aula 03 - Oftalmologia: Glaucoma" },
+                                { url: "https://drive.google.com/file/d/1kh4jmLGk_kXGQn6wP88bH4ExQzmsGLrS/preview?usp=drive_link", customTitle: "Aula 04 - Oftalmologia: Catarata" },
+                                { url: "https://drive.google.com/file/d/1mfgwD_QpUQjqvUDGtHltb6SHpzAsPzos/preview?usp=drive_link", customTitle: "Aula 05 - Oftalmologia: Retinoblastoma" },
+                                { url: "https://drive.google.com/file/d/1SxIhYnAOAH5s9VCJIBowPfMI6hZobV0-/preview?usp=drive_link", customTitle: "Aula 06 - Oftalmologia: Conjuntivite e Diagnósticos Diferenciais" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1buCeWYn86Ie2uSZ0O0pSipzVXiUcZv3z/view?usp=drive_link", customTitle: "Apostila - Oftalmologia" }],
+                            aulasBonus: []
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Ortopedia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Ortopedia Único",
+                        shortcode: "ORTO",
+                        contentCounts: { aulas: 5, apostilas: 1, aulasBonus: 2 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1n28IUKfIJNorQzNaI18Lt31WguAXnFw9/preview?usp=drive_link", customTitle: "Aula 01 - Traumato-Ortopedia: Parte I" },
+                                { url: "https://drive.google.com/file/d/1n2X8cKF0Q5K5Yt-tyAYVstLJV9qDfxD0/preview?usp=drive_link", customTitle: "Aula 02 - Ortopedia Clínica" },
+                                { url: "https://drive.google.com/file/d/1n1kKrMxwPG__r2-oO3UeMRMi34E0hwHV/preview?usp=drive_link", customTitle: "Aula 03 - Ortopedia Pediátrica: Membros Superiores" },
+                                { url: "https://drive.google.com/file/d/1n1B2vKcGbNzAtPUahwZIAgWL0Ki8aBX2/preview?usp=drive_link", customTitle: "Aula 04 - Ortopedia Pediátrica: Quadril" },
+                                { url: "https://drive.google.com/file/d/1n2Ypb0EvP-8udzPOhbphO0VIoIWRELCN/preview?usp=drive_link", customTitle: "Aula 05 - Ortopedia Pediátrica: Membros Inferiores" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1n3PjKkqjHlPYsrtdww6W7qnWD1dO4FHV/view?usp=drive_link", customTitle: "Apostila - Ortopedia" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1n3Gzr8rQCgT4XKv-6JlY7S8eMJuJ-IST/preview?usp=drive_link", customTitle: "Aula 01 - Osteomielite" },
+                                { url: "https://drive.google.com/file/d/1n2fUDretCg08FSYKLb61IjzT5GBZ8dWt/preview?usp=drive_link", customTitle: "Aula 02 - Doenças Periarticulares" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Pneumologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Pneumologia I",
+                        shortcode: "PNE I",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 6 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1R_yX2QswUksP56hBAoFeExkYhud2jaLj/preview?usp=drive_link", customTitle: "Aula 01 - Doenças Pulmonares Obstrutivas: Noções de Espirometria, Asma e DPOC" },
+                                { url: "https://drive.google.com/file/d/1R_OKT39xS5YxPpAvRHYX2tfIeMNoEGOx/preview?usp=drive_link", customTitle: "Aula 02 - Doenças Pulmonares Obstrutivas: DPOC" },
+                                { url: "https://drive.google.com/file/d/1Ra9KlZlmVxJ9MYWFDC1JqMlGpR5cYYoe/preview?usp=drive_link", customTitle: "Aula 03 - Tromboembolismo Pulmonar e Câncer de Pulmão: Tromboembolismo Pulmonar" },
+                                { url: "https://drive.google.com/file/d/1R_HUVvsKsfKlO5IornRoIfGqF0B0o6Dn/preview?usp=drive_link", customTitle: "Aula 04 - Tromboembolismo Pulmonar e Câncer de Pulmão: Câncer de Pulmão" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1RbHvGwywrez8xosCZryRi6Kk4oC_8yon/view?usp=drive_link", customTitle: "Apostila - Principais Doenças Pulmonares" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1R_-V9LKnnzlTUwAXd53ANdSESa_xqkOj/preview?usp=drive_link", customTitle: "Aula 01 - Pneumopatias Intersticiais Difusas" },
+                                { url: "https://drive.google.com/file/d/1RZM6rkaAuoJrklUXt46QGo77hNCyV9_X/preview?usp=drive_link", customTitle: "Aula 02 - Sarcoidose" },
+                                { url: "https://drive.google.com/file/d/1RZDjsGpUmDK6KfbgEnZ10CzoLKbHNXRl/preview?usp=drive_link", customTitle: "Aula 03 - Ventilação Mecânica" },
+                                { url: "https://drive.google.com/file/d/1RZZkrXzFE330BH-_dGtWIxu4bgAZhfoJ/preview?usp=drive_link", customTitle: "Aula 04 - Síndrome do Desconforto Respiratório Agudo I" },
+                                { url: "https://drive.google.com/file/d/1RYlTZk4TgvCbI_oTdJJgebPQeXWilV6Q/preview?usp=drive_link", customTitle: "Aula 05 - Síndrome do Desconforto Respiratório Agudo II" },
+                                { url: "https://drive.google.com/file/d/1RZe1zocZto1gCXaDracksMnJetG7YRmx/preview?usp=drive_link", customTitle: "Aula 06 - Nódulo Pulmonar Solitário" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Pneumologia II",
+                        shortcode: "PNE II",
+                        contentCounts: { aulas: 7, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1ScesVN_Lb4Q6ykLNKt2taw4N_aOiYb2X/preview?usp=drive_link", customTitle: "Aula 01 - Tuberculose: História Natural da Tuberculose" },
+                                { url: "https://drive.google.com/file/d/1Se6S5y1auyIM0A0EEKKd02J2VmaoBo_P/preview?usp=drive_link", customTitle: "Aula 02 - Tuberculose: Tuberculose Pulmonar, Clínica e Diagnóstico" },
+                                { url: "https://drive.google.com/file/d/1SeLiVB2i4NRqu4D6fC7lSENNwZnXwarY/preview?usp=drive_link", customTitle: "Aula 03 - Tuberculose: Tuberculose Extrapulmonar, Pleural e Meníngea" },
+                                { url: "https://drive.google.com/file/d/1SegaTKXxYm99itG_pw6h0xJ9wrVzuVQ9/preview?usp=drive_link", customTitle: "Aula 04 - Tuberculose: Tratamento" },
+                                { url: "https://drive.google.com/file/d/1ScJjHN8EV1MYHCBg2ZvjP_M2_umzibsQ/preview?usp=drive_link", customTitle: "Aula 05 - Tuberculose: Controle da Tuberculose" },
+                                { url: "https://drive.google.com/file/d/1Sd6j38obypUgC9K2JPDfo61JMFcQOIv0/preview?usp=drive_link", customTitle: "Aula 06 - Pneumonia: Parte I" },
+                                { url: "https://drive.google.com/file/d/1SePhlDKPxaIQK8n1QG936wSHIhRVBVIV/preview?usp=drive_link", customTitle: "Aula 07 - Pneumonia: Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1SpPF1U_c4NZ7pdzOJwGRuGCEFp0JWise/view?usp=drive_link", customTitle: "Apostila - Infecções Pulmonares: Tuberculose, Micose e Pneumonia" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1SpedxVziRVvPMbMmtxX7B7GqmkncZUO2/view?usp=drive_link", customTitle: "Aula 01 - Derrame Pleural" }]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Psiquiatria",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Psiquiatria Único",
+                        shortcode: "PSI",
+                        contentCounts: { aulas: 5, apostilas: 1, aulasBonus: 2 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1cX-BuEBdWmn6PT11_XX4ZJzT7Fc1gVAF/preview?usp=drive_link", customTitle: "Aula 01 - Delirium" },
+                                { url: "https://drive.google.com/file/d/1cXjxrcecPUSY8CJ3eMLhcJGl9R79sE3M/preview?usp=drive_link", customTitle: "Aula 02 - Transtornos Relacionados ao Uso de Substâncias" },
+                                { url: "https://drive.google.com/file/d/1cW-9cHAJCcWrFtFeQJFma7Z5-n9rO_Ib/preview?usp=drive_link", customTitle: "Aula 03 - Transtornos Psicóticos" },
+                                { url: "https://drive.google.com/file/d/1cXuXzAwuqxpLZaO-7sgcHdxdwz7ahfJk/preview?usp=drive_link", customTitle: "Aula 04 - Transtornos do Humor" },
+                                { url: "https://drive.google.com/file/d/1cX9tDEN7V1z0C0GGhUlEkP8ISNEtc7az/preview?usp=drive_link", customTitle: "Aula 05 - Transtornos de Ansiedade, TOC, TEPT e Transtornos Alimentares" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1cVJZgl-yPbMyeTzqMvq9hXTGtFXTbg60/view?usp=drive_link", customTitle: "Apostila - Psiquiatria" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1cN0FKdR9CK-k8zwD1spdcJC0SImb2f-x/preview?usp=drive_link", customTitle: "Aula 01 - Transtornos do Neurodesenvolvimento" },
+                                { url: "https://drive.google.com/file/d/1cMppXYTD-jne0DjGSWr8mqcg8hzfGnCD/preview?usp=drive_link", customTitle: "Aula 02 - Suicídio" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Reumatologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Reumatologia I",
+                        shortcode: "REU I",
+                        contentCounts: { aulas: 5, apostilas: 2, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1l25fdFkGctsY0gt1gftRpIiaDauvRQt-/preview?usp=drive_link", customTitle: "Aula 01 - Artrites Idiopáticas: Artrite Reumatoide" },
+                                { url: "https://drive.google.com/file/d/1qogGb7gbx-8bgoRKlRoj13UBy9M3OYR1/preview?usp=drive_link", customTitle: "Aula 02 - Artrites Idiopáticas: Espondiloartropatias Soronegativas" },
+                                { url: "https://drive.google.com/file/d/1vGToRtxhHkOZq_Db7cIdIoNor8pMNggw/preview?usp=drive_link", customTitle: "Aula 03 - Febre Reumática, Gota e Osteoartrite: Febre Reumática" },
+                                { url: "https://drive.google.com/file/d/17XK6cGdRnTGGl0sR9v5uL__IS7WOYGE1/preview?usp=drive_link", customTitle: "Aula 04 - Febre Reumática, Gota e Osteoartrite: Gota" },
+                                { url: "https://drive.google.com/file/d/1gl9axDYiyZ4lNuMmwVJEqY2o8A9LcyjG/preview?usp=drive_link", customTitle: "Aula 05 - Febre Reumática, Gota e Osteoartrite: Osteoartrite" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1UbC97nB91NncgubigVJOA-qRpZYTHkv8/preview?usp=drive_link", customTitle: "Apêndice - REU I" }, { url: "https://drive.google.com/file/d/1yoPsWkJCmzLjSQQJcdlNkEYoW7jZKHdu/preview?usp=drive_link", customTitle: "Apostila - Doenças Articulares" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1WSKYj2oSG-ipkqAx2Z0QCOYIZono0sqH/preview?usp=drive_link", customTitle: "Aula 01 - Anti-Inflamatórios e Glicocorticoides" },
+                                { url: "https://drive.google.com/file/d/13kQ0prrmO137Je2rHmPDA30NIOnNicTi/preview?usp=drive_link", customTitle: "Aula 02 - Febre Familiar do Mediterrâneo" },
+                                { url: "https://drive.google.com/file/d/1N434XT74nXSbF6L37ASXxde5T7MkTwbw/preview?usp=drive_link", customTitle: "Aula 03 - Fibromialgia" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Reumatologia II",
+                        shortcode: "REU II",
+                        contentCounts: { aulas: 8, apostilas: 2, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1BLGwZ9IQa185gKrLtEIh0tF_UinlpaTc/preview?usp=drive_link", customTitle: "Aula 01 - Colagenoses: Introdução" },
+                                { url: "https://drive.google.com/file/d/1lZ2acGK27kL3IB22NdyzJVxwbYpZii8D/preview?usp=drive_link", customTitle: "Aula 02 - Colagenoses: Esclerose Sistêmica" },
+                                { url: "https://drive.google.com/file/d/1_AijAxINjntrH29WL2hUdeG9PDjdmvJW/preview?usp=drive_link", customTitle: "Aula 03 - Colagenoses: Miosites e Doença Mista" },
+                                { url: "https://drive.google.com/file/d/1xq2NZtLWUNKD0VoQJ41WRLDbS8ISNO2G/preview?usp=drive_link", customTitle: "Aula 04 - Colagenoses: Lúpus" },
+                                { url: "https://drive.google.com/file/d/1ASujPm0dxYYCNXr00EvNZHgXuy1TTaEV/preview?usp=drive_link", customTitle: "Aula 05 - Colagenoses: Síndrome de Sjögren" },
+                                { url: "https://drive.google.com/file/d/1orWaTBPE-y9aRd2cYmQGbV_Eri_Wc7XQ/preview?usp=drive_link", customTitle: "Aula 06 - Colagenoses: Síndrome do Anticorpo Antifosfolipídeo" },
+                                { url: "https://drive.google.com/file/d/1kNicjPH-noO4NonQIlVL0IEwXJ9bV9eC/preview?usp=drive_link", customTitle: "Aula 07 - Vasculites: Parte I" },
+                                { url: "https://drive.google.com/file/d/1JJMwS9Yw6-aQKfq6tQcAnEytAAD-CRyn/preview?usp=drive_link", customTitle: "Aula 08 - Vasculites: Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1PRVVuEoZyuBXA4C82yASiv_-3bNc0pJD/preview?usp=drive_link", customTitle: "Apêndice - REU II" }, { url: "https://drive.google.com/file/d/13xok8kfVe2PB7PuTZTwpveWE7ZrmdRz0/preview?usp=drive_link", customTitle: "Apostila - Colagenoses e Vasculites" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1VuaOxuz_YGBvQddDK_bS-wU2Q0nqMiFe/preview?usp=drive_link", customTitle: "Aula 01 - Amiloidoses" },
+                                { url: "https://drive.google.com/file/d/1Vxm7KPDyoT79-f05Zng_0VnA0dhDOSEV/preview?usp=drive_link", customTitle: "Aula 02 - Artrite Séptica" },
+                                { url: "https://drive.google.com/file/d/1VxdpVyyUdSb_4qzIkPme-wVUGt4xi2-q/preview?usp=drive_link", customTitle: "Aula 03 - Policondrite Recidivante" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Cirurgia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Cirurgia I",
+                        shortcode: "CIR I",
+                        contentCounts: { aulas: 4, apostilas: 2, aulasBonus: 11 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/15q8HxLmCC4uaosSgSBOof3mVwxtAYFp-/preview?usp=drive_link", customTitle: "Aula 01 - Trauma I: Primeiro Atendimento, Cabeça e Tórax - Avaliação Inicial" },
+                                { url: "https://drive.google.com/file/d/1FRZ6fdQeg77km6ATW4ScbGofYwcdtYOe/preview?usp=drive_link", customTitle: "Aula 02 - Trauma I: Primeiro Atendimento, Cabeça e Tórax - Trauma de Tórax" },
+                                { url: "https://drive.google.com/file/d/1RFZv0rZM5sxFZ15eOXnIhGisIHU1c8UZ/preview?usp=drive_link", customTitle: "Aula 03 - Trauma II: Trauma de Abdome e Pelve" },
+                                { url: "https://drive.google.com/file/d/1ob_8J_K7wbIKN05FNPsuoLNYOQMz2QUs/preview?usp=drive_link", customTitle: "Aula 04 - Trauma II: Traumatismo Cranioencefálico" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1LLw6AerSxAzOnmDlZVC6MFaGq-HtWAOt/preview?usp=drive_link", customTitle: "Apêndice - CIR I" }, { url: "https://drive.google.com/file/d/1ySzPPOODep_6sjJP04gLHjFvW0fvz9Tb/preview?usp=drive_link", customTitle: "Apostila - Abordagem Inicial, Trauma Torácico e Abdominal" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1T3XpyIeaU3eCkneP1US0MmHnWl9zPJ1Z/preview?usp=drive_link", customTitle: "Aula 01 - Trauma: Preparação e Triagem" },
+                                { url: "https://drive.google.com/file/d/1bwVbfWJGzwcQbdNjqAyvYxF0TU_LRKs3/preview?usp=drive_link", customTitle: "Aula 02 - Trauma Cervical e Fraturas de Face" },
+                                { url: "https://drive.google.com/file/d/1c0ZOQS1CfBwwdBZNFaG152V1i1NLMWxH/preview?usp=drive_link", customTitle: "Aula 03 - Trauma Diafragmático" },
+                                { url: "https://drive.google.com/file/d/1bxH_oJ-spHBPlRjvbymW3FJUvrSMhAMZ/preview?usp=drive_link", customTitle: "Aula 04 - Embolia Gordurosa" },
+                                { url: "https://drive.google.com/file/d/1c2LmC_hd1YK7O6O7uQTq78HhZKp-HjVq/preview?usp=drive_link", customTitle: "Aula 05 - Trauma Vascular Abdominal" },
+                                { url: "https://drive.google.com/file/d/1d_4hrv5kjJJ0w5wZy1tI4EoEnuWRY6r0/preview?usp=drive_link", customTitle: "Aula 06 - Trauma de Abdômen e Lesões Específicas" },
+                                { url: "https://drive.google.com/file/d/1by3bwIK0h7n-oREDcvXbde5p0Rhmbd_F/preview?usp=drive_link", customTitle: "Aula 07 - Trauma: Lesões Específicas - Uretra e Bexiga" },
+                                { url: "https://drive.google.com/file/d/1c-wEIks7ZrVW--NsjbGX1Tm3oOc1m0El/preview?usp=drive_link", customTitle: "Aula 08 - Trauma Cranioencefálico e Colar Cervical" },
+                                { url: "https://drive.google.com/file/d/1bzHF5hTl9EBT_f-Ta9cuL0r6GV1qLF-n/preview?usp=drive_link", customTitle: "Aula 09 - Morte Encefálica" },
+                                { url: "https://drive.google.com/file/d/1c0UpFAuFh1HI2TeLMArCkjn0_JL5g4q4/preview?usp=drive_link", customTitle: "Aula 10 - Trauma da Coluna Vertebral e Raquimedular" },
+                                { url: "https://drive.google.com/file/d/1bzILBjOpbM_kq_GY1AZa40uOG61JSQHL/preview?usp=drive_link", customTitle: "Aula 11 - Trauma Renal" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Cirurgia II",
+                        shortcode: "CIR II",
+                        contentCounts: { aulas: 6, apostilas: 2, aulasBonus: 18 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1OiyEmYGH4z8agazq51Or0HvsZ-z6DVg1/preview?usp=drive_link", customTitle: "Aula 01 - Urologia: Nefrolitíase" },
+                                { url: "https://drive.google.com/file/d/1JC8FJFB9whAOxOptnl8VwcjBFk5JzqUQ/preview?usp=drive_link", customTitle: "Aula 02 - Urologia: Câncer de Próstata" },
+                                { url: "https://drive.google.com/file/d/14SIEZ0bXL5Rq7Fn1LN7YYdTdlS8MD2tR/preview?usp=drive_link", customTitle: "Aula 03 - Urologia: Hiperplasia Prostática Benigna" },
+                                { url: "https://drive.google.com/file/d/1l8pqq2fEC9zrlKbxBjqJonIOe5Jt6eVr/preview?usp=drive_link", customTitle: "Aula 04 - Remit: Resposta Endócrina, Metabólica e Imunológica ao Trauma" },
+                                { url: "https://drive.google.com/file/d/1wQd-tE2sdVYGGC397h8MC18GkNLMopWG/preview?usp=drive_link", customTitle: "Aula 05 - Queimaduras" },
+                                { url: "https://drive.google.com/file/d/1bt86BezWSqLPjMbYaKuYB-tFrKzNm_yV/preview?usp=drive_link", customTitle: "Aula 06 - Aula Especial: Anestesiologia" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1aSTW5rZvk-hoRbKlDtExVIvifLybXdEm/preview?usp=drive_link", customTitle: "Apêndice - CIR II" }, { url: "https://drive.google.com/file/d/1aCa6HryoxtXfqflORsxcN21sl7jikAP5/preview?usp=drive_link", customTitle: "Apostila - Urologia, Resposta ao Trauma, Queimaduras, Cirurgia Plástica" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1bttIssEXU3KFz_tPJcPy7sqWo5xB0LOG/preview?usp=drive_link", customTitle: "Aula 01 - Suporte Nutricional" },
+                                { url: "https://drive.google.com/file/d/1bsot29opargp1bqNGs81AOBpG975qejw/preview?usp=drive_link", customTitle: "Aula 02 - Cirurgia Plástica" },
+                                { url: "https://drive.google.com/file/d/1bsJ5VrK6xVQcFlMtyfDbhR80cIjIg2sP/preview?usp=drive_link", customTitle: "Aula 03 - Úlceras de Pressão" },
+                                { url: "https://drive.google.com/file/d/1dSUKxLk7zrLcGdn0iKRgnlyCi7Cp2oL0/preview?usp=drive_link", customTitle: "Aula 04 - Cicatrização de Feridas" },
+                                { url: "https://drive.google.com/file/d/1buNeEAHrBAlbFHFsUdwdNAenL8xYFnVd/preview?usp=drive_link", customTitle: "Aula 05 - Choque: Monitorização Hemodinâmica e Perfusional" },
+                                { url: "https://drive.google.com/file/d/1bvBPBnJzb8P5vD9kE0UfnXQ5yWKlFsA1/preview?usp=drive_link", customTitle: "Aula 06 - Choque: Tratamento" },
+                                { url: "https://drive.google.com/file/d/1fogsg0qcPd4GAgRetoNqYeFBsIqBqibe/preview?usp=drive_link", customTitle: "Aula 07 - Anestesiologia" },
+                                { url: "https://drive.google.com/file/d/1ygURHurdwxDZYhigSj4uxGaTd3DcD98G/preview?usp=drive_link", customTitle: "Aula 08 - Projeto Eras e Acertos" },
+                                { url: "https://drive.google.com/file/d/1r1LSi1bro18_h3uCgbwh1ZC0ITWxmmzo/preview?usp=drive_link", customTitle: "Aula 09 - Protocolo de Cirurgia Segura" },
+                                { url: "https://drive.google.com/file/d/1fNm0V0VGQcusL4ZxILSoWYDn0ZeOG8U_/preview?usp=drive_link", customTitle: "Aula 10 - Fios de Sutura" },
+                                { url: "https://drive.google.com/file/d/15Rb0saZGxfsLp0IxW9r_rdMtJGvKHZ8W/preview?usp=drive_link", customTitle: "Aula 11 - Fístula Digestiva e Deiscência" },
+                                { url: "https://drive.google.com/file/d/1OHSivoJRkibSnRwZ4o3mLIR3QY6dAl_t/preview?usp=drive_link", customTitle: "Aula 12 - Profilaxia de TEP e TVP" },
+                                { url: "https://drive.google.com/file/d/1h1_diXTaJqvujQth4HRoCAUd1J6R7gJg/preview?usp=drive_link", customTitle: "Aula 13 - Outras Hérnias" },
+                                { url: "https://drive.google.com/file/d/1aTof80z-0feWbkFglUyVoZ675dUI5Vyj/preview?usp=drive_link", customTitle: "Aula 14 - Hérnias na Infância" },
+                                { url: "https://drive.google.com/file/d/15Dbgc3y51wHR-CuHLaj-mRUD7EgUYwZI/preview?usp=drive_link", customTitle: "Aula 15 - Hérnias: Abordagem Laparoscópica" },
+                                { url: "https://drive.google.com/file/d/1uSFbcZkOZGBJK6kmtRBridPOIKAYL3tH/preview?usp=drive_link", customTitle: "Aula 16 - Tipos de Tela" },
+                                { url: "https://drive.google.com/file/d/1bv0U-iFyXudNHS9JXESL0IzuSenYz5Hg/preview?usp=drive_link", customTitle: "Aula 17 - Urologia: Câncer de Bexiga" },
+                                { url: "https://drive.google.com/file/d/1buBfmOUllu6XOAinKHR1arSsEuOIjINO/preview?usp=drive_link", customTitle: "Aula 18 - Urologia: Câncer de Rim" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Cirurgia III",
+                        shortcode: "CIR III",
+                        contentCounts: { aulas: 6, apostilas: 2, aulasBonus: 16 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/10ISvkG1m6gb9BD0dXs-TV55G_zQNI8aa/preview?usp=drive_link", customTitle: "Aula 01 - Hérnias de Parede Abdominal: Anatomia da Região da Virilha" },
+                                { url: "https://drive.google.com/file/d/1RIuXFc751jc_NtTM0zSjFRSGGbZAAey-/preview?usp=drive_link", customTitle: "Aula 02 - Hérnias de Parede Abdominal: Hérnias da Virilha - Inguinal e Femoral" },
+                                { url: "https://drive.google.com/file/d/1HPn0_bY3yqkI1frFiMCuss3ZC31j4oc-/preview?usp=drive_link", customTitle: "Aula 03 - Hérnias de Parede Abdominal: Hérnias da Virilha - Inguinal e Femoral: Tratamento" },
+                                { url: "https://drive.google.com/file/d/1ZNiZAN1e1FKghUqbxCVZ6aeoNawS1QU8/preview?usp=drive_link", customTitle: "Aula 04 - Hérnias de Parede Abdominal: Outros Tipos de Hérnia" },
+                                { url: "https://drive.google.com/file/d/1smAIDieD-nTbIdevSF1ibXP9TMyn8D6N/preview?usp=drive_link", customTitle: "Aula 05 - Pré-Operatório" },
+                                { url: "https://drive.google.com/file/d/1ZcSVq5s3sawkxy8J5nKi6z8KG1ko7Tah/preview?usp=drive_link", customTitle: "Aula 06 - Pós-Operatório" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1lPaXdIOJ_gY4-k19jImLCTuahVpz4QNW/preview?usp=drive_link", customTitle: "Apêndice - CIR III" }, { url: "https://drive.google.com/file/d/1pGUpj3MwRei-m1ok4-64T0vQPAyoHvUS/preview?usp=drive_link", customTitle: "Apostila - Pré-Operatório, Complicações em Cirurgia, Hérnias da Parede Abdominal, Anestesiologia" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1bWeDf596oypPC96uabX4GxEl3XpwA9ue/preview?usp=drive_link", customTitle: "Aula 01 - Tipos de Tela" },
+                                { url: "https://drive.google.com/file/d/1M0IWsUTUYjVIi-J0AQeX8JsBrtX0RZkB/preview?usp=drive_link", customTitle: "Aula 02 - Suporte Nutricional" },
+                                { url: "https://drive.google.com/file/d/1bXmsI9N9YgLs8FOWjbAwXJEUP0BEP9sp/preview?usp=drive_link", customTitle: "Aula 03 - Projeto ERAS e ACERTO" },
+                                { url: "https://drive.google.com/file/d/1bUyPwDdOxJL8S0XMvAOo7H6seZ04WNIn/preview?usp=drive_link", customTitle: "Aula 04 - Fios de Sutura" },
+                                { url: "https://drive.google.com/file/d/1bYdLNOCiLW4dFZ94LF-aB4NITKVcfLy7/preview?usp=drive_link", customTitle: "Aula 05 - Fístulas Digestivas e Deiscência" },
+                                { url: "https://drive.google.com/file/d/1bWJwv_abQKh720e9D9OATDusmsqfWbaN/preview?usp=drive_link", customTitle: "Aula 06 - Cicatrização de Feridas" },
+                                { url: "https://drive.google.com/file/d/1bWnXtlimOVeVRbyrvHVYVJoRpGTVPk-u/preview?usp=drive_link", customTitle: "Aula 07 - Hérnias na Infância" },
+                                { url: "https://drive.google.com/file/d/1bZLX0h1__LFeQdVAziH-ExPoKfnLZ12P/preview?usp=drive_link", customTitle: "Aula 08 - Outras Hérnias" },
+                                { url: "https://drive.google.com/file/d/1bYbEI-OpAjpHCcNoshd0bBtu-rf4Pm7K/preview?usp=drive_link", customTitle: "Aula 09 - Hérnias: Abordagem Videolaparoscópica" },
+                                { url: "https://drive.google.com/file/d/19g_aWFDSdxoDZYn1hvpvaGoQF4KJkSAr/preview?usp=drive_link", customTitle: "Aula 10 - Cirurgia Plástica" },
+                                { url: "https://drive.google.com/file/d/1JO1saf9gvID1gfdRbog78nbBe-x3cOuS/preview?usp=drive_link", customTitle: "Aula 11 - Úlceras de Pressão" },
+                                { url: "https://drive.google.com/file/d/1bW7-e1gBVa9OH2NLKEfZZhkhxlyqrAZ2/preview?usp=drive_link", customTitle: "Aula 12 - Anestesiologia" },
+                                { url: "https://drive.google.com/file/d/1bYMCF3YU_udEzKztGVtQBBx9G6U9AJSd/preview?usp=drive_link", customTitle: "Aula 13 - Profilaxia do TEP e TVP" },
+                                { url: "https://drive.google.com/file/d/1ooA7jPLuV4va-8CiBhVNkfqEdb7KPqaj/preview?usp=drive_link", customTitle: "Aula 14 - Choque: Monitorização Hemodinâmica e Perfusional" },
+                                { url: "https://drive.google.com/file/d/1c-va_KMwQy9N2wCrykr5CpAF2xwVXhKz/preview?usp=drive_link", customTitle: "Aula 15 - Choque: Tratamento" },
+                                { url: "https://drive.google.com/file/d/1bgusAvf0V8-rsgphJyhjGpJhDeXLS8Mb/preview?usp=drive_link", customTitle: "Aula 16 - Protocolo de Cirurgia Segura" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Cirurgia IV",
+                        shortcode: "CIR IV",
+                        contentCounts: { aulas: 8, apostilas: 1, aulasBonus: 9 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1csH1S8qCrkgFpVqH9_dGT-0dbiOBSxtK/preview?usp=drive_link", customTitle: "Aula 01 - Cirurgia Vascular: AAA" },
+                                { url: "https://drive.google.com/file/d/1cImG9eoTma7l228itN0UKxbbjan-WmGy/preview?usp=drive_link", customTitle: "Aula 02 - Cirurgia Vascular: Ruptura do AAA" },
+                                { url: "https://drive.google.com/file/d/1cHgVEs9Ckipl5CDYERYqeMcHLN2647Fe/preview?usp=drive_link", customTitle: "Aula 03 - Cirurgia Vascular: Dissecção da Aorta Torácica" },
+                                { url: "https://drive.google.com/file/d/1cGn_KQ6TiJucQK7APt_ucO91Q-wkdin-/preview?usp=drive_link", customTitle: "Aula 04 - Cirurgia Vascular: Doenças Arterial Periférica" },
+                                { url: "https://drive.google.com/file/d/1cGCXLtEZPENAj5RKAt3HtqT41FytwQ0z/preview?usp=drive_link", customTitle: "Aula 05 - Cirurgia Vascular: Oclusão Arterial Aguda dos MMII" },
+                                { url: "https://drive.google.com/file/d/1cGl6sXUahIf36xLSG5ZjJ7sI3EBeMWyK/preview?usp=drive_link", customTitle: "Aula 06 - Cirurgia Vascular: Doença Venosa Crônica" },
+                                { url: "https://drive.google.com/file/d/1cqjgAxrVTY_dHYu2aNk0Dh92Fb4_BZjQ/preview?usp=drive_link", customTitle: "Aula 07 - Especialidades Cirúrgicas: Proctologia" },
+                                { url: "https://drive.google.com/file/d/1cHyE4w3YRgZ0TSXp9a5m57NI_5v_ISCj/preview?usp=drive_link", customTitle: "Aula 08 - Especialidades Cirúrgicas: Cirurgia Bariátrica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1DwJ-3B914-r_uh-kJa8oeW3UFcJ1PQSh/view?usp=drive_link", customTitle: "Apostila - Cirurgia Vascular, Proctologia, Cirurgia de Obesidade, Cirurgia Pediátrica, Tumores de Cabeça e Pescoço" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1pUtNTFqoEPiHUj-pH7mm5ECRUwTRdtwH/preview?usp=drive_link", customTitle: "Aula 01 - Cirurgia Plástica" },
+                                { url: "https://drive.google.com/file/d/1cMKroO0fpAL2kFNSdK5FWEBoYUF8BnwK/preview?usp=drive_link", customTitle: "Aula 02 - Colangite Esclerosante Primária" },
+                                { url: "https://drive.google.com/file/d/1cMX_lVMVu-uwNQaP08dS4VqAFDZEJVP_/preview?usp=drive_link", customTitle: "Aula 03 - Anatomia do Reto e Canal Anal" },
+                                { url: "https://drive.google.com/file/d/1cngEKivWf-0BT4jaKSDTtsRmAagw2QIN/preview?usp=drive_link", customTitle: "Aula 04 - Cirurgia Pediátrica: Afecções Cervicais" },
+                                { url: "https://drive.google.com/file/d/1cpjgxpNkCkbOUUaFOMOeypj8I-_t9oHW/preview?usp=drive_link", customTitle: "Aula 05 - Cirurgia Pediátrica: Gastrointestinal I" },
+                                { url: "https://drive.google.com/file/d/1cq5TvUY6tSFUwz1qy6AIgi67FnE1dGZn/preview?usp=drive_link", customTitle: "Aula 06 - Cirurgia Pediátrica: Gastrointestinal II" },
+                                { url: "https://drive.google.com/file/d/1edoGjeZ-2iWuKj_Bm8Jc5OG3OJSMKk8K/preview?usp=drive_link", customTitle: "Aula 07 - Cirurgia Pediátrica: Gastrointestinal III" },
+                                { url: "https://drive.google.com/file/d/1cMjeIbj4eWyowFFuzmwep5luKhbirtOw/preview?usp=drive_link", customTitle: "Aula 08 - Cirurgia Pediátrica: Geniturinário e Tumores" },
+                                { url: "https://drive.google.com/file/d/1cLRYKv33SvVSIU1Vy0uyG2ACWvFjC4lA/preview?usp=drive_link", customTitle: "Aula 09 - Cabeça e Pescoço" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Ginecologia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Ginecologia I",
+                        shortcode: "GIN I",
+                        contentCounts: { aulas: 6, apostilas: 2, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1tqIAaNkfsStvVUFt_yC7P_feEOzo4voN/preview?usp=drive_link", customTitle: "Aula 01 - Ciclo Menstrual e Anticoncepção: Introdução" },
+                                { url: "https://drive.google.com/file/d/1sWXIAuA_Sxkb23P0WwKHCHNTQtyhf3-R/preview?usp=drive_link", customTitle: "Aula 02 - Ciclo Menstrual e Anticoncepção: Ciclo Menstrual" },
+                                { url: "https://drive.google.com/file/d/1RKOv_A43ntHhxbL6De9izW2z2-gC0S_j/preview?usp=drive_link", customTitle: "Aula 03 - Ciclo Menstrual e Anticoncepção: Anticoncepção" },
+                                { url: "https://drive.google.com/file/d/1zsr2kW4LLQJmasCat7Fm3W3UtE0KwcCz/preview?usp=drive_link", customTitle: "Aula 04 - Amenorreia e SOP: Introdução" },
+                                { url: "https://drive.google.com/file/d/1Q9KUADKTI31474zVDbZEwArVLohosXZJ/preview?usp=drive_link", customTitle: "Aula 05 - Amenorreia e SOP: Amenorreia" },
+                                { url: "https://drive.google.com/file/d/16iV8W70S49P0TCoAy6nZZ9oPbDXM26II/preview?usp=drive_link", customTitle: "Aula 06 - Amenorreia e SOP: SOP" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/19w_DDIuY_zyaDDEWzvdbSnD_5eCbMCSM/preview?usp=drive_link", customTitle: "Apêndice - GIN I" }, { url: "https://drive.google.com/file/d/1pdddzextRM363jubkX1_WnEavY9ONVkS/preview?usp=drive_link", customTitle: "Apostila - Fisiologia Menstrual, Anticoncepção, Amenorreia, Síndrome dos Ovários Policísticos" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1kBOADGgrJaIkaH78rTgoKDW95KUBb4Sj/view?usp=drive_link", customTitle: "Aula 01 - Síndrome Pré-Menstrual (SPM) e Síndrome Disfórica Pré-Menstrual (SDPM)" }]
+                        }
+                    },
+                    {
+                        title: "Ginecologia II",
+                        shortcode: "GIN II",
+                        contentCounts: { aulas: 6, apostilas: 2, aulasBonus: 2 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1Usgjut3CUXxZVlXaaRFZ104ojFvFKVTF/preview?usp=drive_link", customTitle: "Aula 01 - Sangramento Uterino Anormal, Leiomiomas, Pólipos Uterinos, Adenomiose e Endometriose: Introdução" },
+                                { url: "https://drive.google.com/file/d/1kD_j_x98xxsXwf-5dUIFVLdGyaBdflH-/preview?usp=drive_link", customTitle: "Aula 02 - Sangramento Uterino Anormal, Leiomiomas, Pólipos Uterinos, Adenomiose e Endometriose: Sangramento Uterino Anormal" },
+                                { url: "https://drive.google.com/file/d/1WSJTqTTzVcAZOc9K1xpOjjDFwUd-iVbD/preview?usp=drive_link", customTitle: "Aula 03 - Sangramento Uterino Anormal, Leiomiomas, Pólipos Uterinos, Adenomiose e Endometriose: Mioma" },
+                                { url: "https://drive.google.com/file/d/1Is6BwOc36aqryfMQ39p-JWAgvh08ot8O/preview?usp=drive_link", customTitle: "Aula 04 - Sangramento Uterino Anormal, Leiomiomas, Pólipos Uterinos, Adenomiose e Endometriose: Pólipos Uterinos" },
+                                { url: "https://drive.google.com/file/d/1ovE4jNG9YLcyZcbuAF6cV4UCmcBxqBjB/preview?usp=drive_link", customTitle: "Aula 05 - Sangramento Uterino Anormal, Leiomiomas, Pólipos Uterinos, Adenomiose e Endometriose: Adenomiose" },
+                                { url: "https://drive.google.com/file/d/1S5z9kxcGCxW5NvHceUz2XxYX6JQfQ0RJ/preview?usp=drive_link", customTitle: "Aula 06 - Sangramento Uterino Anormal, Leiomiomas, Pólipos Uterinos, Adenomiose e Endometriose: Endometriose" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1O0b_m20Kh27KJA3_RLbE-i-l8Ty2Z7T0/preview?usp=drive_link", customTitle: "Apêndice - GIN II" }, { url: "https://drive.google.com/file/d/1d3FdbFQpQNdxzpSp6F2USyCwnhnTfnyg/preview?usp=drive_link", customTitle: "Apostila - Sangramento Uterino Anormal, Miomatose, Adenomiose, Endometriose, Infertilidade, Pólipos" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1kLjvyQ4RsqV8WSM4m2xcUUhKiliAiaVN/preview?usp=drive_link", customTitle: "Aula 01 - Pólipos Endometriais e Dismenorreia" },
+                                { url: "https://drive.google.com/file/d/1kLkWFY4gwg4icbS0Nw4zPwftuvOGsZNZ/preview?usp=drive_link", customTitle: "Aula 02 - Infertilidade" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Ginecologia III",
+                        shortcode: "GIN III",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 2 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1lPXfbEqsKw-rQL-6h3fhkk8Mu4QJpCDb/preview?usp=drive_link", customTitle: "Aula 01 - Incontinência Urinária, Distopia Genital e Climatério: Introdução" },
+                                { url: "https://drive.google.com/file/d/1lPeS4SIF7lywUAgbP58icPDIWTgS05G6/preview?usp=drive_link", customTitle: "Aula 02 - Incontinência Urinária, Distopia Genital e Climatério: Incontinência Urinária" },
+                                { url: "https://drive.google.com/file/d/1lPtfJOdDWxh1tWNbdERIUD1VBEwTXveg/preview?usp=drive_link", customTitle: "Aula 03 - Incontinência Urinária, Distopia Genital e Climatério: Distopia Genital" },
+                                { url: "https://drive.google.com/file/d/1lPWdHxpjXBZc5Ab3dJLTjYoEfrZf_GVi/preview?usp=drive_link", customTitle: "Aula 04 - Incontinência Urinária, Distopia Genital e Climatério: Climatério" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1lQIcEYlaGbUyK6anjI8TYLo9YAoCdMA5/view?usp=drive_link", customTitle: "Apostila - Climatério, Osteoporose, Distopia Genital, Incontinência Urinária" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1lQMYDheTFan8Dr9t7rI9YsqbN6a-ibGC/preview?usp=drive_link", customTitle: "Aula 01 - Osteoporose" },
+                                { url: "https://drive.google.com/file/d/1lQVS92MZJKjzO4uVIvcdF6rQ64H9bnWE/preview?usp=drive_link", customTitle: "Aula 02 - Fístulas Genitais e Síndrome da Bexiga Dolorosa" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Ginecologia IV",
+                        shortcode: "GIN IV",
+                        contentCounts: { aulas: 3, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1kWRoFOKKCIYrN2UMka2RghQgRNQNipNl/preview?usp=drive_link", customTitle: "Aula 01 - Doenças das Mamas e Doenças dos Ovários: Introdução" },
+                                { url: "https://drive.google.com/file/d/1kWCaEHwK57eTLAfiiEzYs220LVONyUVg/preview?usp=drive_link", customTitle: "Aula 02 - Doenças das Mamas e Doenças dos Ovários: Doenças das Mamas" },
+                                { url: "https://drive.google.com/file/d/1kWEraTNzTVz4U8AB3VaoLLhdyFd_VSAT/preview?usp=drive_link", customTitle: "Aula 03 - Doenças das Mamas e Doenças dos Ovários: Doenças dos Ovários" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1kWfEbgSQgmq2Kc9vOWnfVvwztghOx86Q/view?usp=drive_link", customTitle: "Apostila - Doenças das Mamas e Doenças dos Ovários" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1kMVn2gxUZUpQY9kU3qAxU9B3F8ZQKq9i/preview?usp=drive_link", customTitle: "Aula 01 - Doenças das Mamas e Doenças dos Ovários" }]
+                        }
+                    },
+                    {
+                        title: "Ginecologia V",
+                        shortcode: "GIN V",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1kaIyYJ9oRkEqky-L1-U7B1bKTz7GFfaZ/preview?usp=drive_link", customTitle: "Aula 01 - Câncer de Colo, Câncer de Endométrio e Lesões Precursoras: Introdução" },
+                                { url: "https://drive.google.com/file/d/1k_fsQToscGzeysRAx4mSR1zugrpLvfX0/preview?usp=drive_link", customTitle: "Aula 02 - Câncer de Colo, Câncer de Endométrio e Lesões Precursoras: Vacina e Condiloma" },
+                                { url: "https://drive.google.com/file/d/1k_hi3p0K0c-UJuYaRbadNAkarWEJTjjN/preview?usp=drive_link", customTitle: "Aula 03 - Câncer de Colo, Câncer de Endométrio e Lesões Precursoras: Câncer de Colo" },
+                                { url: "https://drive.google.com/file/d/1kafPvcOpz5p5o__8bu29QciuJCndLSZ4/preview?usp=drive_link", customTitle: "Aula 04 - Câncer de Colo, Câncer de Endométrio e Lesões Precursoras: Câncer de Endométrio e Lesões Precursoras" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1kauriPqgZd_uQtyCkQRKqaplqbOKGslP/view?usp=drive_link", customTitle: "Apostila - Hiperplasia e Câncer de Endométrio, Lesões Intraepiteliais e Câncer de Colo Uterino, da Vulva e da Vagina" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1kcQT2I0QtiI2XXqSra3CvNhj59Noe5pr/preview?usp=drive_link", customTitle: "Aula 01 - Neoplasia Intraepitelial Vulvar" },
+                                { url: "https://drive.google.com/file/d/1kbYwyg-v1VIYDM-yh_D0fxFwPENDxf2x/preview?usp=drive_link", customTitle: "Aula 02 - Câncer de Vulva" },
+                                { url: "https://drive.google.com/file/d/1kcBGXi8vV8trAOaVm12eEjWWKp1aQ6Xm/preview?usp=drive_link", customTitle: "Aula 03 - Distúrbios do Humor e Tromboembolismo" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Ginecologia VI",
+                        shortcode: "GIN VI",
+                        contentCounts: { aulas: 5, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1lBMTaf40QSAhXaDlHl4hCTlp0dmCB5Lg/preview?usp=drive_link", customTitle: "Aula 01 - IST e Violência Sexual: Introdução" },
+                                { url: "https://drive.google.com/file/d/1l9p-dDFD1g4WENGsOviZiMFWhWc0_Z0X/preview?usp=drive_link", customTitle: "Aula 02 - IST e Violência Sexual: Vulvovaginites" },
+                                { url: "https://drive.google.com/file/d/1lAqCNze6Tqf7GzD5YGjKP4zRReLrLl1l/preview?usp=drive_link", customTitle: "Aula 03 - IST e Violência Sexual: Cervicite e Doença Inflamatória Pélvica" },
+                                { url: "https://drive.google.com/file/d/1l9oYfZ-6nSHFTW7tJjeSF_-ElJebnDk-/preview?usp=drive_link", customTitle: "Aula 04 - IST e Violência Sexual: Úlceras" },
+                                { url: "https://drive.google.com/file/d/1l9xN7X_jkrjXvZcIR8GPA5gsHDrYj1WJ/preview?usp=drive_link", customTitle: "Aula 05 - IST e Violência Sexual: Violência Sexual" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1l95ikv46ABeNuGez9_4Qza_F8zEcGPoP/view?usp=drive_link", customTitle: "Apostila - IST" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1l8wxa2xItFU34RGoNZL4XWW4nGkKVhZU/preview?usp=drive_link", customTitle: "Aula 01 - HIV e Gestação" }]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Obstetrícia",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Obstetrícia I",
+                        shortcode: "OBS I",
+                        contentCounts: { aulas: 5, apostilas: 2, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1o8KbhtrHbpc84pPNz41YUcbZiR2WXgtN/preview?usp=drive_link", customTitle: "Aula 01 - Diagnóstico, Modificações e Pré-Natal: Introdução" },
+                                { url: "https://drive.google.com/file/d/1ZB9hV9JZmngc9pVLUM4lhE-qlMQ0aldb/preview?usp=drive_link", customTitle: "Aula 02 - Diagnóstico, Modificações e Pré-Natal: Diagnóstico de Gravidez" },
+                                { url: "https://drive.google.com/file/d/1D9pa6jbdgpnWcHTzO2wNB45X0Cm-fgRp/preview?usp=drive_link", customTitle: "Aula 03 - Diagnóstico, Modificações e Pré-Natal: Modificações do Organismo Materno" },
+                                { url: "https://drive.google.com/file/d/1tEtteuBgh1flR7p5d0FtYer8t66i-iVk/preview?usp=drive_link", customTitle: "Aula 04 - Diagnóstico, Modificações e Pré-Natal: Assistência Pré-Natal" },
+                                { url: "https://drive.google.com/file/d/13Aibk7LUPz5SDLugbOeCMLJxPTked_SW/preview?usp=drive_link", customTitle: "Aula 05 - Diagnóstico, Modificações e Pré-Natal: Hiperêmese Gravídica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1qOHnnPEwppzc9bJfQP8BC0fHXhKj_HBt/preview?usp=drive_link", customTitle: "Apêndice - OBS I" }, { url: "https://drive.google.com/file/d/1zB7S9IMZS6FB8wrsrRThQNSGbDKW_fI_/preview?usp=drive_link", customTitle: "Apostila - Diagnóstico de Gravidez, Pré-Natal e Suas Particularidades" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1o1RTNpB16XhqR279EX7EmS-70dOSW6UK/view?usp=drive_link", customTitle: "Aula 01 - Aconselhamento Genético Pré-Natal" }]
+                        }
+                    },
+                    {
+                        title: "Obstetrícia II",
+                        shortcode: "OBS II",
+                        contentCounts: { aulas: 5, apostilas: 2, aulasBonus: 3 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1NZoSOQt3VcXQvT-_-tWiIaMdliXgfN_O/preview?usp=subscribed_link", customTitle: "Aula 01 - O Parto: Introdução" },
+                                { url: "https://drive.google.com/file/d/1nxOB7gFcRuvX0qwLrc_Dy9TKgu1PBggU/preview?usp=subscribed_link", customTitle: "Aula 02 - O Parto: Trajeto e Estática" },
+                                { url: "https://drive.google.com/file/d/11ut7vR-sGSr52EHniNKvDZvXmyYIbre_/preview?usp=subscribed_link", customTitle: "Aula 03 - O Parto: Assistência" },
+                                { url: "https://drive.google.com/file/d/1nyyV29SDOD3rmC29sY9iorpugniKfaCB/preview?usp=subscribed_link", customTitle: "Aula 04 - O Parto: Prematuridade" },
+                                { url: "https://drive.google.com/file/d/14ohsH0EHY-MQI2vLCLww-urVLnWpunqH/preview?usp=subscribed_link", customTitle: "Aula 05 - O Parto: Amniorrexe Prematura" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1DtYlq3DYLB2_2IxAPuUGyF5EWab7zRI9/preview?usp=drive_link", customTitle: "Apêndice - OBS II" }, { url: "https://drive.google.com/file/d/1sLqT7MfDXKrOLsM_IDT60occo-wW7Ozo/preview?usp=drive_link", customTitle: "O Parto" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1mVuc0PD_mmcZi95FP9vbkbGvqPOJvQSg/preview?usp=subscribed_link", customTitle: "Aula 01 - Estudo do Motor" },
+                                { url: "https://drive.google.com/file/d/161vyOLX0HUa8gKwjeMyF22GhVH_nSpca/preview?usp=subscribed_link", customTitle: "Aula 02 - Mecanismo de Parto" },
+                                { url: "https://drive.google.com/file/d/1aulHlSA--1xqo3kHS5cjX9GVLd9C-eyV/preview?usp=subscribed_link", customTitle: "Aula 03 - Cesariana" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Obstetrícia III",
+                        shortcode: "OBS III",
+                        contentCounts: { aulas: 9, apostilas: 1, aulasBonus: 0 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1neoYWkvZAXtu995kLTVOr6cNxOgdschk/preview?usp=drive_link", customTitle: "Aula 01 - Sangramentos na Gravidez: Parte I - Introdução" },
+                                { url: "https://drive.google.com/file/d/1nfRjuk-pg8VdewjQiy1cpxco4jA8EnYH/preview?usp=drive_link", customTitle: "Aula 02 - Sangramentos na Gravidez: Parte I - Abortamento" },
+                                { url: "https://drive.google.com/file/d/1nfj4YcCZzgC-dftIJthK00rD3M1DHXLY/preview?usp=drive_link", customTitle: "Aula 03 - Sangramentos na Gravidez: Parte I - Gravidez Ectópica" },
+                                { url: "https://drive.google.com/file/d/1nfvDr92nA--x7Cp5TT1gDsGPsR1sjgbL/preview?usp=drive_link", customTitle: "Aula 04 - Sangramentos na Gravidez: Parte I - Doença Trofoblástica Gestacional" },
+                                { url: "https://drive.google.com/file/d/1nh4-K-T_MynnNtHG19HhrqHHjk_7VJMQ/preview?usp=drive_link", customTitle: "Aula 05 - Sangramentos na Gravidez: Parte II - Introdução" },
+                                { url: "https://drive.google.com/file/d/1neJ0Qb_6QN4Q20pJMxZIeE64kDmLv5Eg/preview?usp=drive_link", customTitle: "Aula 06 - Sangramentos na Gravidez: Parte II - Deslocamento Prematuro de Placenta" },
+                                { url: "https://drive.google.com/file/d/1ncfP3gNqV-plUVVeQJGizuc3uGBbD4Pa/preview?usp=drive_link", customTitle: "Aula 07 - Sangramentos na Gravidez: Parte II - Placenta Prévia" },
+                                { url: "https://drive.google.com/file/d/1nf6cRvkrkIF410PGq-slIK2mna9FFgba/preview?usp=drive_link", customTitle: "Aula 08 - Sangramentos na Gravidez: Parte II - Roturas (Diagnósticos Diferenciais)" },
+                                { url: "https://drive.google.com/file/d/1nhMtOEKZfD8V6doLh8bI2ozwAiuueRqW/preview?usp=drive_link", customTitle: "Aula 09 - Sangramentos na Gravidez: Parte II - Doença Hemolítica Perinatal" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1ncKoXS_CUQFf-fJ-roTeo9QFyiwrZYoe/view?usp=drive_link", customTitle: "Apostila - Sangramento na Gravidez" }],
+                            aulasBonus: []
+                        }
+                    },
+                    {
+                        title: "Obstetrícia IV",
+                        shortcode: "OBS IV",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1o9c41D5KXak75hz4Mk-s37Ho3okhfk0c/preview?usp=drive_link", customTitle: "Aula 01 - Doenças Clínicas na Gestação: Introdução" },
+                                { url: "https://drive.google.com/file/d/1o9cwxzkB5xHNbh_MSPt59zPjW3YBAKaW/preview?usp=drive_link", customTitle: "Aula 02 - Doenças Clínicas na Gestação: Hipertensão Arterial" },
+                                { url: "https://drive.google.com/file/d/1o8sPrDShtRJWS8SUem-hKMtXM_Q5wvzg/preview?usp=drive_link", customTitle: "Aula 03 - Doenças Clínicas na Gestação: Diabetes Gestacional" },
+                                { url: "https://drive.google.com/file/d/1o8s7k6PvSnf92Z-KfzQtNrvBB3v-aU1l/preview?usp=drive_link", customTitle: "Aula 04 - Doenças Clínicas na Gestação: Gestação Gemelar" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1o4L2SeN62Sl4IrLKHTqB3TpYoWeJiMzf/view?usp=drive_link", customTitle: "Apostila - Distúrbios Hipertensivos da Gestação; Diabetes Mellitus e Gemelaridade" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1YigGpoU-icjeH6Kt2k1sRkFBlHJ8ig40/view?usp=drive_link", customTitle: "Aula 01 - Outras Doenças Intercorrentes na Gestação" }]
+                        }
+                    },
+                    {
+                        title: "Obstetrícia V",
+                        shortcode: "OBS V",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1nXr53lX9b_6H5NFTKqtTy-1mGgFHOEs8/preview?usp=drive_link", customTitle: "Aula 01 - Sofrimento Fetal, Fórcipe e Puerpério: Introdução" },
+                                { url: "https://drive.google.com/file/d/1nWauIZoq9Vao-v6ts3TBsHRDYJw2-YcC/preview?usp=drive_link", customTitle: "Aula 02 - Sofrimento Fetal, Fórcipe e Puerpério: Sofrimento Fetal" },
+                                { url: "https://drive.google.com/file/d/1nXREaA-c0AAoKQa2yn3v8JacCy1zeJfR/preview?usp=drive_link", customTitle: "Aula 03 - Sofrimento Fetal, Fórcipe e Puerpério: Fórcipe" },
+                                { url: "https://drive.google.com/file/d/1nWEbo1PaFBM7JA1gPBsEJZTv_rL3re6B/preview?usp=drive_link", customTitle: "Aula 04 - Sofrimento Fetal, Fórcipe e Puerpério: Puerpério" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1nXtqGWn7Up0eLu0MeiRGgRRpkuAn8-sj/view?usp=drive_link", customTitle: "Apostila - Fórcipe, Sofrimento Fetal Agudo e Crônico e Puerpério" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1aWBLs6DXB7mCngspZmOXt6uTy6tHQt8r/view?usp=drive_link", customTitle: "Aula 01 - Distúrbios do Humor e Tromboembolismo" }]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Pediatria",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Pediatria I",
+                        shortcode: "PED I",
+                        contentCounts: { aulas: 8, apostilas: 2, aulasBonus: 5 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1HfGc-ScEG0IBMzXtqm178LuC3n1Q5Zbj/preview?usp=drive_link", customTitle: "Aula 01 - Neonatologia: Parte I - Introdução Neonatal" },
+                                { url: "https://drive.google.com/file/d/12wM-Tp3qG1sBofwfDvLfJ95LvGTuF8ON/preview?usp=drive_link", customTitle: "Aula 02 - Neonatologia: Parte I - Reanimação Neonatal e Cuidados Iniciais: Reanimação Neonatal" },
+                                { url: "https://drive.google.com/file/d/1JHUCutFiCrxK6LiTKdyACIGdNA1rRKb8/preview?usp=drive_link", customTitle: "Aula 03 - Neonatologia: Parte I - Principais Doenças do Período Neonatal: Icterícia Neonatal" },
+                                { url: "https://drive.google.com/file/d/1y7LqQYvyG4C4ZP0q_uI2YXJ-xuG6FyyW/preview?usp=drive_link", customTitle: "Aula 04 - Neonatologia: Parte II - Principais Doenças do Período Neonatal: Distúrbio Respiratório - Parte I" },
+                                { url: "https://drive.google.com/file/d/1ZX-mVBQ3RIV0hEOsar7ukYtgvXn-ifNn/preview?usp=drive_link", customTitle: "Aula 05 - Neonatologia: Parte II - Principais Doenças do Período Neonatal: Distúrbio Respiratório - Parte II" },
+                                { url: "https://drive.google.com/file/d/1xPNVxkYmcFq3Z9KEM_NMkQroAgly_4-C/preview?usp=drive_link", customTitle: "Aula 06 - Neonatologia: Parte II - Principais Doenças do Período Neonatal: Infecções Congênitas - Sífilis Congênita" },
+                                { url: "https://drive.google.com/file/d/1h8kUvDyNP802NW5MA4p482mVSTzgRk-N/preview?usp=drive_link", customTitle: "Aula 07 - Neonatologia: Parte II - Principais Doenças do Período Neonatal: Infecções Congênitas - Outras Infecções" },
+                                { url: "https://drive.google.com/file/d/1ISXozIAEYwde3WYasI-2PiB704xnTDZC/preview?usp=drive_link", customTitle: "Aula 08 - Neonatologia: Parte II - Principais Doenças do Período Neonatal: Exposição Perinatal ao HIV" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/18RYLz-bQ7Ccm34Dc5UCtIuQ_0-_JGzAf/preview?usp=drive_link", customTitle: "Apêndice - PED I" }, { url: "https://drive.google.com/file/d/19wC-iNEbxtj8acbHLjL9GSfUt6aUtuX4/preview?usp=drive_link", customTitle: "Apostila - Neonatologia" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1isLpEB1wpPzn3Gy7-bn2yjG3rjZ9yU-O/preview?usp=drive_link", customTitle: "Aula 01 - Triagem Neonatal I" },
+                                { url: "https://drive.google.com/file/d/1ipKHoSEcGyrRNcBNWHOGrOhzNUBdSE2d/preview?usp=drive_link", customTitle: "Aula 02 - Triagem Neonatal II" },
+                                { url: "https://drive.google.com/file/d/1ipakRK9KCLp4PRHfs9qXG6pv3oz6Wyt_/preview?usp=drive_link", customTitle: "Aula 03 - O Exame Físico Neonatal" },
+                                { url: "https://drive.google.com/file/d/1iq9MfKzUPYqG6N2Lu9tio2tmZjNkUaFh/preview?usp=drive_link", customTitle: "Aula 04 - Doenças do Trato Gastrointestinal" },
+                                { url: "https://drive.google.com/file/d/1ipKdDYJvXAJQ72S73heqeSq10xoVB03b/preview?usp=drive_link", customTitle: "Aula 05 - Miscelânea" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Pediatria II",
+                        shortcode: "PED II",
+                        contentCounts: { aulas: 7, apostilas: 2, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1WtEYck_0_RvET18AWLKIHhYE9nGCTHgi/preview?usp=drive_link", customTitle: "Aula 01 - Alimentação Infantil: Aleitamento Materno - Definições e Composição do Leite" },
+                                { url: "https://drive.google.com/file/d/1zQLrZQC7a_j8rHp6BEQetidwZcsQnM2V/preview?usp=drive_link", customTitle: "Aula 02 - Alimentação Infantil: Aleitamento Materno - Aspectos Práticos" },
+                                { url: "https://drive.google.com/file/d/1yOUsOYVRuxbWJXrHYCjnPDyE0hqh46bo/preview?usp=drive_link", customTitle: "Aula 03 - Alimentação Infantil: Aleitamento Materno - Queixas Comuns e Contraindicações" },
+                                { url: "https://drive.google.com/file/d/15cf0d-Owd2oSDQfDSMRFSW9A1To7KG8U/preview?usp=drive_link", customTitle: "Aula 04 - Alimentação Infantil: Suplementação de Micronutriente" },
+                                { url: "https://drive.google.com/file/d/1qQrGVuZkQYMPGjW4eYA4K-Eta4hc9gfG/preview?usp=drive_link", customTitle: "Aula 05 - Crescimento, Desenvolvimento e Puberdade: Crescimento" },
+                                { url: "https://drive.google.com/file/d/1t05xJ80mz01x4CR23IdX1951jUST75kX/preview?usp=drive_link", customTitle: "Aula 06 - Crescimento, Desenvolvimento e Puberdade: Puberdade" },
+                                { url: "https://drive.google.com/file/d/1q-XQtqPBtj2cqYLXKURCUCXnb-Zx6H11/preview?usp=drive_link", customTitle: "Aula 07 - Crescimento, Desenvolvimento e Puberdade: Desenvolvimento" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1ubiGGdzoeE5piEX_t5R-DUn3kgwhJebk/preview?usp=drive_link", customTitle: "Apêndice - PED II" }, { url: "https://drive.google.com/file/d/1iJTHg2XhmApdo-oKrV340k4R33xWyAHo/preview?usp=drive_link", customTitle: "Apostila - Aleitamento Materno, Crescimento e Desenvolvimento" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1q5C4C8EccWWpsOG2zCKyYmnb5Q4Alq9o/preview?usp=drive_link", customTitle: "Aula 01 - Alimentação Complementar" }]
+                        }
+                    },
+                    {
+                        title: "Pediatria III",
+                        shortcode: "PED III",
+                        contentCounts: { aulas: 7, apostilas: 1, aulasBonus: 4 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1iPt9UShXeqD3vtVJJb0Z4dgIPJVu5lBg/preview?usp=drive_link", customTitle: "Aula 01 - Distúrbios do Crescimento: Avaliação Nutricional" },
+                                { url: "https://drive.google.com/file/d/1iQMr_E_TPkLCPj-7G1DkxZaeVoTU5K9U/preview?usp=drive_link", customTitle: "Aula 02 - Distúrbios do Crescimento: Desnutrição Grave" },
+                                { url: "https://drive.google.com/file/d/1iPh77LOm0CjgEqFJEzcdQo3wwpB03wK7/preview?usp=drive_link", customTitle: "Aula 03 - Distúrbios do Crescimento: Obesidade e Baixa Estatura" },
+                                { url: "https://drive.google.com/file/d/1iPzz61ElFKucAOLM2wOvNYgkXGBVMe1C/preview?usp=drive_link", customTitle: "Aula 04 - Imunizações: Aspectos Iniciais" },
+                                { url: "https://drive.google.com/file/d/1iQJW9gohFHNV6Wy_o85fQR7FqNGK7Zv5/preview?usp=drive_link", customTitle: "Aula 05 - Imunizações: Calendários Vacinais" },
+                                { url: "https://drive.google.com/file/d/1iS3U11Tro-OB_Fnqsc2MdS1o96bJt938/preview?usp=drive_link", customTitle: "Aula 06 - Imunizações: As Vacinas - Parte I" },
+                                { url: "https://drive.google.com/file/d/1iQ8bJLSokgJySDgixxl_kHAsDveOFJNy/preview?usp=drive_link", customTitle: "Aula 07 - Imunizações: As Vacinas - Parte II" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1w7eGlX6f7MH7W3N-VfbY9M-zq3plrnoD/view?usp=drive_link", customTitle: "Apostila - Distúrbios Nutricionais da Infância e Imunizações" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1dLvmLLlrBGgthQWhWIOUD8gI_iTn6u0O/preview?usp=drive_link", customTitle: "Aula 01 - Carência de Micronutrientes" },
+                                { url: "https://drive.google.com/file/d/1afREIXlDgGyWOoMm0tNNIl7SKTWsk6jN/preview?usp=drive_link", customTitle: "Aula 02 - Profilaxia para Raiva" },
+                                { url: "https://drive.google.com/file/d/1rS_17Z7nhEpxJTAhME7cZazOGJm4T9OS/preview?usp=drive_link", customTitle: "Aula 03 - Profilaxia para o Tétano Acidental" },
+                                { url: "https://drive.google.com/file/d/1QTdxeXqR6fZmo6_iSm_vmy5w9L614FHI/preview?usp=drive_link", customTitle: "Aula 04 - Síndromes Genéticas" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Pediatria IV",
+                        shortcode: "PED IV",
+                        contentCounts: { aulas: 8, apostilas: 1, aulasBonus: 1 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1jZR3u7IYly2EnFv-mA8ybxfxqV3Jcj0A/preview?usp=drive_link", customTitle: "Aula 01 - Diarreia Aguda: Parte I" },
+                                { url: "https://drive.google.com/file/d/1jc6SIdY7bzqhF11FAak45eDRDTEAfFjU/preview?usp=drive_link", customTitle: "Aula 02 - Diarreia Aguda: Parte II" },
+                                { url: "https://drive.google.com/file/d/1jaNDw3J8WIopNzlHdKGKG2urZClfd8Jf/preview?usp=drive_link", customTitle: "Aula 03 - Infecções Respiratórias Agudas: Parte I - Resfriado e Otite Média Aguda" },
+                                { url: "https://drive.google.com/file/d/1j_8aRlJPJZPDAozQ2nsgHnfQ3Ahs-C5X/preview?usp=drive_link", customTitle: "Aula 04 - Infecções Respiratórias Agudas: Parte I - Sinusite Bacteriana e Faringite Aguda" },
+                                { url: "https://drive.google.com/file/d/1jYNr-MpnrrdJAOBt-J6B_E1eQ_76jJrS/preview?usp=drive_link", customTitle: "Aula 05 - Infecções Respiratórias Agudas: Parte I - Epiglotite Aguda e Laringotraqueíte Viral Aguda" },
+                                { url: "https://drive.google.com/file/d/1jbqHl1j-rqVW-mtHxn1owOHjjlWMW0LM/preview?usp=drive_link", customTitle: "Aula 06 - Infecções Respiratórias Agudas: Parte II - Pneumonia Bacteriana" },
+                                { url: "https://drive.google.com/file/d/1jYl5os5YNI0Dp6T3T7MI8huTkp7V2-hG/preview?usp=drive_link", customTitle: "Aula 07 - Infecções Respiratórias Agudas: Parte II - Bronquiolite Viral Aguda" },
+                                { url: "https://drive.google.com/file/d/1jYRYVtZVcVvxVY8nIwwn6cDkEOzTeO25/preview?usp=drive_link", customTitle: "Aula 08 - Infecções Respiratórias Agudas: Parte II - Pneumonia Afebril do Lactente e Coqueluche" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1j5qgjhNlX_Km13NgJo8syZes6zk_vtzp/view?usp=drive_link", customTitle: "Apostila - Doenças Infecciosas Prevalentes na Infância" }],
+                            aulasBonus: [{ url: "https://drive.google.com/file/d/1GjG7SFKlLYqKviv14ExFTnmT_9V52ToQ/view?usp=drive_link", customTitle: "Aula 01 - Fibrose Cística" }]
+                        }
+                    },
+                    {
+                        title: "Pediatria V",
+                        shortcode: "PED V",
+                        contentCounts: { aulas: 6, apostilas: 1, aulasBonus: 4 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1iUY3uwZ_m8qj2crq-l-esO3ZFOwTlFHZ/preview?usp=drive_link", customTitle: "Aula 01 - Infecção do Trato Urinário e Urologia Pediátrica: Infecção do Trato Urinário" },
+                                { url: "https://drive.google.com/file/d/1iVXif9z0p3U0kQMzJXbMWFAgZKk2XAtg/preview?usp=drive_link", customTitle: "Aula 02 - Infecção do Trato Urinário e Urologia Pediátrica: Outros Distúrbios Urológicos" },
+                                { url: "https://drive.google.com/file/d/1iW61ACeZUBDSnhhgqiEy0RRCqspPuY5I/preview?usp=drive_link", customTitle: "Aula 03 - Doenças Exantemáticas: Sarampo e Rubéola" },
+                                { url: "https://drive.google.com/file/d/1iVkvN_fZzkNZgoXpmSGUjbyIciHXegus/preview?usp=drive_link", customTitle: "Aula 04 - Doenças Exantemáticas: Exantema Súbito e Eritema Infeccioso" },
+                                { url: "https://drive.google.com/file/d/1iUQ9tmwTVxTxzcxlNqIzq5u8-5nPUIOZ/preview?usp=drive_link", customTitle: "Aula 05 - Doenças Exantemáticas: Varicela e Doença Mão-Pé-Boca" },
+                                { url: "https://drive.google.com/file/d/1iU2fqrFqVvKE-pYW34z0Pk3GU2v3tmKP/preview?usp=drive_link", customTitle: "Aula 06 - Doenças Exantemáticas: Escarlatina e Mononucleose" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1iTR9dA2ev_5zML6Djv0NRZy5SMox7qWl/view?usp=drive_link", customTitle: "Apostila - Especialidades Pediátricas" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1Tz647ztse8bUU8SlqfBTTSgS_XGKypqC/preview?usp=drive_link", customTitle: "Aula 01 - PALS" },
+                                { url: "https://drive.google.com/file/d/1tXP6PGSSOhuBE-Cf5Bzpj6UJ_zTLWxV2/preview?usp=drive_link", customTitle: "Aula 02 - Cardiopatias Congênitas" },
+                                { url: "https://drive.google.com/file/d/1LObtRDLO1m6gZKZkOWF62oC_buwMnt0j/preview?usp=drive_link", customTitle: "Aula 03 - Anafilaxia" },
+                                { url: "https://drive.google.com/file/d/1ZuzIQV4DY30sxdnYULSAeAGkH0wS-Meo/preview?usp=drive_link", customTitle: "Aula 04 - Hipertensão Arterial" }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Preventiva",
+                icon: gradientClasses[gradientIconIndex++ % 20],
+                modules: [
+                    {
+                        title: "Preventiva I",
+                        shortcode: "PREV I",
+                        contentCounts: { aulas: 4, apostilas: 1, aulasBonus: 2 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1uuX_3LGDBdLvETIKt9ZhT_H56-jfQVKF/preview?usp=drive_link", customTitle: "Aula 01 - Medidas de Saúde Coletiva: Os Indicadores de Saúde - Parte I" },
+                                { url: "https://drive.google.com/file/d/1iG7EWpUK8pWwXiLCjqC4G3bDD2rNuoiJ/preview?usp=drive_link", customTitle: "Aula 02 - Medidas de Saúde Coletiva: Os Indicadores de Saúde - Parte II" },
+                                { url: "https://drive.google.com/file/d/10tA5DkuEvoRG6quek_zxnQ5Pjt951GZa/preview?usp=drive_link", customTitle: "Aula 03 - Medidas de Saúde Coletiva: Os Indicadores de Saúde - Parte III" },
+                                { url: "https://drive.google.com/file/d/12n5PHRNq8YbZ8D-ejwxbTtRYIxQ-yoni/preview?usp=drive_link", customTitle: "Aula 04 - Medidas de Saúde Coletiva: Os Indicadores de Saúde - Parte IV" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1pBBg9n_BLOASI72C1FQSocq1E2Ab7sv6/view?usp=drive_link", customTitle: "Apostila - Medidas de Saúde Coletiva" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1UESM-efS9-P2RwnMGqfB4MucGjMISvOV/preview?usp=drive_link", customTitle: "Aula 01 - Sistema de Informação" },
+                                { url: "https://drive.google.com/file/d/1qYoJLEkmdUcmxE9JALaebS5uQV9Iq0d3/preview?usp=drive_link", customTitle: "Aula 02 - Outros Indicadores e Atualizações: Censo 2022" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Preventiva II",
+                        shortcode: "PREV II",
+                        contentCounts: { aulas: 3, apostilas: 2, aulasBonus: 7 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1yThsXZ6OMDieaaJz1G8f1YBL0Of_kbsX/preview?usp=drive_link", customTitle: "Aula 01 - Estudos Epidemiológicos: Classificação" },
+                                { url: "https://drive.google.com/file/d/1s_0fkn5mdnUaznTQYQeaBowXbN8enKqz/preview?usp=drive_link", customTitle: "Aula 02 - Estudos Epidemiológicos: Análise" },
+                                { url: "https://drive.google.com/file/d/1V64_KoIE6yE3PklkmqmOtR4QTDM3PijH/preview?usp=drive_link", customTitle: "Aula 03 - Epidemiologia Clínica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/188IcoqNdJIPWBYnuUSr0Z5BDcnc16Vx1/preview?usp=drive_link", customTitle: "Apêndice - PREV II" }, { url: "https://drive.google.com/file/d/1ttpDZFffRVS6HabJASgBm2NAm6CTnaHi/preview?usp=drive_link", customTitle: "Apostila - Epidemiologia Analítica e Aplicada a Clinica" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1YFH8KIz-J07jYrLifzHVvF3IsG-YeLqt/preview?usp=drive_link", customTitle: "Aula 01 - Variáveis" },
+                                { url: "https://drive.google.com/file/d/1YEjazki9lXMluUehoDzH_BxRDdFzpNYc/preview?usp=drive_link", customTitle: "Aula 02 - Fases do Ensaio Clínico" },
+                                { url: "https://drive.google.com/file/d/1YCdB5hVfQxZTy7i1HrX6wxj1w6JtDk8j/preview?usp=drive_link", customTitle: "Aula 03 - Estudos Descritivos e Metanálise" },
+                                { url: "https://drive.google.com/file/d/1YCZvj21p9JBGz8hgbNZ881TSPEmJ4dOf/preview?usp=drive_link", customTitle: "Aula 04 - Verossimilhança e Testes Múltiplos" },
+                                { url: "https://drive.google.com/file/d/1YCXAlK2t4hrUtywuh0QpJvY8axCvs3m4/preview?usp=drive_link", customTitle: "Aula 05 - Curva ROC e Variações no Ponto de Corte" },
+                                { url: "https://drive.google.com/file/d/1YDE17bWXw3pC344Ggu4gIZDSqhrrTevQ/preview?usp=drive_link", customTitle: "Aula 06 - Medidas de Tendência Central e de Dispersão" },
+                                { url: "https://drive.google.com/file/d/1YEG_Elp3A3Bu5kWtGNpnjvzRRNapnVnx/preview?usp=drive_link", customTitle: "Aula 07 - Testes Estatísticos" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Preventiva III",
+                        shortcode: "PREV III",
+                        contentCounts: { aulas: 3, apostilas: 2, aulasBonus: 7 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/18hUbEH-70-Uwe0ywy9yNQYTxaWcRmMR6/preview?usp=drive_link", customTitle: "Aula 01 - Vigilância Epidemiológica: Vigilância da Saúde" },
+                                { url: "https://drive.google.com/file/d/16G8Ykn8b4nt7UGwC1kY7rTSxXQbK7sUo/preview?usp=drive_link", customTitle: "Aula 02 - Vigilância Epidemiológica: Processo Epidêmico" },
+                                { url: "https://drive.google.com/file/d/1hbQEWkUxkpQh6jIzD11hkeYTVw1RvDDB/preview?usp=drive_link", customTitle: "Aula 03 - Vigilância Epidemiológica: Níveis de Prevenção" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1xdDaFr9vQ6aXhgQbNyj-M_ccsY8nAGyL/preview?usp=drive_link", customTitle: "Apêndice - PREV III" }, { url: "https://drive.google.com/file/d/1OvBZrwkekzY8KhmYXp4MrVvk1K8aPg6e/preview?usp=drive_link", customTitle: "Apostila - Vigilância da Saúde e Saúde do Trabalhador" }],
+                            aulasBonus: [
+                                { url: "https://drive.google.com/file/d/1Y-NhqQVBFEISFYN_pQoRQAp9d82y5yTk/preview?usp=drive_link", customTitle: "Aula 01 - Raiva" },
+                                { url: "https://drive.google.com/file/d/1XyjYdmdfSnSrBSllTGy3RoJCgTLA9LW7/preview?usp=drive_link", customTitle: "Aula 02 - Glossário de Doenças Infecciosas" },
+                                { url: "https://drive.google.com/file/d/1XyU-T60oT9nbEm5let0HKk8JKSy22RZS/preview?usp=drive_link", customTitle: "Aula 03 - Saúde do Trabalhador: CAT e Tipos de Acidentes" },
+                                { url: "https://drive.google.com/file/d/1XyoYN8a5PbawUCYnQdFJoxIv8AUE-lJn/preview?usp=drive_link", customTitle: "Aula 04 - Saúde do Trabalhador: Agrotóxicos" },
+                                { url: "https://drive.google.com/file/d/1Y-53TWXvnDu3I6Z04-DeRX5JHPeSa6Oh/preview?usp=drive_link", customTitle: "Aula 05 - Saúde do Trabalhador: Pneumoconioses, PAIR e Burnout" },
+                                { url: "https://drive.google.com/file/d/1Xzd2StmH3X60uMUM6E_Osa3-icqfEz8Q/preview?usp=drive_link", customTitle: "Aula 06 - Saúde do Trabalhador: Saturnismo, Hidrargirismo, Benzenismo e Cromo" },
+                                { url: "https://drive.google.com/file/d/1XzX2Ck7FIrHpFymibRnjV8cEeHpIbtJf/preview?usp=drive_link", customTitle: "Aula 07 - Ética Médica: Artigos Principais, Erros e Atualizações" }
+                            ]
+                        }
+                    },
+                    {
+                        title: "Preventiva IV",
+                        shortcode: "PREV IV",
+                        contentCounts: { aulas: 3, apostilas: 1, aulasBonus: 0 },
+                        contentLinks: {
+                            aulas: [
+                                { url: "https://drive.google.com/file/d/1XfmZRX-XMLuWMAPH1ud50iYTk9ttQfwY/preview?usp=drive_link", customTitle: "Aula 01 - Sistema Único de Saúde" },
+                                { url: "https://drive.google.com/file/d/1XgKNPDvxybYs50z8xNUj51HvLiC9BaFS/preview?usp=drive_link", customTitle: "Aula 02 - Sistema Único de Saúde: Atenção Básica" },
+                                { url: "https://drive.google.com/file/d/1XidPUmR8BH5X4_h8hdQNNQuCDDGu-ki2/preview?usp=drive_link", customTitle: "Aula 03 - Sistema Único de Saúde: Financiamento do SUS e da Atenção Básica" }
+                            ],
+                            apostilas: [{ url: "https://drive.google.com/file/d/1WFeHtO_QfD572b6mEXgIYQMD8kXz0DBe/preview?usp=drive_link", customTitle: "Apostila - Sistema Único de Saúde" }],
+                            aulasBonus: []
+                        }
+                    }
+                ]
+            }
+        ];
+        
+        const modulesDataRaw = [];
+        newSpecialtiesWithModules.forEach(specData => {
+            specData.modules.forEach(modData => { 
+                modulesDataRaw.push({
+                    specialty: specData.name, 
+                    shortcode: modData.shortcode, 
+                    title: modData.title, 
+                    subtitle: specData.name, 
+                    contentCounts: modData.contentCounts, 
+                    iconType: specData.icon, 
+                    contentLinks: modData.contentLinks 
+                });
+            });
+        });
+
+        const specialtyOrder = newSpecialtiesWithModules.map(s => s.name); 
+        const modulesData = modulesDataRaw.map(mod => createModule( mod.specialty, mod.shortcode, mod.title, mod.subtitle, mod.contentCounts, mod.iconType, mod.contentLinks ));
+        
+        // --- UI Rendering and Event Handling (rest of the script remains the same) ---
+        function clearTopicsMenu(message = 'Nenhum tópico disponível.') {
+            topicsListUl.innerHTML = '';
+            noTopicsMessage.textContent = message;
+            noTopicsMessage.classList.remove('hidden');
+            topicsMenuDiv.classList.add('hidden');      
+            toggleTopicsButton.classList.add('hidden'); 
+            topicsIconOpen.classList.remove('hidden');
+            topicsIconClose.classList.add('hidden');
+        }
+
+        function populateTopicsMenu(topics, isYouTube = false, playerInstance = null) { 
+            topicsListUl.innerHTML = '';
+            const currentPlayerInstance = playerInstance; 
+            console.log("Populating topics. isYouTube:", isYouTube, "Player instance for click:", currentPlayerInstance);
+
+            if (topics && topics.length > 0) {
+                topics.forEach(topic => {
+                    const li = document.createElement('li');
+                    li.className = 'topics-item'; 
+                    
+                    const topicTitleContainer = document.createElement('div');
+                    topicTitleContainer.className = 'topic-title-container';
+
+                    const playIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    playIconSvg.setAttribute('class', 'play-icon');
+                    playIconSvg.setAttribute('viewBox', '0 0 20 20');
+                    playIconSvg.setAttribute('fill', 'currentColor'); 
+                    playIconSvg.innerHTML = `<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />`;
+                    
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'topic-title';
+                    titleSpan.textContent = topic.title;
+
+                    topicTitleContainer.appendChild(playIconSvg);
+                    topicTitleContainer.appendChild(titleSpan);
+                    
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'topic-time';
+                    timeSpan.textContent = topic.time;
+
+                    li.appendChild(topicTitleContainer);
+                    li.appendChild(timeSpan);
+
+                    if (isYouTube && currentPlayerInstance && typeof currentPlayerInstance.seekTo === 'function') { 
+                        console.log("Making topic clickable:", topic.title, "with player:", currentPlayerInstance);
+                        li.classList.add('clickable');
+                        li.addEventListener('click', () => {
+                            console.log("Topic clicked:", topic.title, "Attempting to use player:", currentPlayerInstance);
+                            const seconds = parseTimeToSeconds(topic.time);
+                            if (currentPlayerInstance && typeof currentPlayerInstance.seekTo === 'function' && typeof currentPlayerInstance.playVideo === 'function') {
+                                currentPlayerInstance.seekTo(seconds, true); 
+                                currentPlayerInstance.playVideo(); 
+                            } else {
+                                console.warn("Player instance was not valid or ready at time of click for topic:", topic.title);
+                            }
+                        });
+                    } else if (isYouTube) {
+                         console.log("Topic NOT clickable (YouTube video, but player invalid/not ready at this stage):", topic.title, "Player:", currentPlayerInstance);
+                    }
+                    topicsListUl.appendChild(li);
+                });
+                noTopicsMessage.classList.add('hidden');
+                toggleTopicsButton.classList.remove('hidden'); 
+            } else {
+                clearTopicsMenu(isYouTube ? 'Nenhum tópico definido para esta aula.' : 'Nenhum tópico disponível para este material.');
+            }
+        }
+
+        function displayModuleDetails(module) {
+            materialsHeader.textContent = `Módulo - ${module.title}`; 
+            detailsContentList.innerHTML = ''; 
+            
+            destroyYouTubePlayer(); 
+            playerDiv.classList.add('hidden');
+            gDriveViewer.src = 'about:blank'; 
+            gDriveViewer.classList.add('hidden');
+
+            topicsMenuDiv.classList.add('hidden'); 
+            toggleTopicsButton.classList.add('hidden');
+            topicsIconOpen.classList.remove('hidden'); 
+            topicsIconClose.classList.add('hidden');   
+
+            const initialMessage = detailsContentList.querySelector('.initial-details-message');
+            if(initialMessage) initialMessage.remove(); 
+
+            if (module.contentCounts.aulas === 0 && module.contentCounts.apostilas === 0 && module.contentCounts.aulasBonus === 0) {
+                 detailsContentList.innerHTML = '<p class="text-gray-400">Nenhum material cadastrado para este módulo.</p>';
+                 return;
+            }
+
+            let hasContentToList = false; 
+            let firstPlayableItemDiv = null; 
+            
+            subItemOrder.forEach(contentTypeKey => { 
+                const items = module.content[contentTypeKey]; 
+                const countForType = module.contentCounts[contentTypeKey];
+
+                if (countForType > 0 && items && items.length > 0) { 
+                    hasContentToList = true;
+                    const sectionTitle = document.createElement('h4');
+                    sectionTitle.className = 'text-xs font-semibold text-gray-400 mt-3 mb-1 uppercase tracking-wider';
+                    const displayContentType = contentTypeKey === 'aulasBonus' ? 'Aulas Bônus' : contentTypeKey.charAt(0).toUpperCase() + contentTypeKey.slice(1);
+                    sectionTitle.textContent = displayContentType;
+                    detailsContentList.appendChild(sectionTitle);
+
+                    items.forEach(item_data => { 
+                        const itemNode = contentItemTemplate.content.cloneNode(true);
+                        const itemDiv = itemNode.querySelector('.content-item');
+                        const titleSpan = itemNode.querySelector('.content-title');
+                        titleSpan.textContent = item_data.title; 
+
+                        itemDiv.setAttribute('data-url', item_data.url || '#'); 
+                        itemDiv.setAttribute('data-type', item_data.type || 'gdrive'); 
+                        itemDiv.dataset.topics = JSON.stringify(item_data.topics || []); 
+
+                        const iconSvgContainer = document.createElement('span');
+                        if (contentIcons[contentTypeKey.toLowerCase()]) {
+                            iconSvgContainer.innerHTML = contentIcons[contentTypeKey.toLowerCase()];
+                            titleSpan.parentNode.insertBefore(iconSvgContainer.firstChild, titleSpan);
+                        }
+                        
+                        if (!firstPlayableItemDiv && item_data.url && item_data.url !== '#' && !item_data.url.startsWith("ID_YOUTUBE_") && !item_data.url.startsWith("LINK_GOOGLE_DRIVE_") ) { 
+                            firstPlayableItemDiv = itemDiv;
+                        }
+
+                        itemDiv.addEventListener('click', () => {
+                            const url = itemDiv.getAttribute('data-url');
+                            const type = itemDiv.getAttribute('data-type');
+                            const storedTopics = JSON.parse(itemDiv.dataset.topics);
+
+                            if(activeContentItem) activeContentItem.classList.remove('active-content');
+                            itemDiv.classList.add('active-content');
+                            activeContentItem = itemDiv;
+
+                            topicsMenuDiv.classList.add('hidden'); 
+                            topicsIconOpen.classList.remove('hidden'); 
+                            topicsIconClose.classList.add('hidden');   
+
+                            if (url && url !== '#') {
+                                if (url.startsWith("ID_YOUTUBE_") || url.startsWith("LINK_GOOGLE_DRIVE_")) { 
+                                    destroyYouTubePlayer();
+                                    playerDiv.classList.add('hidden');
+                                    gDriveViewer.classList.remove('hidden');
+                                    gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Substitua o placeholder '${url}' pela URL real do conteúdo.</div>`;
+                                    if (storedTopics && storedTopics.length > 0) {
+                                       populateTopicsMenu(storedTopics, type === 'youtube', null); 
+                                    } else {
+                                       clearTopicsMenu('URL do conteúdo não definida.');
+                                    }
+                                } else if (type === 'youtube') { 
+                                    loadYouTubeVideo(url, storedTopics); 
+                                } else if (type === 'gdrive') { 
+                                    destroyYouTubePlayer(); 
+                                    playerDiv.classList.add('hidden');
+                                    gDriveViewer.src = url; 
+                                    gDriveViewer.classList.remove('hidden');
+                                    if (storedTopics && storedTopics.length > 0) { 
+                                        populateTopicsMenu(storedTopics, false, null); 
+                                    } else {
+                                        clearTopicsMenu('Tópicos não aplicáveis ou não definidos para este material.');
+                                    }
+                                }
+                            } else { 
+                                destroyYouTubePlayer();
+                                playerDiv.classList.add('hidden');
+                                gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Link não disponível ou inválido.</div>`;
+                                gDriveViewer.classList.remove('hidden');
+                                clearTopicsMenu('Link não disponível.');
+                            }
+                        });
+                        detailsContentList.appendChild(itemNode);
+                    });
+                }
+            });
+
+            if (!hasContentToList) { 
+                 detailsContentList.innerHTML = '<p class="text-gray-400">Nenhum material encontrado para este módulo.</p>';
+            }
+            
+            if (firstPlayableItemDiv) {
+                setTimeout(() => { firstPlayableItemDiv.click(); }, 0); 
+            } else if (hasContentToList) { 
+                destroyYouTubePlayer();
+                playerDiv.classList.add('hidden');
+                gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Selecione um material da lista. Nenhum item com link real para autoplay.</div>`;
+                gDriveViewer.classList.remove('hidden');
+                clearTopicsMenu('Selecione um material.'); 
+            } else { 
+                destroyYouTubePlayer();
+                playerDiv.classList.add('hidden');
+                gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Nenhum conteúdo para este módulo.</div>`;
+                gDriveViewer.classList.remove('hidden');
+                clearTopicsMenu('Nenhum conteúdo.'); 
+            }
+        }
+        
+        toggleTopicsButton.addEventListener('click', () => {
+            topicsMenuDiv.classList.toggle('hidden');
+            topicsIconOpen.classList.toggle('hidden');
+            topicsIconClose.classList.toggle('hidden');
+        });
+
+        function renderModules(modulesToRender) { 
+            modulesListContainer.innerHTML = ''; 
+            let isFirstModuleOfList = true; 
+            let firstEverClickableModuleCard = null; 
+
+            specialtyOrder.forEach(specialtyName => {
+                const modulesInSpecialty = modulesToRender.filter(m => m.specialty === specialtyName);
+                
+                if (modulesInSpecialty.length > 0 || (searchInput.value && specialtyOrder.includes(specialtyName))) {
+                    const specialtyHeaderDiv = document.createElement('div');
+                    specialtyHeaderDiv.className = 'specialty-header pt-3';
+                    specialtyHeaderDiv.innerHTML = `<span>${specialtyName}</span>`;
+                    modulesListContainer.appendChild(specialtyHeaderDiv);
+                }
+
+                if (modulesInSpecialty.length > 0) {
+                    modulesInSpecialty.forEach(module => {
+                        const cardNode = moduleListItemTemplate.content.cloneNode(true);
+                        const cardDiv = cardNode.querySelector('.module-list-item');
+                        cardDiv.dataset.moduleId = module.id;
+
+                        const displayTitle = module.title; 
+                        cardNode.querySelector('.module-title').textContent = displayTitle;
+
+                        const iconPlaceholder = cardNode.querySelector('.module-icon-box');
+                        iconPlaceholder.innerHTML = `<span class="text-sm">${module.shortcode || 'M'}</span>`; 
+                        iconPlaceholder.className = 'module-icon-box flex-shrink-0'; 
+                        if (module.iconType && gradientClasses.includes(module.iconType)) { 
+                            iconPlaceholder.classList.add(module.iconType);
+                        } else { 
+                            iconPlaceholder.classList.add('gradient-gray'); 
+                        }
+                        
+                        cardNode.querySelector('.aulas-count').textContent = module.contentCounts.aulas;
+                        cardNode.querySelector('.apostilas-count').textContent = module.contentCounts.apostilas;
+                        cardNode.querySelector('.aulasBonus-count').textContent = module.contentCounts.aulasBonus;
+
+                        cardDiv.addEventListener('click', () => {
+                            if (activeModuleCard) {
+                                activeModuleCard.classList.remove('active');
+                            }
+                            cardDiv.classList.add('active');
+                            activeModuleCard = cardDiv;
+                            if(activeContentItem) activeContentItem.classList.remove('active-content'); 
+                            activeContentItem = null; 
+                            displayModuleDetails(module); 
+                        });
+
+                        if (isFirstModuleOfList && modulesToRender.length > 0) { 
+                            firstEverClickableModuleCard = cardDiv;
+                            isFirstModuleOfList = false;
+                        }
+                        modulesListContainer.appendChild(cardNode);
+                    });
+                } else if (searchInput.value && specialtyOrder.includes(specialtyName)){ 
+                    const noModulesMsg = document.createElement('p');
+                    noModulesMsg.className = 'text-xs text-gray-500 text-center pb-2';
+                    noModulesMsg.textContent = 'Nenhum módulo encontrado para esta especialidade com o filtro atual.';
+                    modulesListContainer.appendChild(noModulesMsg);
+                }
+            });
+            
+            if (firstEverClickableModuleCard) {
+                firstEverClickableModuleCard.click(); 
+            } else if (modulesToRender.length === 0 && modulesData.length > 0) { 
+                materialsHeader.textContent = 'Nenhum módulo encontrado';
+                detailsContentList.innerHTML = '<p class="text-gray-400">Tente um termo de pesquisa diferente ou limpe a busca.</p>';
+                destroyYouTubePlayer(); playerDiv.classList.add('hidden'); 
+                gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Nenhum resultado para a busca.</div>`;
+                gDriveViewer.classList.remove('hidden');
+                if (activeModuleCard) activeModuleCard.classList.remove('active'); activeModuleCard = null;
+                if(activeContentItem) activeContentItem.classList.remove('active-content'); activeContentItem = null;
+                clearTopicsMenu('Nenhum resultado para a busca.');
+
+            } else if (modulesData.length === 0) { 
+                materialsHeader.textContent = 'Nenhum módulo disponível';
+                detailsContentList.innerHTML = '<p class="text-gray-400">Nenhum módulo foi configurado na plataforma.</p>';
+                destroyYouTubePlayer(); playerDiv.classList.add('hidden'); 
+                gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Plataforma vazia.</div>`;
+                gDriveViewer.classList.remove('hidden');
+                clearTopicsMenu('Plataforma vazia.');
+            }
+        }
+
+        // --- Initial Page Load ---
+        renderModules(modulesData);
+
+        if (modulesData.length === 0 && modulesListContainer.children.length === 0 ) { 
+            materialsHeader.textContent = 'Nenhum módulo disponível';
+            detailsContentList.innerHTML = '<p class="text-gray-400">Adicione módulos para começar.</p>';
+            destroyYouTubePlayer(); playerDiv.classList.add('hidden'); 
+            gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Nenhum módulo cadastrado.</div>`;
+            gDriveViewer.classList.remove('hidden');
+            clearTopicsMenu('Nenhum módulo cadastrado.');
+        }
+
+        // --- Event Listeners ---
+        searchInput.addEventListener('input', (e) => { 
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const filteredModules = modulesData.filter(module =>
+                module.title.toLowerCase().includes(searchTerm) ||
+                (module.subtitle && module.subtitle.toLowerCase().includes(searchTerm)) || 
+                (module.shortcode && module.shortcode.toLowerCase().includes(searchTerm)) ||
+                (module.specialty && module.specialty.toLowerCase().includes(searchTerm)) 
+            );
+            renderModules(filteredModules); 
+
+            if (filteredModules.length === 0) {
+                materialsHeader.textContent = 'Nenhum módulo encontrado';
+                detailsContentList.innerHTML = '<p class="text-gray-400">Nenhum módulo corresponde à sua pesquisa.</p>';
+                destroyYouTubePlayer(); playerDiv.classList.add('hidden'); 
+                gDriveViewer.srcdoc = `<div style='color: #a0aec0; display:flex; justify-content:center; align-items:center; height:100%; font-family: Inter, sans-serif;'>Nenhum resultado para a busca.</div>`;
+                gDriveViewer.classList.remove('hidden');
+                if (activeModuleCard) { activeModuleCard.classList.remove('active'); activeModuleCard = null; }
+                if(activeContentItem) { activeContentItem.classList.remove('active-content'); activeContentItem = null; }
+                clearTopicsMenu('Nenhum resultado para a busca.');
+            }
+        });
+    </script>
+</body>
+</html>

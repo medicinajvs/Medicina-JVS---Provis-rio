@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curso de Dermatologia</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca de ícones Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* bg-gray-800 */
+            overflow: hidden; /* Evita a rolagem do body principal */
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        /* Scrollbar customizada para a playlist */
+        #playlist-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #playlist-container::-webkit-scrollbar-track {
+            background: #111827; /* bg-gray-900 */
+        }
+        #playlist-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        #playlist-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="main-view" class="flex flex-col lg:flex-row h-screen">
+        <!-- Coluna Principal (Player de Vídeo ou Placeholder) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col bg-gray-800">
+            <header class="flex items-center justify-between mb-4">
+                <h2 id="current-view-title" class="text-2xl font-bold text-white">Dermatologia Essencial</h2>
+            </header>
+            <div id="player-container" class="flex-1 flex flex-col items-center justify-center">
+                 <!-- Placeholder inicial -->
+                <div id="initial-placeholder" class="text-center text-gray-500">
+                    <i data-lucide="play-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h3 class="text-2xl font-semibold">Selecione uma aula na playlist</h3>
+                    <p>O conteúdo será exibido aqui.</p>
+                </div>
+                <!-- Iframe para o vídeo -->
+                <div id="lesson-view" class="hidden w-full h-full flex flex-col">
+                    <h1 id="lesson-view-title" class="text-xl lg:text-2xl font-bold mb-4 text-center"></h1>
+                    <div class="relative w-full max-w-5xl mx-auto aspect-video bg-black rounded-lg shadow-2xl">
+                        <iframe id="lesson-view-iframe" class="w-full h-full rounded-lg" src="" allow="autoplay; fullscreen" frameborder="0"></iframe>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Coluna da Direita (Playlist) -->
+        <aside id="playlist-container" class="w-full lg:w-96 bg-gray-900 p-4 flex-shrink-0 flex flex-col overflow-y-auto">
+            <div id="course-playlist-content" class="space-y-4">
+                <!-- O conteúdo da playlist será gerado aqui pelo JavaScript -->
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        const courseData = [
+            {
+                moduleTitle: "Módulo Básico",
+                lessons: [
+                    {
+                        title: "Introdução à Semiologia Dermatológica",
+                        resources: [
+                            { type: 'video', title: "Anamnese: o que não posso esquecer de perguntar?", src: "https://drive.google.com/file/d/1_NHkOxh3MvhgjZFcGHJb1cfydq1ynOgn/view?usp=sharing" },
+                            { type: 'video', title: "Lesões elementares: como descrever as afecções cutâneas", src: "https://drive.google.com/file/d/1X3yKJw3dwwXqYxnHWig5yfzBiRCjofGV/view?usp=sharing" },
+                            { type: 'video', title: "Vamos treinar?", src: "https://drive.google.com/file/d/1xKkxllvF71c8JalWA9yYGGgP9GzCuD-h/view?usp=sharing" },
+                        ]
+                    },
+                    {
+                        title: "Prescrição básica da Dermatologia",
+                        resources: [
+                            { type: 'video', title: "Noções de receituário, veículos e medicações mais utilizadas - parte 1", src: "https://drive.google.com/file/d/10Ipnbk6f2iTMo8RMSe2RiQY3wMr3R75o/view?usp=sharing" },
+                            { type: 'video', title: "Noções de receituário, veículos e medicações mais utilizadas - parte 2", src: "https://drive.google.com/file/d/19B9P1Wcg_kbTCb6BCYcDOfUULVhsVPpB/view?usp=sharing" },
+                            { type: 'video', title: "Orientações quanto aos cuidados gerais da pele", src: "https://drive.google.com/file/d/1CsCUHD6Jv3-vqhAojNx8i_NxJV9qyjXg/view?usp=sharing" },
+                        ]
+                    }
+                ]
+            },
+            {
+                moduleTitle: "Dermatologia na Unidade Básica de Saúde",
+                lessons: [
+                    { title: "Como diagnosticar e conduzir micoses superficiais?", resources: [{ type: 'video', title:"Tinha ou candidíase?", src: "https://drive.google.com/file/d/1-8nDdSzVk1yUd6gJ3dWihLRoS2255X0l/view?usp=sharing"}, { type: 'video', title: "Pitiríase versicolor e outras micoses superficiais", src: "https://drive.google.com/file/d/1BCjaEvTjz26JlO9e8gowH53eDOHxsPiG/view?usp=sharing" }] },
+                    { title: "Infecções bacterianas mais frequentes", resources: [{ type: 'video', title: "Infecções estafilocócicas: do impetigo ao furúnculo", src: "https://drive.google.com/file/d/1hZV8Iypkano-yazC5c9_hMuTQOq_C0lY/view?usp=sharing" }, { type: 'video', title: "Erisipela e celulite: como diferenciar e tratar", src: "https://drive.google.com/file/d/1nFMznCQNNZbMZvzn_hJF3g_lzZ-RZDte/view?usp=sharing" }] },
+                    { title: "Hanseníase", resources: [{ type: 'video', title: "Como diagnosticar e tratar hanseníase na UBS?", src: "https://drive.google.com/file/d/16BsOA6AlGy0ao5WDK0usDbxFCPbj7AUs/view?usp=sharing" }, { type: 'video', title: "Reações hansênicas: identificação e condução", src: "https://drive.google.com/file/d/188oHbbc_cizlYcIx2UCjTaA_DGHpL7au/view?usp=sharing" }] },
+                    { title: "Lesões ulceradas em membros: principais diagnósticos diferenciais", resources: [{ type: 'video', title: "Como direcionar a investigação de úlceras de membros inferiores?", src: "https://drive.google.com/file/d/1Yax4PxmK8yzgDePrZnxdVPqEx7l-IAt-/view?usp=sharing" }, { type: 'video', title: "Como conduzir as principais doenças que se manifestam com lesões ulceradas?", src: "https://drive.google.com/file/d/1LvpgRKd7eGz2VMdLv3-3s5nqjOjCIam7/view?usp=sharing" }] },
+                    { title: "Reconhecendo e desvendando os eczemas", resources: [{ type: 'video', title: "Principais eczemas: atópico, de contato, seborreico, de estase e disidrótico", src: "https://drive.google.com/file/d/1K8Yg0DWIFRGyan0x6Sfwaj5sSOpVZ8Ks/view?usp=sharing" }, { type: 'video', title: "Diagnóstico topográfico", src: "https://drive.google.com/file/d/1GLqA3AUTlapL02-VxMnvn9aYOoxYg5fj/view?usp=sharing" }] },
+                    { title: "Dermatozoonoses com resolutividade", resources: [{ type: 'video', title: "Pediculose e escabiose: parece simples mas sua conduta e orientação fazem diferença!", src: "https://drive.google.com/file/d/1bOQtT4Bf-taHc_QhZHuUejQdUlWPtIoN/view?usp=sharing" }, { type: 'video', title: "Tungíase, larva migrans e miíase: como tratar", src: "https://drive.google.com/file/d/1-Q5OeVbk-ckHMGoAUOR6sobJn76J-GRG/view?usp=sharing" }] },
+                    { title: "Infecções virais cutâneas: você sabe diagnosticar e tratar?", resources: [{ type: 'video', title: "Verruga x molusco", src: "https://drive.google.com/file/d/1uXA5QgJSD84RqPSMY62DMeDGNYu0fxSK/view?usp=sharing" }, { type: 'video', title: "Infecções herpéticas: reconhecendo e tratando oportunamente", src: "https://drive.google.com/file/d/1q6isjGBZksJL5cdYNM2ZiGC3kE_PZl2l/view?usp=sharing" }] },
+                    { title: "Infecções sexualmente transmissíveis (ISTs)", resources: [{ type: 'video', title: "Principais diagnósticos diferenciais", src: "https://drive.google.com/file/d/1-JvdBfwe_MSdUxJFF2qy5zJPuWCD2YzS/view?usp=sharing" }, { type: 'video', title: "Úlceras genitais: desvendando fluxogramas de diagnóstico e tratamento", src: "https://drive.google.com/file/d/1LyKAJ_Ux0vt52Qm7XGJTGXlQ1WAWWbtn/view?usp=sharing" }] },
+                    { title: "Quando suspeitar de câncer de pele?", resources: [{ type: 'video', title: "Características de benignidade x malignidade", src: "https://drive.google.com/file/d/1c0By2vFcPRceYaWwfrC5FvoTzmxy24rh/view?usp=sharing" }, { type: 'video', title: "Reconhecendo os principais cânceres de pele", src: "https://drive.google.com/file/d/1gYl3bMo239eSY90fsGnXCzILG4qAgxLX/view?usp=sharing" }] },
+                    { title: "Avaliação Inicial de queda de cabelos: da anamnese ao exame físico", resources: [{ type: 'video', title: "Raciocínio clínico nas alopecias", src: "https://drive.google.com/file/d/1zlF7iWIfY_Ts_riov7Jwy6dOWsIFUiSS/view?usp=sharing" }, { type: 'video', title: "Diagnósticos diferenciais: ênfase no eflúvio telógeno", src: "https://drive.google.com/file/d/1r7QefKrRyBun3SrSamYNuq004OLQuTMA/view?usp=sharing" }] },
+                    { title: "Principais afecções ungueais", resources: [{ type: 'video', title: "Reconhecendo infecções fúngicas da unha", src: "https://drive.google.com/file/d/1O_DjfchrecCWksNqpGLWT7aE5c-8vf_B/view?usp=sharing" }, { type: 'video', title: "Nem tudo é onicomicose: outras infecções, psoríase ungueal, onicocriptose e outras afecções", src: "https://drive.google.com/file/d/1xln6N5Py6iq4JeYev6pC1o2eCckFtcoa/view?usp=sharing" }] },
+                    { title: "Lesões cutâneas associadas a doenças sistêmicas", resources: [{ type: 'video', title: "Como as endocrinopatias se manifestam na pele?", src: "https://drive.google.com/file/d/1MP7is0EwYg8e_Rz86dSOCFPY5UL_EQaB/view?usp=sharing" }, { type: 'video', title: "É lúpus ou dermatomiosite?", src: "https://drive.google.com/file/d/1JJ7zkBmQp7sQdU4dpfdvcQ4T49GMysb6/view?usp=sharing" }] },
+                    { title: "Paciente com púrpura: e agora?", resources: [{ type: 'video', title: "Qual o raciocínio clínico?", src: "https://drive.google.com/file/d/1xp_t7o-VeqK_4kzP9rNyoOz5pBlUzcMo/view?usp=sharing" }, { type: 'video', title: "Simplificando as vasculites cutâneas", src: "https://drive.google.com/file/d/1Zrmq_bDqC75DTU2vA180N0BIewcMzQ-f/view?usp=sharing" }] },
+                    { title: "Prurido leve ao recalcitrante", resources: [{ type: 'video', title: "O que deve ser investigado?", src: "https://drive.google.com/file/d/15LNEixh4-iblDktcd6GC8lvQWhqR45T9/view?usp=sharing" }, { type: 'video', title: "O que fazer no atendimento primário?", src: "https://drive.google.com/file/d/1NSFMQz_OUgWJzm62G33JSFBc4fQyqJ0v/view?usp=sharing" }] },
+                ]
+            },
+            {
+                moduleTitle: "Dermatologia no Pronto-Socorro",
+                lessons: [
+                    { title: "Como raciocinar diante de um paciente com rash", resources: [{ type: 'video', title: "Por onde começar?", src: "https://drive.google.com/file/d/1ZDv3IPS00bK_w2SD9Wf78Ddi_UhAcfJI/view?usp=sharing" }, { type: 'video', title: "Quando pensar em infecção?", src: "https://drive.google.com/file/d/1fcFYGRQXxrAEIaDGragiaFHm8UAqGQMW/view?usp=sharing" }] },
+                    { title: "Farmacodermias: quadros leves aos graves", resources: [{ type: 'video', title: "Rash, urticária, angioedema e eritema multiforme", src: "https://drive.google.com/file/d/1S_GG61I_lmDklbOzFiTkPq0JxaGeZvVk/view?usp=sharing" }, { type: 'video', title: "Síndrome de Stevens-Johnson, NET e Síndrome DRESS", src: "https://drive.google.com/file/d/1bdBm9slPoHBpD2M35cgL-XpEoblj2N-h/view?usp=sharing" }] },
+                    { title: "Infecções bacterianas graves", resources: [{ type: 'video', title: "Erisipela, celulite e fasceíte", src: "https://drive.google.com/file/d/1U80iRK8zg8oA3VXQaiVKL-oQo_IoeO_C/view?usp=sharing" }, { type: 'video', title: "Indicações de internamento e opções de tratamento", src: "https://drive.google.com/file/d/1DGwN48lIe9SkUXnGp3-BrBzp34nJ5Wfz/view?usp=sharing" }, { type: 'video', title: "Síndrome da pele escaldada estafilocócica", src: "https://drive.google.com/file/d/1L_4mkkTMbN_s5SIwhw6Gc3xig56X1RId/view?usp=sharing" }] },
+                    { title: "Lesões vesicobolhosas: o que pensar?", resources: [{ type: 'video', title: "Acometimento localizado: principais diagnósticos diferenciais", src: "https://drive.google.com/file/d/1z8qEfO1iUMEYDhPexfVFQpt_S2Tq7AWl/view?usp=sharing" }, { type: 'video', title: "Quadro generalizado: precisa encaminhar ao dermatologista?", src: "https://drive.google.com/file/d/1IvcsOpPIxMAJMYYhBX6YWbntbQFCn89C/view?usp=sharing" }] }
+                ]
+            },
+            {
+                moduleTitle: "E-book Dermato Essencial 2023",
+                lessons: [{ title: "E-book", resources: [{ type: 'ebook', title: 'E-book Dermato Essencial 2023'}] }]
+            },
+            {
+                moduleTitle: "Introdução à Inteligência Artificial na Medicina",
+                lessons: [
+                    {
+                        title: "Inteligência Artificial na Medicina",
+                        resources: [
+                            { type: 'video', title: "Conceitos Fundamentais de IA", src: "https://drive.google.com/file/d/1BdvxZpkIJw2ujRs2N6K9OH1-_OaFb07Z/view?usp=sharing" },
+                            { type: 'video', title: "Bem-vindo ao futuro", src: "https://drive.google.com/file/d/131tGTwc6ClyHSAcW5DySGuDz1Basgx5J/view?usp=sharing" },
+                            { type: 'video', title: "Visão inicial de como usar IA na Medicina", src: "https://drive.google.com/file/d/1ZDv3IPS00bK_w2SD9Wf78Ddi_UhAcfJI/view?usp=sharing" },
+                            { type: 'video', title: "IA e aprendizado" },
+                            { type: 'video', title: "Encerramento", src: "https://drive.google.com/file/d/17BrvIUxl-rcfWTuY_vq8wimtIBK4EEyY/view?usp=sharing" }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const playlistContainer = document.getElementById('course-playlist-content');
+            const initialPlaceholder = document.getElementById('initial-placeholder');
+            const lessonView = document.getElementById('lesson-view');
+            const lessonViewTitle = document.getElementById('lesson-view-title');
+            const lessonViewIframe = document.getElementById('lesson-view-iframe');
+            let activeResourceItem = null;
+
+            const openResourceView = (resource, resourceElement) => {
+                initialPlaceholder.classList.add('hidden');
+                
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                }
+                
+                if (resourceElement) {
+                    resourceElement.classList.add('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = resourceElement;
+                }
+
+                if (resource.type === 'video') {
+                    lessonViewTitle.textContent = resource.title;
+                    lessonViewIframe.src = resource.src ? resource.src.replace(/\/view(\?usp=sharing)?$/, '/preview') : 'about:blank';
+                    lessonView.classList.remove('hidden');
+                } else {
+                    // Placeholder para outros tipos como ebook
+                    lessonView.classList.add('hidden');
+                    initialPlaceholder.classList.remove('hidden');
+                    initialPlaceholder.querySelector('h3').textContent = "Recurso selecionado";
+                    initialPlaceholder.querySelector('p').textContent = `O e-book "${resource.title}" estará disponível para download aqui.`;
+                }
+            };
+
+            playlistContainer.innerHTML = courseData.map((module, moduleIdx) => `
+                <div>
+                    <h3 class="font-bold text-lg px-2 pt-4 pb-2 text-pink-400">${module.moduleTitle}</h3>
+                    <div class="space-y-2">
+                        ${module.lessons.map((lesson, lessonIdx) => `
+                            <div class="lesson-group bg-gray-800 rounded-lg">
+                                <button class="accordion-header w-full flex justify-between items-center p-3 text-left font-semibold text-gray-300 hover:bg-gray-700/50 transition-colors">
+                                    <span class="truncate">${lesson.title}</span>
+                                    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform flex-shrink-0 ml-2"></i>
+                                </button>
+                                <div class="accordion-content" style="max-height: 0px;">
+                                    <div class="p-2 space-y-1 border-t border-gray-700">
+                                        ${lesson.resources.map((resource, resourceIdx) => {
+                                            const icon = resource.type === 'video' ? 'play-circle' : 'book';
+                                            return `
+                                            <div class="resource-item flex justify-between items-center p-3 rounded-md text-sm hover:bg-pink-600/20 cursor-pointer transition-colors" 
+                                                 data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}" data-resource-idx="${resourceIdx}">
+                                                <div class="flex items-center overflow-hidden">
+                                                    <i data-lucide="${icon}" class="w-5 h-5 mr-3 text-gray-400 flex-shrink-0"></i>
+                                                    <p class="truncate">${resource.title}</p>
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const { moduleIdx, lessonIdx, resourceIdx } = item.dataset;
+                    const resource = courseData[moduleIdx].lessons[lessonIdx].resources[resourceIdx];
+                    openResourceView(resource, item);
+                });
+            });
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i[data-lucide]');
+                    const isExpanded = content.style.maxHeight !== '0px';
+
+                    document.querySelectorAll('.accordion-content').forEach(otherContent => {
+                        if (otherContent !== content) {
+                            otherContent.style.maxHeight = '0px';
+                            otherContent.previousElementSibling.querySelector('i[data-lucide]').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

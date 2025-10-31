@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Cursos TdC</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .disabled-item {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Neuroflix</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio (PDFs)</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais em PDF injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_1', title: 'Módulo 01 - Roteiro: O Curso', items: [
+                { type: 'video', title: 'Aula 01 - Seja Bem-Vindo', link: 'https://drive.google.com/file/d/1qug5teFIGtI3D-HRvkQUXgfgcahj0onc/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Abertura', link: 'https://drive.google.com/file/d/1Zw-2i2B1d1O6FuLG743Pk2rR-2bIbqkN/view?usp=sharing' },
+                { type: 'video', title: 'Aula 1.0 - Abertura', link: 'https://drive.google.com/file/d/1vJlwkZ81jXXtNsUD6lOG857OyehA8s_k/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Conceitos Fundamentais', link: 'https://drive.google.com/file/d/16eyPpOGIe_MqZ2TVtCk7rQcrbPslpUB3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Episódio 01: Primeiros Passos', link: 'https://drive.google.com/file/d/1zcbWVNKcxQtUReunfH52DpufFP_n4I7f/view?usp=sharing' },
+                { type: 'video', title: 'Aula 16.1 - Fechamento', link: 'https://drive.google.com/file/d/1qL5ZNy0G_fZ-Ug3VhnNdchZvm4hJ1coG/view?usp=sharing' },
+            ]},
+            { id: 'module_2', title: 'Módulo 02 - Neuro 29 Dias', items: [
+                { type: 'video', title: 'Aula 01 - Dia 01', link: 'https://drive.google.com/file/d/1e9NzmHvO56FMcE94SId6DhyzK8-nCEic/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Dia 02', link: 'https://drive.google.com/file/d/1V2mWTi7VmaQPpgca8d7J_TRgDZ_Qo-6h/view?usp=sharing' },
+                { type: 'video', title: 'Aula 03 - Dia 03', link: 'https://drive.google.com/file/d/1ReFEkD_afTM0KOp-mc0o-C2yLwCGlLaG/view?usp=sharing' },
+                { type: 'video', title: 'Aula 04 - Dia 04', link: 'https://drive.google.com/file/d/1qRQg8I4Bjeq2eLuX9VSMCfEXm45RVXxr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 05 - Dia 05', link: 'https://drive.google.com/file/d/18ZaaH7x028D2UtwnX5IIBLB0KghkZTWC/view?usp=sharing' },
+                { type: 'video', title: 'Aula 06 - Dia 06', link: 'https://drive.google.com/file/d/1quARm1S7VvGhGPCmcMUC3xaTAy3ABCBr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 07 - Dia 07', link: 'https://drive.google.com/file/d/1jzAvTb9pijZBAjoSl5rVEXZz0b5DytRA/view?usp=sharing' },
+                { type: 'video', title: 'Aula 08 - Dia 08', link: 'https://drive.google.com/file/d/1zXtCoJdu3qUz0YzebAbuQxYVGm7Qnbcx/view?usp=sharing' },
+                { type: 'video', title: 'Aula 09 - Dia 09', link: 'https://drive.google.com/file/d/1l3uTbyrU4FwhT4Y5I2gbwbsc1Nlb8GEs/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10 - Dia 10', link: 'https://drive.google.com/file/d/1kfCRJ3vyxesnzIRCJHejo0Pblrykurn8/view?usp=sharing' },
+                { type: 'video', title: 'Aula 11 - Dia 11', link: 'https://drive.google.com/file/d/1k30O1jBbrLkFrRDTBukijZ2RCYYnnYDk/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12 - Dia 12', link: 'https://drive.google.com/file/d/1n2Mn1--OuThXHEu3G7kByf9MbGK98zy5/view?usp=sharing' },
+                { type: 'video', title: 'Aula 13 - Dia 13', link: 'https://drive.google.com/file/d/1_KW6Zah_WFVp2Q3uvvytQYn_gmOh7ZEz/view?usp=sharing' },
+                { type: 'video', title: 'Aula 14 - Dia 14', link: 'https://drive.google.com/file/d/1_EUAZcpUM8JsRXN7LleY-Tig_5LypEO3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 15 - Dia 15', link: 'https://drive.google.com/file/d/1bdKA5u19wqSb73OheNyfrgqUbhw0v73y/view?usp=sharing' },
+                { type: 'video', title: 'Aula 16 - Dia 16', link: 'https://drive.google.com/file/d/1KxEAaWRU0Qt9OgClCMXxAy4FX1pPGxsW/view?usp=sharing' },
+                { type: 'video', title: 'Aula 17 - Dia 17', link: 'https://drive.google.com/file/d/1IA_QqtZ-ZUAvSoeIECnzk0UABGbOOnzE/view?usp=sharing' },
+                { type: 'video', title: 'Aula 18 - Dia 18', link: 'https://drive.google.com/file/d/1rreo0_2h3oOpEUzE0wOTudxIfq4upawc/view?usp=sharing' },
+                { type: 'video', title: 'Aula 19 - Dia 19', link: 'https://drive.google.com/file/d/19poAWGIPrhlwLGxXHbGil0uHNzJuG4Z1/view?usp=sharing' },
+                { type: 'video', title: 'Aula 20 - Dia 20', link: 'https://drive.google.com/file/d/1exkgagQemW49FRicymfG0NHusyqiFbWD/view?usp=sharing' },
+                { type: 'video', title: 'Aula 22 - Dia 22', link: 'https://drive.google.com/file/d/1MwKOttUjm-5b1U93F_lgi83UE0NDAVCS/view?usp=sharing' },
+                { type: 'video', title: 'Aula 23 - Dia 23', link: 'https://drive.google.com/file/d/1VtizsXKzSNWJktujSbsOAhaqGd-NJDBw/view?usp=sharing' },
+                { type: 'video', title: 'Aula 24 - Dia 24', link: 'https://drive.google.com/file/d/1jZpNGnrLDB-OHPLKTc867C95p-5Lxd1Z/view?usp=sharing' },
+                { type: 'video', title: 'Aula 25 - Dia 25', link: 'https://drive.google.com/file/d/1GeupCTwhjUewJWYT7HVvxhX-mG7J9moK/view?usp=sharing' },
+                { type: 'video', title: 'Aula 26 - Dia 26', link: 'https://drive.google.com/file/d/1DHH86QU6-9BdELl_omcg2TQh924qk4fm/view?usp=sharing' },
+                { type: 'video', title: 'Aula 27 - Dia 27', link: 'https://drive.google.com/file/d/1GnJtvjmTzqLyaKPBFiotL1XmW1xqY4zn/view?usp=sharing' },
+                { type: 'video', title: 'Aula 28 - Dia 28', link: 'https://drive.google.com/file/d/1XIDVNZwPUq5XMAWavgtxFG4syhA_KYks/view?usp=sharing' },
+                { type: 'video', title: 'Aula 29 - Dia 29', link: 'https://drive.google.com/file/d/1jTDifoNJN_zDQLFWFw3kNF7VRPCnecyI/view?usp=sharing' },
+            ]},
+            { id: 'module_3', title: 'Módulo 03 - Exame Neurológico na Prática', items: [
+                { type: 'video', title: 'Aula 01 - Exame Neurológico: Erros Mais Frequentes', link: 'https://drive.google.com/file/d/11uC8JtKS4eFvPmGvOIaj2c6c9wtWP9pt/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Exame Físico Neurológico: Parte I', link: 'https://drive.google.com/file/d/1HO-7DEGOZ9sfSwNxMaqWwQOqEjnshgu7/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Fundo de Olho', link: 'https://drive.google.com/file/d/1PgI83TmFSY6OFF3Ik33MIWZrRpMkgYaH/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Exame da Linguagem', link: 'https://drive.google.com/file/d/1cIBrE0jLolVa6k-yWE7BP5grHTPWdQRI/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Anamnese: Parte I', link: 'https://drive.google.com/file/d/1sOPrIZbT1Duv-CHjzbNqJeIvv_XyT7gs/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Exame Físico Neurológico: Parte II', link: 'https://drive.google.com/file/d/1YmUcTrP5FmZ0Xi1qOEnmnyZOCXSEBpSZ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 2.1 - Inspeção Movimentos Involuntários Anormais', link: 'https://drive.google.com/file/d/1qmwYRN-f7I1PEwilCAqmxzR6KDz32NYG/view?usp=sharing' },
+                { type: 'video', title: 'Aula 2.2 - Inspeção Movimentos Involuntários Anormais', link: 'https://drive.google.com/file/d/1k0VwX5k7OEugladr-BFV5jMJZrIwyH3B/view?usp=sharing' },
+                { type: 'video', title: 'Aula 03 - Anamnese: Parte II', link: 'https://drive.google.com/file/d/14Fp4C7YL5sGT3A5MCbXCB2wnK1kGx5OX/view?usp=sharing' },
+                { type: 'video', title: 'Aula 3.1 - Cabeça Pescoço Coluna', link: 'https://drive.google.com/file/d/1GmQGfKySx1ys3W9sm87GlYnJZ7cwwTT7/view?usp=sharing' },
+                { type: 'video', title: 'Aula 3.2 - Cabeça Pescoço Coluna', link: 'https://drive.google.com/file/d/1UqGq3s21PuCF26NR_w8hbMG-9LibrFLY/view?usp=sharing' },
+                { type: 'video', title: 'Aula 3.3 - Cabeça Pescoço Coluna', link: 'https://drive.google.com/file/d/1Z1naslaaxjOcnQsbS0A9a-JQwwHyXopi/view?usp=sharing' },
+                { type: 'video', title: 'Aula 3.4 - Amplitude de Movimento', link: 'https://drive.google.com/file/d/1VHAucrEu5xGsX4MWhdVFPxfWd53KY0I_/view?usp=sharing' },
+                { type: 'video', title: 'Aula 04 - Exame Físico Geral', link: 'https://drive.google.com/file/d/1RiZpFktG52tjKO6EU0ibY79CIBm3Xdc6/view?usp=sharing' },
+                { type: 'video', title: 'Aula 4.0 - Equilíbrio Estático', link: 'https://drive.google.com/file/d/1mpYDNwZ8e9zfgZHb7__3yRE4DTuQwxfp/view?usp=sharing' },
+                { type: 'video', title: 'Aula 05 - Estado Mental', link: 'https://drive.google.com/file/d/1j2_z8zxtcUoRTFmb5HNwPOO7RjrD_qKQ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 5.1 - Exame da Marcha I', link: 'https://drive.google.com/file/d/1NDkEwSI4FCwyfdMhfHgNUZ9UEgPGWmPF/view?usp=sharing' },
+                { type: 'video', title: 'Aula 5.2 - Exame da Marcha II', link: 'https://drive.google.com/file/d/1Tpldd1jnT3j7IYSE03FizJjtH3WHhmXc/view?usp=sharing' },
+                { type: 'video', title: 'Aula 5.3 - Exame da Marcha III', link: 'https://drive.google.com/file/d/1EQVuwufUO3Ft3Ifstuh_3gh654Q8_du3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 06 - Inspeção Atitudes e Facies', link: 'https://drive.google.com/file/d/1QlP1vSKA8_kE100IBhFl_MJ7P2gWUVff/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.1 - Exame da Força I', link: 'https://drive.google.com/file/d/1nTSOAgXvUDR61zfz0HjOcpl5j8cMcgM3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.2 - Exame da Força II', link: 'https://drive.google.com/file/d/1ae1fkBVk4ND4TQDM9cI9svUSNUMHSUpl/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.3 - Exame da Força III', link: 'https://drive.google.com/file/d/1D5ZCH6JFmbFKCO_qLmqX3Imwhbl8KNjC/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.4 - Exame da Força IV', link: 'https://drive.google.com/file/d/1sb-gvfbsfIPb2mok9Z8HlxUX51SHjXcQ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.5 - Exame da Força V', link: 'https://drive.google.com/file/d/1XcbRJHDW50sw1jN3tXHEeFHHGMkmxzdK/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.6 - Exame da Força VI', link: 'https://drive.google.com/file/d/1bACVcvFZOPOeT-0Oiw0SLDj9Ria9Me5E/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.7 - Exame da Força VII', link: 'https://drive.google.com/file/d/1QqThmt-QB-TXrBKwuM1HOUT1urzbPFor/view?usp=sharing' },
+                { type: 'video', title: 'Aula 6.8 - Exame da Força VIII', link: 'https://drive.google.com/file/d/1SK_sP7n2nFfch5Yrw97WzQDkB2M7q6pG/view?usp=sharing' },
+                { type: 'video', title: 'Aula 07 - Inspeção Pele e Trofismo', link: 'https://drive.google.com/file/d/1q8DgcvpSKmRFdUOMcOdDFIC-ey-6WOZT/view?usp=sharing' },
+                { type: 'pdf', title: 'Arquivo 07 - Exame das Pupilas', link: 'https://drive.google.com/file/d/1wj3WCP6GmhggorTrdYyIBgCW_PbTXCxU/view?usp=sharing' },
+                { type: 'video', title: 'Aula 7.1 - Tônus I', link: 'https://drive.google.com/file/d/1evOX7g6azCteYDpd7eeCovjO3q2gA78W/view?usp=sharing' },
+                { type: 'video', title: 'Aula 7.2 - Tônus II', link: 'https://drive.google.com/file/d/1VAEhuzozpXJInU2g6M4K6tvPbP_LKkHs/view?usp=sharing' },
+                { type: 'video', title: 'Aula 7.3 - Tônus III', link: 'https://drive.google.com/file/d/19e5r0CSBHuo_GYumnq9C_H1RGuvZB3B6/view?usp=sharing' },
+                { type: 'video', title: 'Aula 7.4 - Tônus IV', link: 'https://drive.google.com/file/d/1alSBXgKSXuhjRb-TxArYKTaVfoJl7WFC/view?usp=sharing' },
+                { type: 'video', title: 'Aula 08 - Exame da Cabeça', link: 'https://drive.google.com/file/d/1bVx3ssws1qiWSIqnoCuJoQ_zBGJDoiEO/view?usp=sharing' },
+                { type: 'video', title: 'Aula 8.1 - Coordenação I', link: 'https://drive.google.com/file/d/1e1tMZ32eTP0ykjK9P9p32j967Pb6oNJI/view?usp=sharing' },
+                { type: 'video', title: 'Aula 8.2 - Coordenação II', link: 'https://drive.google.com/file/d/19MJJvEJqqpB-AaEctHnMc-2Nb5drbSkN/view?usp=sharing' },
+                { type: 'video', title: 'Aula 09 - Exame do Pescoço', link: 'https://drive.google.com/file/d/1MmZbqt5c6HNOTh4ss3FPUAypCyYj-lbZ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 9.0 - Reflexos', link: 'https://drive.google.com/file/d/1mAPeL39dYsglyv-qG1i0GdrQ-_8BJwzA/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10 - Exame da Coluna', link: 'https://drive.google.com/file/d/11ZuosTk5TREG731SFiad_LOk0EtwhhOY/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10.1 - Sensibilidade I', link: 'https://drive.google.com/file/d/1bW4Un_pbetfX-xs6jRlSkDtc14eXOkHc/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10.2 - Sensibilidade II', link: 'https://drive.google.com/file/d/1wytF-we_YHighKIMAJWICGYfTKr6EGNj/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10.3 - Sensibilidade III', link: 'https://drive.google.com/file/d/1L84BZShiyyc7cT87ZDhCtmf8OLjcKEai/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10.4 - Sensibilidade IV', link: 'https://drive.google.com/file/d/11e7YBzTslSNKRVJdZqF0WoI4tZbUJg5w/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10.5 - Sensibilidade V', link: 'https://drive.google.com/file/d/1e_g_fJ1gtlUa5raX3M-6Auy27FEDQLFt/view?usp=sharing' },
+                { type: 'video', title: 'Aula 11 - Inspeção Final', link: 'https://drive.google.com/file/d/1j6l7jaOsD0XK-HPk583cdJaoDpNP03Z3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 11.1 - Sinais de Irritação Meníngeo', link: 'https://drive.google.com/file/d/1IiHrWmg3p0iUp2su6-Vbtt-JnXUWGXY4/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.1 - Nervos Cranianos I', link: 'https://drive.google.com/file/d/18PyLZaOsXpBUQ7OgocVet9_eEwt1VWgA/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.2 - Nervos Cranianos II', link: 'https://drive.google.com/file/d/1t8xtE6_JSR26tittdGEYRVJ-PiajmUhv/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.3 - Nervos Cranianos III', link: 'https://drive.google.com/file/d/10LKBnPvUjENYd7b9azb5OK463nUNiE6N/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.4 - Nervos Cranianos IV', link: 'https://drive.google.com/file/d/1IQ5kd-Y6aF1Kfrs2Nv210iDpieFqI5VD/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.5 - Nervos Cranianos V', link: 'https://drive.google.com/file/d/1XWxMugpWJQyYRa_3AORuBib_1AfJ3mhR/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.6 - Nervos Cranianos VI', link: 'https://drive.google.com/file/d/1Qv6EUq4tlFDrFU4BKqResr_FPid1nuiH/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12.7 - Nervos Cranianos VII', link: 'https://drive.google.com/file/d/1JZJvB5Ons_9WPaXXBm-3ElDoof0BtksR/view?usp=sharing' },
+                { type: 'video', title: 'Aula 13 - Amplitude de Movimentos', link: 'https://drive.google.com/file/d/12DuR5molaAGfDGI68_JJ00M4U8s_WUB4/view?usp=sharing' },
+                { type: 'video', title: 'Aula 16 - Equilíbrio Estático', link: 'https://drive.google.com/file/d/1cYpfuMtF6CrpaHlqDcNiNkgw7tehibne/view?usp=sharing' },
+                { type: 'video', title: 'Aula 17 - Marcha', link: 'https://drive.google.com/file/d/1xhhBCMqPQbd2wNVi953KqgBT081mTPL0/view?usp=sharing' },
+                { type: 'video', title: 'Aula 18 - Força', link: 'https://drive.google.com/file/d/1Ikob7QoKJo9ouPQAond5u9dU1S1EXQyH/view?usp=sharing' },
+                { type: 'video', title: 'Aula 19 - Tônus', link: 'https://drive.google.com/file/d/1cCFYARicl3CK_ja4zNG-15EPu4EXGUEh/view?usp=sharing' },
+                { type: 'video', title: 'Aula 20 - Coordenação', link: 'https://drive.google.com/file/d/1-_A69GgnQynF4kqp6b1I1TmHNKDqCcKV/view?usp=sharing' },
+                { type: 'video', title: 'Aula 21 - Reflexos', link: 'https://drive.google.com/file/d/1u2c0tm7EtS-LGBiy4_3fjDDmdUXFXsm0/view?usp=sharing' },
+                { type: 'video', title: 'Aula 22 - Sensibilidade', link: 'https://drive.google.com/file/d/19SpgHQ3zhyLBVKwrLjHPL7KZbSiuP_ay/view?usp=sharing' },
+                { type: 'video', title: 'Aula 23 - Sinais Meníngeos', link: 'https://drive.google.com/file/d/1HwD93L8Cw0-QdC41pE1hAdXaDCVmZcuS/view?usp=sharing' },
+                { type: 'video', title: 'Aula 24 - Exame Neurológico', link: 'https://drive.google.com/file/d/11F6fH_N_Do0BC1LCE_m1b60Mwv5d66hx/view?usp=sharing' },
+                { type: 'video', title: 'Aula 24 - Nervos Cranianos I e V', link: 'https://drive.google.com/file/d/1StAcQsmoxRwrt06CcRfn_0itWNalObtP/view?usp=sharing' },
+                { type: 'video', title: 'Aula 25 - Nervo Craniano II', link: 'https://drive.google.com/file/d/1dtgBlcgSmlUZISYfSso5J8Njtcv0M4c7/view?usp=sharing' },
+                { type: 'video', title: 'Aula 26 - Nervo Craniano III, IV e VI', link: 'https://drive.google.com/file/d/1dRdcVu75T8FdHpETzaDAMnS_jq4SH0Df/view?usp=sharing' },
+                { type: 'video', title: 'Aula 27 - Nervo Craniano VII', link: 'https://drive.google.com/file/d/1Cj2Kx6PgOOf2l3cvD1kzHlv_c7AKmp_m/view?usp=sharing' },
+                { type: 'video', title: 'Aula 28 - Nervo Craniano VIII', link: 'https://drive.google.com/file/d/1LN3-2VRo6JOESrh6Hk7-Wx4698T6zUeV/view?usp=sharing' },
+                { type: 'video', title: 'Aula 29 - Nervo Craniano Bulbar', link: 'https://drive.google.com/file/d/1HAnmVmpjF_9EIZtZuC0PMy38NaE6cbRJ/view?usp=sharing' },
+            ]},
+            { id: 'module_4', title: 'Módulo 04 - Exame Neurológico: O Roteiro (Best-Seller)', items: [
+                { type: 'video', title: 'Aula 01 - O Roteiro do Exame Neurológico', link: 'https://drive.google.com/file/d/1cIW2MTaJbmX6p8khNBLGIQ6DfRIvYxmi/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - O Roteiro do Exame Neurológico (2)', link: 'https://drive.google.com/file/d/1fII_sz1gNxRtZLH2KW8LE12JNtUVHyqV/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Aula do Roteiro do Exame Neurológico: 2023', link: 'https://drive.google.com/file/d/1kPujOKYr9sZCP3Gn-Bj2iKEU_OXOPi9h/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Parabéns: Roteiro do Exame Neurológico', link: 'https://drive.google.com/file/d/1mQlQcCoEYWR2SyLAZL31oXdu_AZjyZbR/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Aula do Roteiro do Exame Neurológico: 2022', link: 'https://drive.google.com/file/d/1hwbbEKUrHoooXekXVwVRuDE8InRRRN2H/view?usp=sharing' },
+                { type: 'pdf', title: 'Arquivo 06 - Checklist do Roteiro de Exame Neurológico', link: 'https://drive.google.com/file/d/104BNuQOfjwTW2J3hdRJhQQWHUXgEiWba/view?usp=sharing' },
+            ]},
+            { id: 'module_5', title: 'Módulo 05 - Curso: AVC', items: [
+                { type: 'video', title: 'Aula 01 - AVC', link: 'https://drive.google.com/file/d/10Y46OQZaBXhRdOLa26kpRo_ENMYPDIGr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Síndrome Neurovasculares: @ineuro', link: 'https://drive.google.com/file/d/1KtarGQ_vXoMzFPUC9QeLpNene983pfg1/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Doença Vascular Encefálica', link: 'https://drive.google.com/file/d/1e8YQMKVNblRF4y5d0l_pGBIANVfT-zNd/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Escala Universal do AVC: @neurocurso', link: 'https://drive.google.com/file/d/1m7sRtA4mh0jqI_WjjKlykSQMUquNzgkl/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Conceitos Básicos AVCs #1', link: 'https://drive.google.com/file/d/15Nv274o8wUdQJUXghjnGgT482w4H60qL/view?usp=sharing' },
+                { type: 'video', title: 'Aula 03 - Conceitos Básicos AVCs #2', link: 'https://drive.google.com/file/d/1svFcCb80fIwXCHtod3_AEnzEJbMg4ba1/view?usp=sharing' },
+                { type: 'video', title: 'Aula 04 - Conceitos Básicos AVCs #3', link: 'https://drive.google.com/file/d/1hJRmPnR6yEgpP1Ld9Mlz43PLeJu8SWlO/view?usp=sharing' },
+                { type: 'video', title: 'Aula 05 - Conceitos Básicos AVCs #4', link: 'https://drive.google.com/file/d/1bpv7uXUU8yL5iUB85ap3j2JW3XFF577I/view?usp=sharing' },
+                { type: 'video', title: 'Aula 06 - Acidente Vascular Encefálico', link: 'https://drive.google.com/file/d/1DVrBuaf35fYmuKwoAWnTxl6WY0AJ9vx7/view?usp=sharing' },
+                { type: 'video', title: 'Aula 07 - Acidente Vascular Cerebral Isquêmico', link: 'https://drive.google.com/file/d/13DR9pkB4jc_627QRjfglkylimkXziu7v/view?usp=sharing' },
+                { type: 'video', title: 'Aula 08 - Conceitos Básicos AVCs #5', link: 'https://drive.google.com/file/d/11gnTcVZ_P2UVk_8GJVAvLsugAlHtTbNY/view?usp=sharing' },
+                { type: 'video', title: 'Aula 09 - Conceitos Básicos AVCs #6', link: 'https://drive.google.com/file/d/1UzKRa2tVPKhjmfazfwnX2bssiNSo-36N/view?usp=sharing' },
+                { type: 'video', title: 'Aula 10 - Acidente Vascular Isquêmico #1', link: 'https://drive.google.com/file/d/1UmGoR140YDGo8VJyu5JdOIZWC8-dsYYr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 11 - Acidente Vascular Isquêmico #2', link: 'https://drive.google.com/file/d/1QPXf1dgSydvJeykPa5bbhjG9fGwi5QEI/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12 - Acidente Vascular Isquêmico #3', link: 'https://drive.google.com/file/d/1D-jMtwuhd97B6a4MchiskJV9a7C1P_de/view?usp=sharing' },
+                { type: 'video', title: 'Aula 13 - Acidente Vascular Isquêmico #4', link: 'https://drive.google.com/file/d/1kHIbBZrntJUecEyNAJ3Ofy1eKxb-GpHc/view?usp=sharing' },
+                { type: 'video', title: 'Aula 14 - Acidente Vascular Isquêmico #5', link: 'https://drive.google.com/file/d/1hkoVy5H4asOsTa_3UKEON2F5bScJhjln/view?usp=sharing' },
+                { type: 'video', title: 'Aula 15 - Conceitos Básicos AVCs #7', link: 'https://drive.google.com/file/d/178aS2wev3YckRteZyZM_LTgumJOe4dqd/view?usp=sharing' },
+                { type: 'video', title: 'Aula 16 - Acidente Vascular Isquêmico #6', link: 'https://drive.google.com/file/d/1lRMt4yfOUxycQfKM-ZulqpMe4N72KUbs/view?usp=sharing' },
+                { type: 'video', title: 'Aula 17 - Acidente Vascular Isquêmico #7', link: 'https://drive.google.com/file/d/1aU9HmT5wOMM59OSTnGF-vFdaglMdS4jX/view?usp=sharing' },
+                { type: 'video', title: 'Aula 18 - AVE-I | TOAST', link: 'https://drive.google.com/file/d/1TWwTYUSJUHB-eY_LQXvJsLK1xwgn7qoE/view?usp=sharing' },
+                { type: 'video', title: 'Aula 19 - Infarto Lacunar', link: 'https://drive.google.com/file/d/1AdJUdSX8iS-XvXq_0MrTrVj5PYmoL0wp/view?usp=sharing' },
+                { type: 'video', title: 'Aula 20 - Bamford: AVCi Agudo', link: 'https://drive.google.com/file/d/1mDHODmW71tAiwkCSdSl6TXgPHtOokiyz/view?usp=sharing' },
+                { type: 'video', title: 'Aula 21 - AVC: Isquêmico #1', link: 'https://drive.google.com/file/d/19JZ_fKR7hC1JzC1UocUTrOxD22omoV7X/view?usp=sharing' },
+                { type: 'video', title: 'Aula 22 - AVC: Isquêmico #2', link: 'https://drive.google.com/file/d/1QYTWvbw2DV8LZ9ZHw4S4Yg66jwRRKyV1/view?usp=sharing' },
+                { type: 'video', title: 'Aula 23 - AVC: Isquêmico #3', link: 'https://drive.google.com/file/d/1Gmy9GH70St75q9r5mVkhlADB8gi1B2RK/view?usp=sharing' },
+                { type: 'video', title: 'Aula 25 - AVE e AVC Isquêmico', link: 'https://drive.google.com/file/d/15yfepdsqKLiIYVa7Ju57t-yh0-wg7lgH/view?usp=sharing' },
+                { type: 'pdf', title: 'Arquivo 05 - Checklist AVCi/AVEi', link: 'https://drive.google.com/file/d/1WwNqDRKTn02LdW3E_Gqpq6styc7dU1Q4/view?usp=sharing' },
+            ]},
+            { id: 'module_6', title: 'Módulo 06 - Minissérie: O Roteiro', items: [
+                { type: 'video', title: 'Aula 02 - Episódio 02: Mapa', link: 'https://drive.google.com/file/d/1-GZt5g1ibwgmjlvTeTN5YuVSfmeux2Kh/view?usp=sharing' },
+                { type: 'video', title: 'Aula 03 - Episódio 03: Exame Neurológico', link: 'https://drive.google.com/file/d/11QsylTZW5UfZ8eool4Yl6CGhaDYQU1zX/view?usp=sharing' },
+                { type: 'video', title: 'Aula 04 - Episódio 04: Exame Neurológico - Interativo', link: 'https://drive.google.com/file/d/1_7sI6YNQVUjHXDYxAjMVtIaKx63Hf-yz/view?usp=sharing' },
+            ]},
+            { id: 'module_7', title: 'Módulo 07 - Podcast: Neuro Fácil', items: []},
+            { id: 'module_8', title: 'Módulo 08 - Cefaleia na Emergência', items: [
+                { type: 'video', title: 'Aula 01 - Cefaleia: Passo I', link: 'https://drive.google.com/file/d/1lD-mdV1z40TJGa-rgHXmVoLVT8hk0oM3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Cefaleia Secundária', link: 'https://drive.google.com/file/d/1jhEMnuryHy3FPIcWbkLQSkfCidkuFDrG/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Cefaleias: Profa. Jussara K', link: 'https://drive.google.com/file/d/1VCkm4xsWHFnRvJ8nGGKWd6hlX8SaBHRR/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Cefaleia: Passo II', link: 'https://drive.google.com/file/d/17-JmtetuKKF4lJxQZavtK2ZuKfRMcbjR/view?usp=sharing' },
+                { type: 'video', title: 'Aula 03 - Cefaleia: Passo III', link: 'https://drive.google.com/file/d/1A2zfbmyfbFr7O28nq4i1bYUDiOhU0jSN/view?usp=sharing' },
+            ]},
+            { id: 'module_9', title: 'Módulo 09 - Curso: Exame Complementar na Prática', items: [
+                { type: 'video', title: 'Aula 01 - Tomografia de Crânio', link: 'https://drive.google.com/file/d/1P6RiUO31EuEMRoXxrkzafF2oz9Nd-avt/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Ressonância Magnética', link: 'https://drive.google.com/file/d/1cCED_4SJn1ReSzZlkajx_AQnEFN0VXDr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Punção Lombar e Análise do Líquor', link: 'https://drive.google.com/file/d/1_xlkOUf1X0gNyVCEojvXiVC-AvIazkhs/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Eletroencefalograma: Dra. Juliana K', link: 'https://drive.google.com/file/d/1TNLOxOnMu1rA4ynSqpdd6V_YKqi5taJx/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Polissonografia: Dra. Juliana K', link: 'https://drive.google.com/file/d/1sGa-5t_Aio6eehwBXirsFG3GuZ41hwgA/view?usp=sharing' },
+            ]},
+            { id: 'module_10', title: 'Módulo 10 - Drops de Neuro', items: [
+                { type: 'video', title: 'Aula 01 - Raciocínio Neurológico', link: 'https://drive.google.com/file/d/1_4Fm1GZCw8fB9n5SlIMreSki91c9GGtH/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Breve Revisão de Neuroanatomia', link: 'https://drive.google.com/file/d/1vtUl6tsCYpNxp9X1ZG5i9-i--zCbj9ge/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Síndrome do 1º e 2º Neurônio Motor', link: 'https://drive.google.com/file/d/12MQW3uOpH2dYMVlyiPQMYeeT5vTV-pDZ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Via Motora', link: 'https://drive.google.com/file/d/1enLVIUQc3W7smzUyaXqHnbu_7OqcsMEq/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Coroa Radiada', link: 'https://drive.google.com/file/d/1f-xsAkJvXlZ9Z_GNL-7Jzm6PNlIfkhAg/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Medula Espinhal', link: 'https://drive.google.com/file/d/1Kouekb2B3aAq4bgeHY6m2R5KLal33ckr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Neuroanatomia Clínica do Cerebelo: @neurofuncionalr', link: 'https://drive.google.com/file/d/1_dF7_ifDmrAblAGMb15ujmdOwXrB48ps/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Ataxia', link: 'https://drive.google.com/file/d/19_V_6HSx6_M0YzBCkEQbBcuFODIQjiLC/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Anatomia: Afasia', link: 'https://drive.google.com/file/d/1ZUw_yio9Z-V8yI_Nc7-iSXoBqP002YCI/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Afasia', link: 'https://drive.google.com/file/d/1h5tNP4-t0V_fGJHr6qkOniym99zE3ovq/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Paralisia Facial Central', link: 'https://drive.google.com/file/d/1znbvHkkygJMff0PHJxUol4v-9p7O79vm/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Paralisia Facial', link: 'https://drive.google.com/file/d/1yUJFzpHT61dsoWifcvvqlErYuXusChHd/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Paralisia do Olhar Conjugado', link: 'https://drive.google.com/file/d/15wUWzmaOFocfUroIRbw3SgHMzyml3rW8/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Síndrome Talâmica', link: 'https://drive.google.com/file/d/1cTIehH40qaap934WUBgJ1waoe_krp1u6/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Classificação e Etiologia', link: 'https://drive.google.com/file/d/1ZtitZds9-AUmzyAiLTKX4rtu4N2eAPpr/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Estado de Mal Epiléptico', link: 'https://drive.google.com/file/d/1Ir9rQ-bx-OEyTqbsZgYlQbuXMED0k7cn/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Guillain-Barré no PS', link: 'https://drive.google.com/file/d/1MV5ubbHVHmpdWhwpFtR9K9USNI1hJtIT/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Polineuropatia', link: 'https://drive.google.com/file/d/1r3kfu09UP_eIqSKnV2AdQQJceNW4aK15/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Esclerose Lateral Amiotrófica ou ELA', link: 'https://drive.google.com/file/d/1j3hJO2awx-wWI9sOGO-5nP36jhIhaGqD/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - EM: Esclerose Múltipla', link: 'https://drive.google.com/file/d/1t5l_Xb2kNY2nQSBS4StFsi6fwH8FYhja/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Esclerose Múltipla: Dra. Juliana K', link: 'https://drive.google.com/file/d/1_K07WFrA7a1_mPPIgvaGo1VlUszob9RK/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - SHIC: Síndrome de Hipertensão Intracraniana', link: 'https://drive.google.com/file/d/1_SAk4vCFiJsfVUraCiX5Vx0mW6feSggu/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Ciclo da Micção', link: 'https://drive.google.com/file/d/1kPutRcPocS19pyAhKMESR23lJN8SDUsz/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Neuro Endócrino', link: 'https://drive.google.com/file/d/1XW855ZN1Ntf3UG1qZJiIYd2oNTzJJVJi/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Sono: @Daniela Khouri', link: 'https://drive.google.com/file/d/1dDtkW1nhL_A4G-I2QlHyYfLOJDYdgC6y/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Sono @Daniela Khouri.mp4', link: 'https://drive.google.com/file/d/1ijvLa5Htky6Xf-ZSAtW6c_2VEiJIJ0T5/view?usp=sharing' },
+                { type: 'video', title: 'Aula 12 - Revisão Neuroanatomia', link: 'https://drive.google.com/file/d/1-d4hpx3Lt2QQUEOS4AD3KiQAYJZKiMuQ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 13.1 - SNA Funções Autonômicas', link: 'https://drive.google.com/file/d/1WM73ZdvIy4k4J2cndkVz0iyKwq0g_0cd/view?usp=sharing' },
+                { type: 'video', title: 'Aula 14.1 - Palavra', link: 'https://drive.google.com/file/d/1xbPkiVLrvnBHk4kpK1gau4hFLVbmAeNB/view?usp=sharing' },
+                { type: 'video', title: 'Aula 15 - Coréias Distonia', link: 'https://drive.google.com/file/d/1Wu-sbd3X3Pkw_wTXfgf3Cnnoff5V_ok1/view?usp=sharing' },
+                { type: 'video', title: 'Aula 30 - SNA Palavra', link: 'https://drive.google.com/file/d/1ofHnKxdRJnVProVIaTltFi-X-9d731uX/view?usp=sharing' },
+            ]},
+            { id: 'module_11', title: 'Módulo 11 - Doença de Parkinson', items: [
+                { type: 'video', title: 'Aula 01 - Doença de Parkinson', link: 'https://drive.google.com/file/d/17sCsgg16Rh0s64CtQ5yklxrR8yHKnVZX/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Doença de Parkinson (2)', link: 'https://drive.google.com/file/d/1ljA9YXm5HNDXOigXCoZKNWhltNDOczzA/view?usp=sharing' },
+                { type: 'video', title: 'Aula 02 - Síndrome de Parkinson', link: 'https://drive.google.com/file/d/1ROWw4YStI0YrLyVzIVl1qrKQFiIZrZOS/view?usp=sharing' },
+                { type: 'video', title: 'Aula 14 - S Extrapiramidais Parkinson', link: 'https://drive.google.com/file/d/1LAJSyX6VyfQF_PI9kHAIrHHPcMEf9T0n/view?usp=sharing' },
+            ]},
+            { id: 'module_12', title: 'Módulo 12 - Minicurso: Coma', items: [
+                { type: 'video', title: 'Aula 01 - Introdução: Coma', link: 'https://drive.google.com/file/d/1Gxyv9oE_SV-Auoc7-XLpjrVYj-uudpt3/view?usp=sharing' },
+                { type: 'video', title: 'Aula 05 - Estado Mental', link: 'https://drive.google.com/file/d/1j2_z8zxtcUoRTFmb5HNwPOO7RjrD_qKQ/view?usp=sharing' },
+                { type: 'video', title: 'Aula 15.1 - Estado Mental II', link: 'https://drive.google.com/file/d/1VPdSDpoF9sHWNOx9BIsmC3ybxjQp9nUE/view?usp=sharing' },
+                { type: 'video', title: 'Aula 31 - Estado Mental II', link: 'https://drive.google.com/file/d/1wcn-VGi2iZdEotWp8cqsx3T1SwZD0Qh6/view?usp=sharing' },
+            ]},
+            { id: 'module_13', title: 'Módulo 13 - Aulas com Convidados', items: []},
+            { id: 'module_14', title: 'Módulo 14 - Grandes Quadros Neurocirúrgicos', items: [
+                { type: 'video', title: 'Aula 01 - Meningeoma', link: 'https://drive.google.com/file/d/18urL0jp_8BnEHAOcSNOrpf0EJDKL_vxy/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Abscesso Cerebral', link: 'https://drive.google.com/file/d/1RYC28SFHpmkOI6-7upjYtzyd6MSiUM3g/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Trauma Neurocirúrgico: Cézar Prigenzi', link: 'https://drive.google.com/file/d/1DpRPdz5gT8-_-QJp3_mRiizW1pM6ReNf/view?usp=sharing' },
+                { type: 'video', title: 'Aula 01 - Trauma Raquimedular', link: 'https://drive.google.com/file/d/1zKIP9age3TMhS8-mhz8pjvn6JplSnuDM/view?usp=sharing' },
+            ]},
+            { id: 'module_15', title: 'Módulo 15 - E-Books e Materiais Extras', items: [
+                { type: 'pdf', title: 'E-Book: Vol. 1', link: 'https://drive.google.com/file/d/1jqXb3zPn6nZ5l9HAyEU4Reig6L1d-nzn/view?usp=sharing' },
+                { type: 'pdf', title: 'E-Book: Vol. 2', link: 'https://drive.google.com/file/d/1F1ZHWY6FBw1fUSk3V93rNzfdCo7tFRUh/view?usp=sharing' },
+                { type: 'pdf', title: 'E-Book: Vol. 3', link: 'https://drive.google.com/file/d/1pYhYVWKFy6WTYekNq1X3MRwYVXm_7Gl7/view?usp=sharing' },
+                { type: 'pdf', title: 'E-Book: Vol. 4', link: 'https://drive.google.com/file/d/1HGnwLjt9jc6t2YhYzOy5kAdmHcKTLXzC/view?usp=sharing' },
+            ]},
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') return;
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+        }
+        window.loadItem = loadItem;
+
+        // Função para ordenar as aulas numericamente
+        function sortItems(items) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+\.?\d*)/) || title.match(/Dia (\d+)/);
+                if (match) return parseFloat(match[1]);
+                return Infinity; // Deixa itens não numerados no final
+            };
+            items.sort((a, b) => {
+                const numA = extractNumber(a.title);
+                const numB = extractNumber(b.title);
+                if (numA !== Infinity && numB !== Infinity) {
+                    return numA - numB;
+                }
+                return a.title.localeCompare(b.title); // Fallback alfabético
+            });
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            // Ordena os itens antes de renderizar
+            sortItems(module.items);
+
+            // Filtra e renderiza vídeos
+            const videos = module.items.filter(item => item.type === 'video');
+            videosContainer.innerHTML = videos.map(item => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                </div>
+            `).join('');
+
+            // Filtra e renderiza PDFs
+            const pdfs = module.items.filter(item => item.type === 'pdf');
+            materialsContainer.innerHTML = pdfs.map(item => {
+                const isDisabled = !item.link || item.link === '#';
+                const itemClass = isDisabled ? 'disabled-item' : 'cursor-pointer';
+                const clickHandler = isDisabled ? '' : `onclick="loadItem('${item.link}', '${item.title.replace(/'/g, "\\'")}')"`;
+                return `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 transition-colors ${itemClass}"
+                         ${clickHandler} data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-pdf"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>
+                `;
+            }).join('');
+
+            // Carrega o primeiro item clicável
+            const firstPlayableItem = module.items.find(item => item.link && item.link !== '#');
+            if (firstPlayableItem) {
+                loadItem(firstPlayableItem.link, firstPlayableItem.title);
+            } else {
+                loadItem('', 'Nenhum item neste módulo', '');
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Mapeia e classifica os itens para determinar o tipo
+            modulesData.forEach(module => {
+                module.items.forEach(item => {
+                    const lowerTitle = item.title.toLowerCase();
+                    if (lowerTitle.includes('arquivo') || lowerTitle.includes('e-book') || lowerTitle.includes('checklist') || lowerTitle.includes('cupom')) {
+                        item.type = 'pdf'; // Trata como material de leitura
+                    } else {
+                        item.type = 'video';
+                    }
+                });
+            });
+
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            if (modulesData.length > 0) {
+                renderModuleContent(modulesData[0].id);
+            }
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[14].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[14].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

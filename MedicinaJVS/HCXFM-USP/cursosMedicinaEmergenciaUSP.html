@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Emergências no PS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        .selected-lesson {
+            background-color: #4299e1;
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hidden { display: none !important; }
+        
+        summary { list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+        details[open] summary .chevron { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg flex-shrink-0">
+        <div class="flex items-center space-x-4">
+            <button id="backButton" class="hidden bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </button>
+            <h1 id="mainTitle" class="text-xl font-bold text-white">Emergências no PS - Módulos</h1>
+        </div>
+    </header>
+
+    <div id="pageContainer" class="flex-grow">
+        <div id="moduleSelectionPage" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <main id="contentPage" class="hidden h-full p-4 lg:grid lg:grid-cols-3 lg:gap-x-4">
+            <section class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0">
+                    <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-4 bg-gray-800 border-b border-t border-gray-700 flex-shrink-0">
+                    <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione uma aula</h2>
+                </div>
+                <div class="p-4 overflow-y-auto flex-grow">
+                     <details id="materialsDropdown" class="bg-gray-900/50 rounded-lg">
+                        <summary class="p-4 cursor-pointer text-lg font-bold text-white flex justify-between items-center">
+                            <span>Materiais de Estudo</span>
+                            <i class="fas fa-chevron-down chevron transition-transform duration-200"></i>
+                        </summary>
+                        <div id="materialsContainer" class="p-4 border-t border-gray-700 space-y-3"></div>
+                    </details>
+                </div>
+            </section>
+            <aside class="mt-4 lg:mt-0 lg:col-span-1 bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col overflow-y-auto hide-scrollbar max-h-[calc(100vh-128px)]">
+                <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+                <div id="videosContainer" class="space-y-3"></div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+        
+        const modulesData = [
+            { id: 'mod_01', title: 'Módulo 01 - Terapia de Suporte e Abordagem Inicial ao Paciente Grave no Departamento de Emergência', icon: 'fas fa-procedures', submodules: [
+                { id: 'sub_01_01', title: 'Abordagem Inicial do Paciente Grave e Introdução ao Curso', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16HU1zRkiOZir9clEQ3ndp7PpQMpEi3_I/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial do Paciente Grave e Introdução ao Curso: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DUx2O-4TbyI5-l-ujHH79CZOVkMX-XaD/view?usp=sharing'), title: 'Aula 02 - Abordagem Inicial do Paciente Grave e Introdução ao Curso: Parte II' }
+                ], materials: [
+                    { title: 'Abordagem Inicial do Paciente Grave', link: 'https://drive.google.com/file/d/1po-1GXs1dM42mD_dzrwKiS31sCsKI69a/view?usp=sharing' }
+                ]},
+                { id: 'sub_01_02', title: 'Abordagem das Vias Aéreas', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1pabSbY9g2Pz4C2oqz72BrVjx8UYPNw2G/view?usp=sharing'), title: 'Aula 03 - Abordagem das Vias Aéreas: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yq2eUxroxroeT4QBktGkDGb3MKePOrdE/view?usp=sharing'), title: 'Aula 04 - Abordagem das Vias Aéreas: Parte II' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1qqQzlO_7u5TzP4eg7AQinOf8Ek-uWs1S/view?usp=sharing'), title: 'Aula 09 - Via Aérea Difícil: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1G3Xhdk0Ht3nSffQXoANMoXdE4y4AsBHt/view?usp=sharing'), title: 'Aula 10 - Via Aérea Difícil: Parte II' }
+                ], materials: [
+                    { title: 'Abordagem das Vias Aéreas', link: 'https://drive.google.com/file/d/1t_it630Gqf4MqMVMB0uj7kLr9_JDQHSN/view?usp=sharing' },
+                    { title: 'Via Aérea Difícil', link: 'https://drive.google.com/file/d/1Vryl99CehnOCA1EHvZ25Zo6e-hZUDxv2/view?usp=sharing' }
+                ]},
+                { id: 'sub_01_03', title: 'Suporte Básico de Vida (SBV)', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WG6yg3TNW0Gmx_XJcuerDtRYU03Xn57L/view?usp=sharing'), title: 'Aula 01 - BLS' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gM4sC7iKuSWucOv-gAuX6uzcPetBhadS/view?usp=sharing'), title: 'Aula 05 - Suporte Básico de Vida: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cokJlPSxC361Ft3UgNVMHMVF7YOmUAUQ/view?usp=sharing'), title: 'Aula 06 - Suporte Básico de Vida: Parte II' }
+                ], materials: [
+                    { title: 'Suporte Básico de Vida', link: 'https://drive.google.com/file/d/1qJs2idGvZ3SeIa9k7pvRjG_vZMLhyMnG/view?usp=sharing' }
+                ]},
+                { id: 'sub_01_04', title: 'Choque', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ene8tQKssFNf95YC0RRi0XO2fdHVHUxE/view?usp=sharing'), title: 'Aula 07 - Choque: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HgpUUEDNF3IexLQjMNFD0zPAAQOrTDHB/view?usp=sharing'), title: 'Aula 08 - Choque: Parte II' }
+                ], materials: [
+                    { title: 'Abordagem Inicial ao Choque', link: 'https://drive.google.com/file/d/1xXKhpN9hFucUowTtls2EVv719ySEvQTf/view?usp=sharing' },
+                    { title: 'Sepse e Choque Séptico', link: 'https://drive.google.com/file/d/1SEI6dNCbzSZgeK65SH1wq9CnPZeEuHsb/view?usp=sharing' }
+                ]},
+                { id: 'sub_01_05', title: 'Atendimento Pré-Hospitalar', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IsSJnaySubP1Wsywk1o6gcQSzku2i2sq/view?usp=sharing'), title: 'Aula 09 - Atendimento Pré-Hospitalar: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1z3NlIgpd1NllaNEgEIxlCuMvxKMiLhUI/view?usp=sharing'), title: 'Aula 10 - Atendimento Pré-Hospitalar: Parte II' }
+                ], materials: [
+                    { title: 'Atendimento Pré-Hospitalar', link: 'https://drive.google.com/file/d/1T_eLOJe6W7Di-AIMpy0aLuGJ-aeZ68Jz/view?usp=sharing' }
+                ]},
+                { id: 'sub_01_06', title: 'Suporte Avançado de Vida', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WqH6e54yc2m2hQOYYrsoOFkvYlGTTkqP/view?usp=sharing'), title: 'Aula 02 - Ritmo Chocável' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MPeJqo5OJ9MuIl_f6EHFXVavbJX8u4jE/view?usp=sharing'), title: 'Aula 03 - Ritmo Não-Chocável' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ALCK3XfarzrKCjLsUqxLLku-I9B6hBRn/view?usp=sharing'), title: 'Aula 04 - Além do ACLS na PCR' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cGxo8PGgp2dQFfiquAtRe4ZbAoFEuORT/view?usp=sharing'), title: 'Aula 05 - Cuidado Pós-Parada Cardíaca: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1om3dNlKcO84U4Lje-Mo6jVF7UNF0ZWBr/view?usp=sharing'), title: 'Aula 06 - Cuidado Pós-Parada Cardíaca: Parte II' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ugpVNHq2jObQsEuVPSZU1BdwlTqK6eyb/view?usp=sharing'), title: 'Aula 11 - Suporte Avançado de Vida: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1h2a68fyjmr3By9U0towg0v1Myda_r7H0/view?usp=sharing'), title: 'Aula 12 - Suporte Avançado de Vida: Parte II' }
+                ], materials: [
+                    { title: 'Cuidado Pós-Parada Cardíaca', link: 'https://drive.google.com/file/d/1d4M-NhwWapcELpdboduNW-_S5uk7b2Jy/view?usp=sharing' },
+                    { title: 'Suporte Avançado de Vida', link: 'https://drive.google.com/file/d/1ys9pR4D3JNW2LtlXsv4Al1WwuJUR9_5n/view?usp=sharing' }
+                ]},
+                { id: 'sub_01_07', title: 'Bônus', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Wo9U0FmPt9d2QTKFQdmb-L7qTB6QShVn/view?usp=sharing'), title: 'Aula 07 - Drogas Vasoativas: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rQ2Xycz6hl8cxJMmemZt8hdS_hdDptZx/view?usp=sharing'), title: 'Aula 08 - Drogas Vasoativas: Parte II' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1I-8wHo79m27NMZEWh0l692BM4QqNYRT7/view?usp=sharing'), title: 'Aula 11 - Passagem Segura de um Cateter Venoso Central' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uDKhLZIhuNYFcvyEMNwo0ZN2vRGGVLBQ/view?usp=sharing'), title: 'Aula 12 - Ultrassonografia no Departamento de Emergência: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WDEGez6mvvH6VdVeoBhPiPUf5YxXW02O/view?usp=sharing'), title: 'Aula 13 - Ultrassonografia no Departamento de Emergência: Parte II' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o26hazbzgpyJmTTBYRPQ4XWRJMaNSiDg/view?usp=sharing'), title: 'Aula 14 - História da Medicina de Emergência e Futuro' }
+                ], materials: [
+                    { title: 'Drogas Vasoativas', link: 'https://drive.google.com/file/d/1CzQSOaqbPsVRB6mX6rM999-AphvbPlMM/view?usp=sharing' },
+                    { title: 'Passagem Segura de um Cateter Venoso Central', link: 'https://drive.google.com/file/d/1jYC1nLCxY4LRa8AEk_0Qcwx_s9F-X-Gv/view?usp=sharing' },
+                    { title: 'Ultrassonografia no Departamento de Emergência', link: 'https://drive.google.com/file/d/1iuRxqIK9mxRPUmFQaGs-FaLuVd_6Lv7r/view?usp=sharing' }
+                ]}
+            ]},
+            { id: 'mod_02', title: 'Módulo 02 - Problemas Respiratórios no Departamento de Emergência', icon: 'fas fa-lungs', submodules: [
+                { id: 'sub_02_01', title: 'Asma', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HTQ2CzdyjST4tLJ0rK_n4bf4Pq3lww2H/view?usp=sharing'), title: 'Aula 01 - Asma: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Tj60CM2wyQS626Sk8amsN_CO5wMApF2g/view?usp=sharing'), title: 'Aula 02 - Asma: Parte II' }
+                ], materials: [{ title: 'Asma', link: 'https://drive.google.com/file/d/12xlzuTFWUxPxKn4SGLKOV1zX-ziFo2_D/view?usp=sharing' }] },
+                { id: 'sub_02_02', title: 'DPOC', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KejAHVb_4EW1rtt_LiIRClZoPrIt0c2I/view?usp=sharing'), title: 'Aula 03 - DPOC: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1o_S_diFWJ_SMNKjqh6LQBuNq2QTzez1W/view?usp=sharing'), title: 'Aula 04 - DPOC: Parte II' }
+                ], materials: [{ title: 'DPOC', link: 'https://drive.google.com/file/d/1b62F7BLNm13CUPge20gb3icVSaqRKNBv/view?usp=sharing' }] },
+                { id: 'sub_02_03', title: 'Pneumonia Adquirida na Comunidade', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-_xVsHgCXYiYvEjE0F4RmXthLWEY7ZQY/view?usp=sharing'), title: 'Aula 05 - Pneumonia Adquirida na Comunidade: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jR8_2HTBKWb--L6hrXVBZOFFm92l1H8G/view?usp=sharing'), title: 'Aula 06 - Pneumonia Adquirida na Comunidade: Parte II' }
+                ], materials: [{ title: 'Pneumonia Domiciliar', link: 'https://drive.google.com/file/d/116jRHGqySQUY8_cpbXQjlHlJXdfNWKuJ/view?usp=sharing' }] },
+                { id: 'sub_02_04', title: 'Insuficiência Respiratória', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1pFQ20Ioz2bdElsZy6bvq7ZQJbQx6ciEw/view?usp=sharing'), title: 'Aula 07 - Insuficiência Respiratória: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1X-s8rNVIjslrYgumAVZ0VPzgmW0vKLhZ/view?usp=sharing'), title: 'Aula 08 - Insuficiência Respiratória: Parte II' }
+                ], materials: [{ title: 'Abordagem da Insuficiência Respiratória Aguda', link: 'https://drive.google.com/file/d/1Z0zh3trW9tzxMdREUzh8t-A0413YoZPV/view?usp=sharing' }] },
+                { id: 'sub_02_05', title: 'Oxigenação', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14ga2Pnu2X5RA9ksxrwApWT8RfEL5Z5JD/view?usp=sharing'), title: 'Aula 09 - Oxigenação' }], materials: [{ title: 'Oxigenação e Suporte de Oxigênio', link: 'https://drive.google.com/file/d/1j3FVtnHliO7u5DiIU1kX1sZwPxTcnXsJ/view?usp=sharing' }] },
+                { id: 'sub_02_06', title: 'Derrame Pleural', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K6J5eG5VywAhQP8ujny98nB2O2hFo3VT/view?usp=sharing'), title: 'Aula 10 - Derrame Pleural' }], materials: [{ title: 'Derrame Pleural', link: 'https://drive.google.com/file/d/1bEPxhjtKpqP4EWodLr8ZbP5D4f89WKwg/view?usp=sharing' }] },
+                { id: 'sub_02_07', title: 'Hemoptise', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QQV3XS0_IL1yw20CugQnibH3GEzX1lX1/view?usp=sharing'), title: 'Aula 11 - Hemoptise' }], materials: [{ title: 'Hemoptise', link: 'https://drive.google.com/file/d/1VVx9yf74uK-xvTKubnQH3_1i4GJcj17m/view?usp=sharing' }] },
+                { id: 'sub_02_08', title: 'Tromboembolismo Pulmonar', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1XVPv25JTnMZU8Ul9TaRQZRoXmcr5pDNs/view?usp=sharing'), title: 'Aula 12 - Tromboembolismo Pulmonar: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15mR-q3T4C-Im9e-LLZeOYfWHFzdaDdCQ/view?usp=sharing'), title: 'Aula 13 - Tromboembolismo Pulmonar: Parte II' }
+                ], materials: [{ title: 'Tromboembolismo Pulmonar', link: 'https://drive.google.com/file/d/1x_lSqITwj6kedIIkO4cEDx1nPQiE8zJ2/view?usp=sharing' }] },
+                { id: 'sub_02_09', title: 'Avaliação Radiológica no Departamento de Emergência', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CTT-390sF-z4EZteDJSyvGgRCNnhino1/view?usp=sharing'), title: 'Aula 14 - Avaliação Radiológica no Departamento de Emergência: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FUgtx5lnbMzhxK7COHuQwEvpla-O1OEQ/view?usp=sharing'), title: 'Aula 15 - Avaliação Radiológica no Departamento de Emergência: Parte II' }
+                ], materials: [{ title: 'Radiografia do Tórax no Departamento de Emergência', link: 'https://drive.google.com/file/d/1VIAxVq6etpHIIDK14Zrb2qpi6bToc6DL/view?usp=sharing' }] },
+                { id: 'sub_02_10', title: 'Avaliação de Tomografias no Departamento de Emergências', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11vhUX3dwC-5QblO69fT9JIsqvxWMCjCR/view?usp=sharing'), title: 'Aula 16 - Avaliação de Tomografias no Departamento de Emergências: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1efV6Ahz_rnTkAbn4IkpgoeRfBn7TY-CT/view?usp=sharing'), title: 'Aula 17 - Avaliação de Tomografias no Departamento de Emergências: Parte II' }
+                ], materials: [{ title: 'Tomografia Computadorizada do Tórax', link: 'https://drive.google.com/file/d/1cbhh2PrKFuThpaDYxts4dwcF8t6ws6Jm/view?usp=sharing' }] },
+                { id: 'sub_02_11', title: 'Ventilação Mecânica', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1qGrtxVxArdBacofEdzr1njLjoSq8iVWY/view?usp=sharing'), title: 'Aula 18 - Ventilação Mecânica: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1T8OOh3D3BpPPxthMtgBQ1cxqJwbRXRzG/view?usp=sharing'), title: 'Aula 19 - Ventilação Mecânica: Parte II' }
+                ], materials: [{ title: 'Ventilação Mecânica Básica', link: 'https://drive.google.com/file/d/1rifnWE1cqHG80VSXeH6O3WlJaZJaohBG/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_03', title: 'Módulo 03 - Emergências Cardiovasculares', icon: 'fas fa-heart-pulse', submodules: [
+                { id: 'sub_03_01', title: 'Avaliação Inicial do Paciente com Dor Torácica', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hkzX9mDo5pp32hZC3-5v6vJ66-JwNWRH/view?usp=sharing'), title: 'Aula 01 - Avaliação Inicial do Paciente com Dor Torácica: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1P31OTUGP4fd6DrvGlQIZmFnKcYi-KlvH/view?usp=sharing'), title: 'Aula 02 - Avaliação Inicial do Paciente com Dor Torácica: Parte II' }
+                ], materials: [{ title: 'Avaliação Inicial do Paciente com Dor Torácica', link: 'https://drive.google.com/file/d/1ljpe8Z0Y8cqhwJLBv64mReRl9LrQcisL/view?usp=sharing' }] },
+                { id: 'sub_03_02', title: 'Infarto Agudo do Miocárdio com Supradesnivelamento do Segmento ST', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bR7oEP6RdXbAjVgPnBmIeGViokNByd_S/view?usp=sharing'), title: 'Aula 03 - Infarto Agudo do Miocárdio com Supradesnivelamento do Segmento ST: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UY9PCeESsag2TkzxSykdst2Si3f4kvWL/view?usp=sharing'), title: 'Aula 04 - Infarto Agudo do Miocárdio com Supradesnivelamento do Segmento ST: Parte II' }
+                ], materials: [{ title: 'Infarto Agudo do Miocárdio com Supradesnivelamento do Segmento ST', link: 'https://drive.google.com/file/d/13mAgv1lb7fVfYZ0EC1_KW8Wo21-tlsNB/view?usp=sharing' }] },
+                { id: 'sub_03_03', title: 'Síndrome Coronariana Aguda sem Supradesnivelamento do Segmento ST', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16lwiIVMtPpztFgfZDnyg5YmXVNIA0N3D/view?usp=sharing'), title: 'Aula 05 - Síndrome Coronariana Aguda sem Supradesnivelamento do Segmento ST: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/164zNI4_7jcMiPty2WBhBGBgbqruY8jCd/view?usp=sharing'), title: 'Aula 06 - Síndrome Coronariana Aguda sem Supradesnivelamento do Segmento ST: Parte II' }
+                ], materials: [{ title: 'Síndromes Coronárias Agudas sem Supradesnivelamento do Segmento ST', link: 'https://drive.google.com/file/d/1HKlJ-xH9v4kAihwhBZJt6LXl5vPHLSN/view?usp=sharing' }] },
+                { id: 'sub_03_04', title: 'Taquiarritmias', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10g-C6vKA5C57nBqR07ffKZFcdgo5wgTd/view?usp=sharing'), title: 'Aula 07 - Taquiarritmias: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/12Gl-_EOd6jxGvjSfoDI_JruKADsn7cvN/view?usp=sharing'), title: 'Aula 08 - Taquiarritmias: Parte II' }
+                ], materials: [{ title: 'Taquiarritmias', link: 'https://drive.google.com/file/d/1YOhEqfDbAehNlwNqLUwi63GG4jSEorkP/view?usp=sharing' }] },
+                { id: 'sub_03_05', title: 'Bradiarritmias', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iG6Fe8cVC9kJIgEPMQKrF6zkbskFDGS8/view?usp=sharing'), title: 'Aula 09 - Bradiarritmias' }], materials: [{ title: 'Bradiarritmias', link: 'https://drive.google.com/file/d/147W423frHT7ooUO-mM0k9k3-LM3zYXCr/view?usp=sharing' }] },
+                { id: 'sub_03_06', title: 'Fibrilação Atrial', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1v6_LjnvYhva7l2fbmGLMUzuXvDAghSRW/view?usp=sharing'), title: 'Aula 10 - Fibrilação Atrial' }], materials: [{ title: 'Fibrilação Atrial', link: 'https://drive.google.com/file/d/1KGqk1bFJMjLxNlHogQE2yuOSWom_0OYD/view?usp=sharing' }] },
+                { id: 'sub_03_07', title: 'Insuficiência Cardíaca Descompensada no Departamento de Emergência', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wfvD3lepWMQw5-zSynqFEj1KrtltKFBj/view?usp=sharing'), title: 'Aula 11 - Insuficiência Cardíaca Descompensada no Departamento de Emergência: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1d302B_tPLwJkHt8nVmGTV7M0vx0Yc6va/view?usp=sharing'), title: 'Aula 12 - Insuficiência Cardíaca Descompensada no Departamento de Emergência: Parte II' }
+                ], materials: [
+                    { title: 'Abordagem da Insuficiência Cardíaca', link: 'https://drive.google.com/file/d/1F_UZaAskghfHKnW4Hft1-5KwwLiPB7Lf/view?usp=sharing' },
+                    { title: 'Insuficiência Cardíaca Descompensada no Departamento de Emergência', link: 'https://drive.google.com/file/d/1ytLcZd3YJS0Ql54HPI_o4mLk5VT7kfV6/view?usp=sharing' }
+                ]},
+                { id: 'sub_03_08', title: 'Edema Agudo Hipertensivo e SCAPE', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HjyjA9msdHrHTVzFEgwBuslEBtoZ_KE5/view?usp=sharing'), title: 'Aula 13 - Edema Agudo Hipertensivo e Scape' }], materials: [{ title: 'Edema Agudo de Pulmão e Scape', link: 'https://drive.google.com/file/d/1F0tOQHCTOxrqAlzk-oHcxSRvet2LwwRH/view?usp=sharing' }] },
+                { id: 'sub_03_09', title: 'Abordagem das Crises Hipertensivas', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1sgCOndCGAd62WUyFPwXYF2LiUMt9c4tS/view?usp=sharing'), title: 'Aula 14 - Abordagem das Crises Hipertensivas: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vvqNNPvjX1bPKP2lgUtW-Q8FSXV2xbHc/view?usp=sharing'), title: 'Aula 15 - Abordagem das Crises Hipertensivas: Parte II' }
+                ], materials: [{ title: 'Abordagem das Crises Hipertensivas', link: 'https://drive.google.com/file/d/1TrTHPLyQ6vi3Zb62PjsJE4-JqsUP02AA/view?usp=sharing' }] },
+                { id: 'sub_03_10', title: 'Miocardite', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jOwvtvnu0SfMZZp1PTh1SYFZiwGvDkuR/view?usp=sharing'), title: 'Aula 16 - Miocardite' }], materials: [{ title: 'Miocardite', link: 'https://drive.google.com/file/d/1prBD9QvWBEpyI_8K--rYsgXDA5enLz8V/view?usp=sharing' }] },
+                { id: 'sub_03_11', title: 'Pericardite e Tamponamento Cardíaco', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1C9HakrbQkYqKpiNLAQKDzV20V0fnyQiu/view?usp=sharing'), title: 'Aula 17 - Pericardite e Tamponamento Cardíaco: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CrQ81TQmff7ToLYvREqd_qx-24dkITEv/view?usp=sharing'), title: 'Aula 18 - Pericardite e Tamponamento Cardíaco: Parte II' }
+                ], materials: [{ title: 'Pericardite', link: 'https://drive.google.com/file/d/1_CH2B_CGcTgVduN5puMqT7KiNpfIhiVR/view?usp=sharing' }] },
+                { id: 'sub_03_12', title: 'Síncope', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1igPA9ZtBlgt7Nw9_j3Q2JpH49X5vm9io/view?usp=sharing'), title: 'Aula 19 - Síncope' }], materials: [{ title: 'Síncope', link: 'https://drive.google.com/file/d/1HYPjDUf-qD6EReZhHXuJmN7LvmLiaB6E/view?usp=sharing' }] },
+                { id: 'sub_03_13', title: 'Emergências Valvares', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1EtMdWVK-5vJpFEuzlGXhidWIMSIbU2ZO/view?usp=sharing'), title: 'Aula 20 - Emergências Valvares' }], materials: [{ title: 'Emergências Valvares', link: 'https://drive.google.com/file/d/1WNhQNrOS73KFAZkddYWAZL1XrRM2Q6c/view?usp=sharing' }] },
+                { id: 'sub_03_14', title: 'Ecocardiografia Point-of-Care', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VDl9ZXX4yNXnpw78uEB3ioZ-e6vd3frB/view?usp=sharing'), title: 'Aula 21 - Ecocardiografia: Point-of-Care' }], materials: [{ title: 'Ecocardiografia - Point-of-Care', link: 'https://drive.google.com/file/d/1AxZeVFBaW7ff7q9tlbuKpjeYWdulOyEk/view?usp=sharing' }] },
+                { id: 'sub_03_15', title: 'Novas Medicações da Cardiologia para o Emergencista', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tS5_PMBlUMgbLI-idD1SCE7oY2BuemEB/view?usp=sharing'), title: 'Aula 22 - Novas Medicações da Cardiologia para o Emergencista' }], materials: [{ title: 'Novas Medicações da Cardiologia para o Emergencista', link: 'https://drive.google.com/file/d/1_PPmVZfsuLXG1FCxbLrtHQRka4_8sIuu/view?usp=sharing' }] },
+                { id: 'sub_03_16', title: 'Passagem de Marcapasso', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jKmW4-dx5tZIyIbQGqUSePssiHD-UbO1/view?usp=sharing'), title: 'Aula 23 - Passagem de Marcapasso: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15TskM8XFd4malCVYejM4K9VycuSVK5KW/view?usp=sharing'), title: 'Aula 24 - Passagem de Marcapasso: Parte II' }
+                ], materials: [{ title: 'Passagem de Marcapasso', link: 'https://drive.google.com/file/d/1QBwf1OPwzAiRVKe7FXyMjLPePwRnE46T/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_04', title: 'Módulo 04 - Emergências Metabólicas e Renais', icon: 'fas fa-pills', submodules: [
+                { id: 'sub_04_01', title: 'Distúrbios Ácido-Básicos', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Conn2qxsHETGKPY1WWiq4W6mpuFaOQZx/view?usp=sharing'), title: 'Aula 01 - Distúrbios Ácido-Básicos: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Z7QtcUQAuRWrAEtKFc31OI-eBJtps9w5/view?usp=sharing'), title: 'Aula 02 - Distúrbios Ácido-Básicos: Parte II' }
+                ], materials: [{ title: 'Distúrbios Ácido-Básicos', link: 'https://drive.google.com/file/d/130BXBky5K8ZVt2ue8MCoBtqFEyg12Qxt/view?usp=sharing' }] },
+                { id: 'sub_04_02', title: 'Distúrbios do Sódio', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16YNEsgofMfvtXKREOx4govc350GR_5TL/view?usp=sharing'), title: 'Aula 03 - Distúrbios do Sódio: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1niOIu5l932npQxyg9C5EAa1B6tock9rm/view?usp=sharing'), title: 'Aula 04 - Distúrbios do Sódio: Parte II' }
+                ], materials: [{ title: 'Distúrbios do Sódio', link: 'https://drive.google.com/file/d/1mQ2btqR2hQhjC-u70zfIpqvA6jUDB07f/view?usp=sharing' }] },
+                { id: 'sub_04_03', title: 'Distúrbios do Cálcio no Departamento de Emergência', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F-FrirmC0XiyT83Kt-ADVR9LhBgCkudp/view?usp=sharing'), title: 'Aula 05 - Distúrbios do Cálcio no Departamento de Emergência: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tXIuTkKzflnAvKyim1nc_r2vQKlzkcMN/view?usp=sharing'), title: 'Aula 06 - Distúrbios do Cálcio no Departamento de Emergência: Parte II' }
+                ], materials: [{ title: 'Distúrbios do Cálcio', link: 'https://drive.google.com/file/d/1U9VZ0lkOfDYi0yetDwD28nE4qpIrozS5/view?usp=sharing' }] },
+                { id: 'sub_04_04', title: 'Monoartrites', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1spzSMS6AhUH2QqlMBpnf5kqxwE_9EdDk/view?usp=sharing'), title: 'Aula 07 - Monoartrites' }], materials: [{ title: 'Monoartrite', link: 'https://drive.google.com/file/d/1zb9J4HHBtqMuoKaU8JeKiUBtUB0WFuKm/view?usp=sharing' }] },
+                { id: 'sub_04_05', title: 'Casos Reumatológicos', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TV0zvcXFqnmrUaW6rf5HGTv_wDElY2rc/view?usp=sharing'), title: 'Aula 08 - Casos Reumatológicos' }], materials: [{ title: 'Casos Reumatológicos', link: 'https://drive.google.com/file/d/1YWtMq_nMqjTrHgF79ynfZduKk4J2TwVs/view?usp=sharing' }] },
+                { id: 'sub_04_06', title: 'Avaliação do Paciente com Dor Lombar', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1enRcmKrxpnRgrmbFJJSSpJIWoKxfE6u5/view?usp=sharing'), title: 'Aula 09 - Avaliação do Paciente com Dor Lombar' }], materials: [{ title: 'Avaliação do Paciente com Dor Lombar e Cólica Ureteral', link: 'https://drive.google.com/file/d/1sn1zwcVfEedsH0B9c4NtpbtmvVwdqMCV/view?usp=sharing' }] },
+                { id: 'sub_04_07', title: 'Emergências Relacionadas a Tireoide', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FNF_INbQvUcR3JFBdgfT_dvGIbj4cbbA/view?usp=sharing'), title: 'Aula 10 - Emergências Relacionadas a Tireoide: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xk_1DX9Ize8kadO5p0ZNwhna58ob4-w7/view?usp=sharing'), title: 'Aula 11 - Emergências Relacionadas a Tireoide: Parte II' }
+                ], materials: [{ title: 'Tireoide', link: 'https://drive.google.com/file/d/1Ik2IKqqSziRI4l2aW3yWufPHIHeuCOYF/view?usp=sharing' }] },
+                { id: 'sub_04_08', title: 'Emergências Relacionadas a Adrenal', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11KF-SHlYPsuuMAf6awjXV52gFP4OqU1t/view?usp=sharing'), title: 'Aula 12 - Emergências Relacionadas a Adrenal' }], materials: [{ title: 'Adrenal', link: 'https://drive.google.com/file/d/1h-XaH8YdSh1e1llqaCnEsURPvvc5AI8T/view?usp=sharing' }] },
+                { id: 'sub_04_09', title: 'Emergências Relacionadas às Hiperglicemias', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ymrh2uD02OzMXrw6mXbDQ9C8WWvG-o9y/view?usp=sharing'), title: 'Aula 13 - Emergências Relacionadas as Hiperglicemias: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10KphEsacGwOwzEP-vA417sud1jpp5R4q/view?usp=sharing'), title: 'Aula 14 - Emergências Relacionadas as Hiperglicemias: Parte II' }
+                ], materials: [{ title: 'Emergências Relacionadas às Hiperglicemias', link: 'https://drive.google.com/file/d/162gKrH-XcJrscdnL5uLizXWBD88OJaA1/view?usp=sharing' }] },
+                { id: 'sub_04_10', title: 'Lesão Renal Aguda', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1osXz6fhDqRAfS5UNaAIB4YUIQuuT3u9S/view?usp=sharing'), title: 'Aula 15 - Lesão Renal Aguda: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GCOCu6RilXyrYbsWBqC0HQv9-BLqz3E_/view?usp=sharing'), title: 'Aula 16 - Lesão Renal Aguda: Parte II' }
+                ], materials: [{ title: 'Abordagem do Paciente com Lesão Renal Aguda', link: 'https://drive.google.com/file/d/1PdZiXf-lDXXHdMtVl6Mz0pBUWnFIeAfe/view?usp=sharing' }] },
+                { id: 'sub_04_11', title: 'Rabdomiólise', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1pP_ZU9V_pizpHFlf_bG5zZ502SEqMAdK/view?usp=sharing'), title: 'Aula 17 - Rabdomiólise' }], materials: [{ title: 'Rabdomiólise', link: 'https://drive.google.com/file/d/1QG912n_fvml_CpUrq4eE0euIgzFS-ky2/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_05', title: 'Módulo 05 - Atendimento ao Trauma no Departamento de Emergência', icon: 'fas fa-car-burst', submodules: [
+                { id: 'sub_05_01', title: 'Abordagem Inicial do Paciente Politraumatizado', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RqnpeHdCa4wH2WTwPlkEYYVjYB8D_1Fb/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial do Paciente Politraumatizado: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UdFuqgs3L0RVVy7-quWRGqYs0WCBZPKi/view?usp=sharing'), title: 'Aula 02 - Abordagem Inicial do Paciente Politraumatizado: Parte II' }
+                ], materials: [
+                    { title: 'Abordagem Inicial do Paciente Politraumatizado', link: 'https://drive.google.com/file/d/1l-O0-2szZzDu-xXRKrK0-bDg0P1lZZJk/view?usp=sharing' },
+                    { title: 'Abordagem Inicial ao Paciente Vítima de Trauma', link: 'https://drive.google.com/file/d/1odPvVifhp4_S6tpAoRqh8h_1Qnszn9yS/view?usp=sharing' }
+                ]},
+                { id: 'sub_05_02', title: 'Trauma Craniano e Raquimedular', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PC5zc7PkdweYCog4NRv6VnBFuHL7GZV4/view?usp=sharing'), title: 'Aula 03 - Trauma Craniano e Raquimedular: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ikr6QxNLl7IBR5uYLHEBX-hGZj28fUIK/view?usp=sharing'), title: 'Aula 04 - Trauma Craniano e Raquimedular: Parte II' }
+                ], materials: [{ title: 'Trauma Craniano e Raquimedular', link: 'https://drive.google.com/file/d/1q92l18Rai9jwYWqIJJf4bCFskn8rDjFZ/view?usp=sharing' }] },
+                { id: 'sub_05_03', title: 'Trauma Torácico', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_GMPyDbiyKtyRaRJg7dariZeb57Ay9ba/view?usp=sharing'), title: 'Aula 05 - Trauma Torácico: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19aqgghVxtiVe6kDb34FBy33_ILxP5wfv/view?usp=sharing'), title: 'Aula 06 - Trauma Torácico: Parte II' }
+                ], materials: [{ title: 'Trauma Torácico', link: 'https://drive.google.com/file/d/1sVf3DvVBbsGec-1qK_1qT12N12SxZX7F/view?usp=sharing' }] },
+                { id: 'sub_05_04', title: 'Trauma Abdominal', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ImiMY2cSPCGf-yLmmd5dKoz2m_VOHw5n/view?usp=sharing'), title: 'Aula 07 - Trauma Abdominal' }], materials: [{ title: 'Trauma Abdominal', link: 'https://drive.google.com/file/d/1rSshgbq7L70_smCu3xJ_yYTYCF68ui7h/view?usp=sharing' }] },
+                { id: 'sub_05_05', title: 'E-FAST', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bajbettzGdhZGP6LRuJTNFi4M6R2qOVl/view?usp=sharing'), title: 'Aula 08 - E-FAST' }], materials: [{ title: 'E-FAST', link: 'https://drive.google.com/file/d/1q3gBFt8DbGecJltuvK_028-jUH7XcDI_/view?usp=sharing' }] },
+                { id: 'sub_05_06', title: 'Abdome Agudo e Dor Abdominal', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dMP-ADh2EYnDKKVn7aSfJxc9Vi1IqfLI/view?usp=sharing'), title: 'Aula 09 - Abdome Agudo e Dor Abdominal: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1pQY5IF2eggitutOdhJerZ8u8X_A5FwqR/view?usp=sharing'), title: 'Aula 10 - Abdome Agudo e Dor Abdominal: Parte II' }
+                ], materials: [{ title: 'Abdome Agudo e Dor Abdominal', link: 'https://drive.google.com/file/d/1rR-_n72mY4TfuPjoDTyE9CT-0zav2YMw/view?usp=sharing' }] },
+                { id: 'sub_05_07', title: 'Queimaduras', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rFwgf6FhYq4r7vp6uJbjmaj1wHV-6cm3/view?usp=sharing'), title: 'Aula 11 - Queimaduras: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10zlcj_Gd0oDTrUAkvUOt5oE13UjlAMje/view?usp=sharing'), title: 'Aula 12 - Queimaduras: Parte II' }
+                ], materials: [{ title: 'Queimaduras', link: 'https://drive.google.com/file/d/1cmDNwn7IuyWqxz_5srprJtSKLtA3iIi7/view?usp=sharing' }] },
+                { id: 'sub_05_08', title: 'Lesão por Eletricidade e Raios', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GggqhhvYLLEGOWmLd_PiGiNT_v7NTl0g/view?usp=sharing'), title: 'Aula 13 - Lesão por Eletricidade e Raios' }], materials: [{ title: 'Lesões por Raios e Eletricidade', link: 'https://drive.google.com/file/d/1c3mXYYJ6i_bP6Q7Eh2r9ZkebTzG_HttO/view?usp=sharing' }] },
+                { id: 'sub_05_09', title: 'Desastres', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IyTgD9mAD0XOcsIV_o7BYmQHEMExoxBL/view?usp=sharing'), title: 'Aula 14 - Desastres: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Dfh7pA4CZpMYH627WivdYEU8myom3gSn/view?usp=sharing'), title: 'Aula 15 - Desastres: Parte II' }
+                ], materials: [{ title: 'Medicina de Desastres', link: 'https://drive.google.com/file/d/1YAEvaDktrZ1hiYq04Y9byXVSoqxqwrDL/view?usp=sharing' }] },
+                { id: 'sub_05_10', title: 'Drenagem de Tórax', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aJXPXX9ESMRO9ioA0vNH9K63BY9X1TVq/view?usp=sharing'), title: 'Aula 16 - Drenagem de Tórax: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wvYu64aDvNTjLtqgQZnwl4R62pJQW45k/view?usp=sharing'), title: 'Aula 17 - Drenagem de Tórax: Parte II' }
+                ], materials: [{ title: 'Drenagem de Tórax', link: 'https://drive.google.com/file/d/16j15CpuR998cc4VF5UlKHKxgtt-u09bT/view?usp=sharing' }] },
+                { id: 'sub_05_11', title: 'Manejo de Urgências Ortopédicas', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1baT7bOLoxt61wh8WKu2EqyQy6gnt4lEn/view?usp=sharing'), title: 'Aula 18 - Manejo de Urgências Ortopédicas' }], materials: [
+                    { title: 'Manejo de Urgências Ortopédicas I', link: 'https://drive.google.com/file/d/1DXzMEZKZMxiWVo-O_zbkYbvE1N1cRUeZ/view?usp=sharing' },
+                    { title: 'Manejo de Urgências Ortopédicas I', link: 'https://drive.google.com/file/d/1jtd7NeTt44PfMbELF_nqAHCMs7Tbl3RP/view?usp=sharing' }
+                ]},
+                { id: 'sub_05_12', title: 'Manejo de Urgências Ortopédicas Avaliação Radiológica', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F3VLLV08K1SaTt0MekV3IzuLrdAFT7MS/view?usp=sharing'), title: 'Aula 19 - Manejo de Urgências Ortopédicas: Avaliação Radiológica - Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uDfPHaanDgRbt6hTgWQ0PFG95hroHEhK/view?usp=sharing'), title: 'Aula 20 - Manejo de Urgências Ortopédicas: Avaliação Radiológica - Parte II' }
+                ], materials: [{ title: 'Manejo de Urgências Ortopédicas II', link: 'https://drive.google.com/file/d/1ralCqEz3xJJdws_W67B5rJQMtVezF_Zf/view?usp=sharing' }] },
+                { id: 'sub_05_13', title: 'Manejo de Urgências Ortopédicas Politrauma, Fratura Exposta e Síndrome Compartimental', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GCXox2dFpyn_38jCW2E58pV7Ux0am_8_/view?usp=sharing'), title: 'Aula 21 - Manejo de Urgências Ortopédicas: Politrauma, Fratura Exposta e Síndrome Compartimental' }], materials: [] },
+                { id: 'sub_05_14', title: 'Trauma: O Que Eu Faria Diferente do ATLS?', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FSzU6rvAf__p0RYRDLWy3F4aHAiSzpls/view?usp=sharing'), title: 'Aula 22 - Trauma: O Que Eu Faria Diferente do ATLS - Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MJ0qfWrYns3w7gpL2cdrTqklAYsqzqUT/view?usp=sharing'), title: 'Aula 23 - Trauma: O Que Eu Faria Diferente do ATLS - Parte II' }
+                ], materials: [] }
+            ]},
+            { id: 'mod_06', title: 'Módulo 06 - Emergências Neurológicas e Psiquiátricas', icon: 'fas fa-brain', submodules: [
+                { id: 'sub_06_01', title: 'Cefaléia', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TlGykq_gh5t229jdD4ACmXVe57zwyWdW/view?usp=sharing'), title: 'Aula 01 - Cefaleia: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1sJ9p3v8HepXTXVji3lcUvB1C_p51FvRc/view?usp=sharing'), title: 'Aula 02 - Cefaleia: Parte II' }
+                ], materials: [{ title: 'Cefaleia', link: 'https://drive.google.com/file/d/1-_gdoK5XSXYcEE0XnbdWvPy8ExsaeU9v/view?usp=sharing' }] },
+                { id: 'sub_06_02', title: 'Vertigem', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1s6CTuxVvlUauGlTIBIh8aBfSMjfpO7ku/view?usp=sharing'), title: 'Aula 03 - Vertigem: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15s5eM1jUyvaMiz0JXk8gCFaVu7fSvLHO/view?usp=sharing'), title: 'Aula 04 - Vertigem: Parte II' }
+                ], materials: [{ title: 'Vertigem', link: 'https://drive.google.com/file/d/1PQsK3l-nt60hoyqCRSq_kIxRTwJRDDGY/view?usp=sharing' }] },
+                { id: 'sub_06_03', title: 'Agitação Psicomotora', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F2CWfEclu8oY1odCA21XQvfJfWvtoqNK/view?usp=sharing'), title: 'Aula 05 - Agitação Psicomotora' }], materials: [{ title: 'Agitação Psicomotora', link: 'https://drive.google.com/file/d/1yUD6Y88gFrm3FRxCaiM2xaAeAw5rycAF/view?usp=sharing' }] },
+                { id: 'sub_06_04', title: 'Delirium', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gIkt5fNx_m00eX2H2nINyz1tYCJs_uSl/view?usp=sharing'), title: 'Aula 06 - Delirium: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TMjjJu7drdZeAIa-BiTvmUfIfl88AUEk/view?usp=sharing'), title: 'Aula 07 - Delirium: Parte II' }
+                ], materials: [{ title: 'Delirium', link: 'https://drive.google.com/file/d/11SFeZKX1YY7KVv4UepjiILIWQbAFJ4Zt/view?usp=sharing' }] },
+                { id: 'sub_06_05', title: 'Rebaixamento do Nível de Consciência', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13sfnjY9Okw6HXxY-z2FTRuoSjBB810UI/view?usp=sharing'), title: 'Aula 08 - Rebaixamento de Nível de Consciência: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1guvbh1E5qVnrRq7eXHyL9RVyNRppaEIU/view?usp=sharing'), title: 'Aula 09 - Rebaixamento de Nível de Consciência: Parte II' }
+                ], materials: [{ title: 'Rebaixamento do Nível de Consciência', link: 'https://drive.google.com/file/d/1vEVplN9f0nJeAHO3GyGk8bcqzOaXYaoi/view?usp=sharing' }] },
+                { id: 'sub_06_06', title: 'Crise Epiléptica', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HJV32jAGKSEuVs04FWH_PLtZ8Zz8btQb/view?usp=sharing'), title: 'Aula 10 - Crise Epiléptica: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QrtonEamwPulfeMWwnPaHDr2kUMjJoV4/view?usp=sharing'), title: 'Aula 11 - Crise Epiléptica: Parte II' }
+                ], materials: [{ title: 'Crise Epiléptica e Estado de Mal Epiléptico', link: 'https://drive.google.com/file/d/1dhPU1C5Y73CJ3GWAhc5vPNdlM5dCilUq/view?usp=sharing' }] },
+                { id: 'sub_06_07', title: 'AVC Isquêmico', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Wui9Oh6NAa1hQIoWRyQPupMW8ZwiJb-a/view?usp=sharing'), title: 'Aula 12 - AVC Isquêmico: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SnoRzD9Dipq3yXGD6954YuxYKNf8ZLYs/view?usp=sharing'), title: 'Aula 13 - AVC Isquêmico: Parte II' }
+                ], materials: [{ title: 'AVC Isquêmico', link: 'https://drive.google.com/file/d/14VNVjju3pOSQ6hAnOvuPjS8Bvp3mn5FO/view?usp=sharing' }] },
+                { id: 'sub_06_08', title: 'AVCh', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lRkPlt0K3hcqJAXsqQr6RsGy2iC_bMXO/view?usp=sharing'), title: 'Aula 14 - AVCh: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11rVlwHiKzpm9YdDeFwTN7Grcfzm5VQD4/view?usp=sharing'), title: 'Aula 15 - AVCh: Parte II' }
+                ], materials: [
+                    { title: 'Acidente Vascular Hemorrágico', link: 'https://drive.google.com/file/d/1pNDFLJi6C8AklYklaVln1ld-uqTg17kf/view?usp=sharing' },
+                    { title: 'Suporte ao Paciente Neurocrítico', link: 'https://drive.google.com/file/d/1i2rBEL0bK1yWS0eIM0A_1xpUbA517J38/view?usp=sharing' }
+                ]},
+                { id: 'sub_06_09', title: 'Avaliação do Risco de Suicídio', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1tI_FMfIlypc4tlQgZSIFy5cUUJUm6cuL/view?usp=sharing'), title: 'Aula 16 - Avaliação do Risco de Suicídio: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vLs0KC1yVrLfo0cVQHo6fZrQaogLHHPq/view?usp=sharing'), title: 'Aula 17 - Avaliação do Risco de Suicídio: Parte II' }
+                ], materials: [{ title: 'Avaliação do Risco de Suicídio', link: 'https://drive.google.com/file/d/1e2VurdFq5vKxW62GNiuwbRV5fmjSpAxE/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_07', title: 'Módulo 07 - Emergências Gastrointestinais e Oncohematológicas', icon: 'fas fa-stomach', submodules: [
+                { id: 'sub_07_01', title: 'Diarreia Aguda', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BVZo5S-kD8jxnwfuyg5U8b-GGcJMKgcN/view?usp=sharing'), title: 'Aula 01 - Diarreia Aguda' }], materials: [{ title: 'Diarreia Aguda', link: 'https://drive.google.com/file/d/1PRsbtvej209_2aNGiVLaNODs0e4xyQV2/view?usp=sharing' }] },
+                { id: 'sub_07_02', title: 'Quadros Dispépticos', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ngIcR2tOqA1cahJSYgVxz5ChdsB4IAtT/view?usp=sharing'), title: 'Aula 02 - Quadros Dispépticos' }], materials: [] },
+                { id: 'sub_07_03', title: 'Hemorragia Digestiva', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cvkTCcrtmwhd9DzX6rvkzWvU_MJx1G2I/view?usp=sharing'), title: 'Aula 03 - Hemorragia Digestiva' }], materials: [] },
+                { id: 'sub_07_04', title: 'Pancreatite Aguda', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NYkonOgheR0yHNirywf9Yn3sE7V7H6S_/view?usp=sharing'), title: 'Aula 04 - Pancreatite Aguda' }], materials: [{ title: 'Pancreatite Aguda', link: 'https://drive.google.com/file/d/1BfiyViXy6ybNKUY1r9mU5hmo7v0U9Vdw/view?usp=sharing' }] },
+                { id: 'sub_07_05', title: 'Ascite e Síndrome Hepatorrenal', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1umbbV8tpNgNZHjbITcpHWKwMRIDpbbBi/view?usp=sharing'), title: 'Aula 05 - Ascite e Síndrome Hepatorrenal' }], materials: [] },
+                { id: 'sub_07_06', title: 'Encefalopatia Hepática e Varizes Esofágicas', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1n1hVqH2CLLpUKRLOUMTYXS-IPQ_jorh_/view?usp=sharing'), title: 'Aula 06 - Encefalopatia Hepática e Varizes Esofágicas' }], materials: [{ title: 'Encefalopatia Hepática e Varizes Esofágicas', link: 'https://drive.google.com/file/d/14kqp2VeN3NVpCsjM2wo5YdcgaqxI3Ghs/view?usp=sharing' }] },
+                { id: 'sub_07_07', title: 'Problemas Relacionados ao Álcool', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rhU1pfR5IpVTCKfPVQIn5o6l_CMlLtwy/view?usp=sharing'), title: 'Aula 07 - Problemas Relacionados ao Álcool' }], materials: [] },
+                { id: 'sub_07_08', title: 'Avaliação do Paciente com Icterícia', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ERd0_bFdVzXIH2JoZauYNcPMHK-0aJp_/view?usp=sharing'), title: 'Aula 08 - Avaliação do Paciente com Icterícia: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IvBchVuuYpM8m8nuCK0AX1YDO5HWFyxC/view?usp=sharing'), title: 'Aula 09 - Avaliação do Paciente com Icterícia: Parte II' }
+                ], materials: [{ title: 'Icterícia no Departamento de Emergência', link: 'https://drive.google.com/file/d/16HXezOCcMzS5MOiIUToQK1R-GzWdEZqy/view?usp=sharing' }] },
+                { id: 'sub_07_09', title: 'Anemia Falciforme', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1u6J1bOo9Vtnr6xPV1tv5smJ9VokIHlf6/view?usp=sharing'), title: 'Aula 10 - Anemia Falciforme' }], materials: [] },
+                { id: 'sub_07_10', title: 'Emergências Oncológicas', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JP-IPgLfT4iGTsBHBfaKsiPKULo-kfew/view?usp=sharing'), title: 'Aula 11 - Emergências Oncológicas' }], materials: [{ title: 'Emergências Oncológicas', link: 'https://drive.google.com/file/d/1bp1Z_QxizVkzNOBTlemF1v-JQ_X95vsD/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_08', title: 'Módulo 08 - Infecção no Departamento de Emergência', icon: 'fas fa-bacterium', submodules: [
+                { id: 'sub_08_01', title: 'HIV/AIDS: Emergência Médica', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TSXI2UyBk4MtzpZjqnvSmKcERUjKjcoN/view?usp=sharing'), title: 'Aula 01 - HIV/AIDS: Emergência Médica - Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13lYy5-xuR1MQ4i2FnDJ3Tsdx0b0qpHaB/view?usp=sharing'), title: 'Aula 02 - HIV/AIDS: Emergência Médica - Parte II' }
+                ], materials: [{ title: 'HIV/AIDS', link: 'https://drive.google.com/file/d/1Fgs9Gmjw4WnJ4_-JoULnC1pLE-ruGjns/view?usp=sharing' }] },
+                { id: 'sub_08_02', title: 'Febre sem Sinais Localizatórios', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WaptpYlRJI4SdCihpUAon20ufgjHSgnd/view?usp=sharing'), title: 'Aula 03 - Febre sem Sinais Localizatórios: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HbfjgZCBGsWSwMzO7KENig2VAWMmlIm1/view?usp=sharing'), title: 'Aula 04 - Febre sem Sinais Localizatórios: Parte II' }
+                ], materials: [{ title: 'Febre sem Sinais Localizatórios', link: 'https://drive.google.com/file/d/1yOO4VDuzBT73JmHO_pW_jTznHQbdhSh9/view?usp=sharing' }] },
+                { id: 'sub_08_03', title: 'Neuroinfectologia', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eA1Wa4OQHmXWVCDZ1UcjD-PKG5vX6FL6/view?usp=sharing'), title: 'Aula 05 - Neuroinfectologia: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LIoVlG4FyiTQuSuwxU9UIoEPROkfXWR_/view?usp=sharing'), title: 'Aula 06 - Neuroinfectologia: Parte II' }
+                ], materials: [{ title: 'Neuroinfectologia', link: 'https://drive.google.com/file/d/1RdOlkri1jZtpX1OMZfQlpkv5sD0argOd/view?usp=sharing' }] },
+                { id: 'sub_08_04', title: 'Infecções Urinárias', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/12j2TdjxnCPYNP_jO-PCcBusTvCNmwWlL/view?usp=sharing'), title: 'Aula 07 - Infecções Urinárias' }], materials: [{ title: 'Infecções Urinárias', link: 'https://drive.google.com/file/d/17JTASiodiT8pApkwNGS_CI8By8jMV33l/view?usp=sharing' }] },
+                { id: 'sub_08_05', title: 'Infecção de Vias Aéreas Superiores', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-FmFf7MvbR5_NQxtGtbyXTxS5-wOspSr/view?usp=sharing'), title: 'Aula 08 - Infecção de Vias Aéreas Superiores' }], materials: [{ title: 'Infecção de Vias Aéreas Superiores', link: 'https://drive.google.com/file/d/1LHTaoHM4uO4IhEjgMwcwmVZKBeFUDkKa/view?usp=sharing' }] },
+                { id: 'sub_08_06', title: 'Infecções Sexualmente Transmissíveis', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17CEQFjhYcVFvniyi5JWZVdNFTKQHehfx/view?usp=sharing'), title: 'Aula 09 - Infecções Sexualmente Transmissíveis: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Or_7XgUG8aYr9EiCUPOqPJ9BWZtTeyEv/view?usp=sharing'), title: 'Aula 10 - Infecções Sexualmente Transmissíveis: Parte II' }
+                ], materials: [{ title: 'Infecções Sexualmente Transmissíveis', link: 'https://drive.google.com/file/d/12GHacIh9wu9jIVVnmwZcTfv16NN7cIwP/view?usp=sharing' }] },
+                { id: 'sub_08_07', title: 'Dengue e Arboviroses', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10HqYb5j1vvfzB3krZIj6h8z3mnWJxSzZ/view?usp=sharing'), title: 'Aula 11 - Dengue e Arboviroses' }], materials: [{ title: 'Dengue e Arboviroses', link: 'https://drive.google.com/file/d/1yTC9WTkdKqowk3JT__I38qbW3LvaQic1/view?usp=sharing' }] },
+                { id: 'sub_08_08', title: 'Infecções Cutâneas', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Z-IFY2tfIKEDCQXj-uW0zLlhHxZpUc7q/view?usp=sharing'), title: 'Aula 12 - Infecções Cutâneas (Aula Complementar)' }], materials: [{ title: 'Infecções Cutâneas', link: 'https://drive.google.com/file/d/1Fpjtt1blKl24BTVemlqxtMn_eL3FJByl/view?usp=sharing' }] },
+                { id: 'sub_08_09', title: 'Infecções Ginecológicas no PS', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/102BNO2ShP2SwP72ji20e5OZiKTo6cQkg/view?usp=sharing'), title: 'Aula 13 - Infecções Ginecológicas no PS (Aula Complementar)' }], materials: [{ title: 'Infecções Ginecológicas no PS', link: 'https://drive.google.com/file/d/1Z74quZ67hnly_xsDsj8762WfySgvdSN2/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_09', title: 'Módulo 09 - Ginecologia, Urologia, Cuidados Paliativos', icon: 'fas fa-venus-mars', submodules: [
+                { id: 'sub_09_01', title: 'Manejo do Parto pelo Emergencista', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mUYKlqrdus3YtKw5ivD-3SmvTRbDqh2f/view?usp=sharing'), title: 'Aula 01 - Manejo do Parto pelo Emergencista: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1nu-nHOgHjStnKt5oP4XAl3s70X2EVtL-/view?usp=sharing'), title: 'Aula 02 - Manejo do Parto pelo Emergencista: Parte II' }
+                ], materials: [{ title: 'Manejo do Parto pelo Emergencista', link: 'https://drive.google.com/file/d/1LlOeMkBuPHoHxTNTRQTyClQjJS9vG56k/view?usp=sharing' }] },
+                { id: 'sub_09_02', title: 'Sangramento Ginecológico', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lk3lF4VGMV-N2APbEYdbxAaSLVoEToqz/view?usp=sharing'), title: 'Aula 03 - Sangramento Ginecológico' }], materials: [{ title: 'Sangramento Ginecológico', link: 'https://drive.google.com/file/d/1i-8CVqQZO4-wLg1BL0upsvTZqz6nnfOb/view?usp=sharing' }] },
+                { id: 'sub_09_03', title: 'Paciente com Escroto Agudo', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cZ1gb8bDy-oB6FqpuhUKI_dga6erOk6h/view?usp=sharing'), title: 'Aula 04 - Paciente com Escroto Agudo: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NPMjld2tG9WzJ1Q5_FUozfBViMBiBpAs/view?usp=sharing'), title: 'Aula 05 - Paciente com Escroto Agudo: Parte II' }
+                ], materials: [{ title: 'Escroto Agudo', link: 'https://drive.google.com/file/d/1yWoUoYP8FzWJYWDppbEbqO1hkLsiabIU/view?usp=sharing' }] },
+                { id: 'sub_09_04', title: 'Violência Sexual', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PVj3yssyQALpX630N_iV-IuzhWVMaWCh/view?usp=sharing'), title: 'Aula 06 - Violência Sexual' }], materials: [{ title: 'Violência Sexual', link: 'https://drive.google.com/file/d/1OgeErba6_d_DDPbElPWfdWGAuXNPcWrK/view?usp=sharing' }] },
+                { id: 'sub_09_05', title: 'Dor Pélvica', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1EPprUFYT9pNtgERhlF-aTWDTQPifUcTr/view?usp=sharing'), title: 'Aula 07 - Dor Pélvica' }], materials: [{ title: 'Dor Pélvica', link: 'https://drive.google.com/file/d/1z-lurOqwuVa_Opo66RmFJ-UFWam62YI8/view?usp=sharing' }] },
+                { id: 'sub_09_06', title: 'Retenção Urinária Aguda', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PVrPz3jiXUPhpQhTKRrNFGtjwNc0u_u5/view?usp=sharing'), title: 'Aula 08 - Retenção Urinária Aguda' }], materials: [{ title: 'Retenção Urinária Aguda', link: 'https://drive.google.com/file/d/1bOW3HoyMYtlXQBYAL7__BsIbIA3-bVe4/view?usp=sharing' }] },
+                { id: 'sub_09_07', title: 'Síndromes Hipertensivas na Gravidez (Aula Complementar)', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JjZvXVHKZANC0zZJP3NjC683EyATUA4c/view?usp=sharing'), title: 'Aula 09 - Síndromes Hipertensivas na Gravidez (Aula Complementar): Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16_F43nlLIlt-Ph9qMxjb8nTZqUockXLO/view?usp=sharing'), title: 'Aula 10 - Síndromes Hipertensivas na Gravidez (Aula Complementar): Parte II' }
+                ], materials: [{ title: 'Síndromes Hipertensivas na Gravidez', link: 'https://drive.google.com/file/d/1E8s1tKsGrAm9_Vqta5LyQMOk46pp2iTW/view?usp=sharing' }] },
+                { id: 'sub_09_08', title: 'Sedação Paliativa (Aula Complementar)', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WZ3VAlkbnShmTFKbIhmD2jqksruDaBQU/view?usp=sharing'), title: 'Aula 11 - Sedação Paliativa (Aula Complementar)' }], materials: [{ title: 'Sedação Paliativa', link: 'https://drive.google.com/file/d/1QRknfn5DFhIDygAbzJZA9zoZFk9PgpdW/view?usp=sharing' }] }
+            ]},
+            { id: 'mod_10', title: 'Módulo 10 - Intoxicações, Lesões Externas, Anafilaxia, Emergências Oftalmológicas e Otorrinolaringológicas, Gestão', icon: 'fas fa-biohazard', submodules: [
+                { id: 'sub_10_01', title: 'Emergências Oftalmológicas', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RKoPJgk0NXUhJODIJxOnK1aKFp9T8_QQ/view?usp=sharing'), title: 'Aula 01 - Emergências Oftalmológicas: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yqMvfgdT_dt5RjSOEUtKnYvgwc2Dz7UI/view?usp=sharing'), title: 'Aula 02 - Emergências Oftalmológicas: Parte II' }
+                ], materials: [{ title: 'Emergências Oftalmológicas', link: 'https://drive.google.com/file/d/1jy3NPCSxRAtx6M2voXDZLwDQzpOdZcd3/view?usp=sharing' }] },
+                { id: 'sub_10_02', title: 'Emergências Otorrinolaringológicas', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1d0TFsjFB8I8Zq7Rkq-GiTE12TGmo-sDE/view?usp=sharing'), title: 'Aula 03 - Emergências Otorrinolaringológicas: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rpT-fQJhTLcCjnnIqAqKoYVpRtw64_JG/view?usp=sharing'), title: 'Aula 04 - Emergências Otorrinolaringológicas: Parte II' }
+                ], materials: [{ title: 'Emergências Otorrinolaringológicas', link: 'https://drive.google.com/file/d/1MYH2xVm8V3Yj1HpOgjsxiw9Uiiuvjl9A/view?usp=sharing' }] },
+                { id: 'sub_10_03', title: 'Dermatoses Graves e Farmacodermias', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hPgyTzK4lu-FZ_xUwB6bL6dQr3m1m9oB/view?usp=sharing'), title: 'Aula 05 - Dermatoses Graves e Farmacodermias: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Bfkf9AJiuzrD_GEiwRObwf_vrfeBTSlo/view?usp=sharing'), title: 'Aula 06 - Dermatoses Graves e Farmacodermias: Parte II' }
+                ], materials: [{ title: 'Dermatoses Graves e Farmacodermias', link: 'https://drive.google.com/file/d/1_RyoRolS85iih54xKfX76Qkc7SxlGaqA/view?usp=sharing' }] },
+                { id: 'sub_10_04', title: 'Abordagem Inicial das Intoxicações Exógenas', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1oMTpnhlgYQAFs-NGGhLGyJlX6JSDe2r5/view?usp=sharing'), title: 'Aula 07 - Abordagem Inicial das Intoxicações Exógenas: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1q0fx-k0hCE-xgZLnfHC6BS8ha4n1AH7u/view?usp=sharing'), title: 'Aula 08 - Abordagem Inicial das Intoxicações Exógenas: Parte II' }
+                ], materials: [{ title: 'Abordagem Inicial das Intoxicações Exógenas', link: 'https://drive.google.com/file/d/1QSVsVIuQN7WBDnNfpHZUF_vlJIHy7P2v/view?usp=sharing' }] },
+                { id: 'sub_10_05', title: 'Intoxicação por Fármacos', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1srFFdS3pckedgUod7LvANC2HIKEwNP8D/view?usp=sharing'), title: 'Aula 09 - Intoxicação por Fármacos: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ni1nWZwdbtiQpuIHc96JcugoQH8M0UXZ/view?usp=sharing'), title: 'Aula 10 - Intoxicação por Fármacos: Parte II' }
+                ], materials: [{ title: 'Intoxicação por Fármacos', link: 'https://drive.google.com/file/d/1CpVPj-6meIfcdJrXkzlYdHwOXnXNhmXw/view?usp=sharing' }] },
+                { id: 'sub_10_06', title: 'Intoxicações Ambientais', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lOhndBpVDnLM9U3ZGlWhsS4y7yZqrHxu/view?usp=sharing'), title: 'Aula 11 - Intoxicações Ambientais: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1rNWLa0wdv0_8WktuKO6cQhK1lI2ehHLC/view?usp=sharing'), title: 'Aula 12 - Intoxicações Ambientais: Parte II' }
+                ], materials: [{ title: 'Intoxicações Ambientais', link: 'https://drive.google.com/file/d/1nwfyPJ0u4uOG67GHCs2pLmX3YKc8Fc8T/view?usp=sharing' }] },
+                { id: 'sub_10_07', title: 'Intoxicação por Drogas de Abuso', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SBNJrm3ssi_KwrhrIHqdVs83TCaaT6Mg/view?usp=sharing'), title: 'Aula 13 - Intoxicação por Drogas de Abuso: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10R39mJvPAUwMxSdslSyhrIuwgnhlCZSD/view?usp=sharing'), title: 'Aula 14 - Intoxicação por Drogas de Abuso: Parte II' }
+                ], materials: [{ title: 'Intoxicação por Drogas de Abuso', link: 'https://drive.google.com/file/d/1SLgvVTzQBKB4acYvDsFa1XAEzFV42KNB/view?usp=sharing' }] },
+                { id: 'sub_10_08', title: 'Acidentes por Animais Peçonhentos', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NERyVU8E9A96CWpPqN-PcJGCgxumD5x-/view?usp=sharing'), title: 'Aula 15 - Acidentes por Animais Peçonhentos: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eqokxBUnJTWOYL6N3_Qbb18hXmcCvUkg/view?usp=sharing'), title: 'Aula 16 - Acidentes por Animais Peçonhentos: Parte II' }
+                ], materials: [{ title: 'Acidentes por Animais Peçonhentos', link: 'https://drive.google.com/file/d/1fxVemN_3-dtYZl_puEgK1_0FfRyXv-WL/view?usp=sharing' }] },
+                { id: 'sub_10_09', title: 'Liderança no Departamento de Emergência', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/11l4eC8nWaCe-YRFOQSxYZ3Dlm6wHCupP/view?usp=sharing'), title: 'Aula 17 - Liderança no Departamento de Emergência: Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zty4gePgxlBjyfh5U_SG5v3CUPcNm4Bb/view?usp=sharing'), title: 'Aula 18 - Liderança no Departamento de Emergência: Parte II' }
+                ], materials: [{ title: 'Liderança no Departamento', link: 'https://drive.google.com/file/d/1lrssYuqZL45mq2pOUV2msH3Z51tgPL6k/view?usp=sharing' }] },
+                { id: 'sub_10_10', title: 'Ferramentas de Gestão no Departamento de Emergência', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1X2qq0oHH3lKai2v8w1Kun1swctq85Idw/view?usp=sharing'), title: 'Aula 19 - Ferramentas de Gestão no Departamento de Emergência (Aula Complementar)' }], materials: [{ title: 'Ferramentas de Gestão', link: 'https://drive.google.com/file/d/1XhZb3UoqQRjKvSt3CvNB0BlCyo36EfKP/view?usp=sharing' }] },
+                { id: 'sub_10_11', title: 'Corpo Estranho em Crianças', videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k4Tzh7nASlyZg-5OCaSk84DhSaz9ZUtW/view?usp=sharing'), title: 'Aula 20 - Corpo Estranho em Crianças (Aula Complementar): Parte I' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dWRoggdLEsarUaBtvq2POnzcYz4dkf-6/view?usp=sharing'), title: 'Aula 21 - Corpo Estranho em Crianças (Aula Complementar): Parte II' }
+                ], materials: [{ title: 'Corpo Estranho em Crianças', link: 'https://drive.google.com/file/d/1P2HCjMvHfPXauidacTvuYvMSO9qjvZoh/view?usp=sharing' }] },
+                { id: 'sub_10_12', title: 'Anafilaxia', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Bo459zgKrz_87LqyQBQLraI-TrukzZZ6/view?usp=sharing'), title: 'Aula 22 - Anafilaxia (Aula Complementar)' }], materials: [{ title: 'Anafilaxia', link: 'https://drive.google.com/file/d/1IYTZ0oclHOYYLzeSYd2QhFQqc80Wjnw8/view?usp=sharing' }] }
+            ]}
+        ];
+
+        // --- Funções de Navegação ---
+
+        function navigateTo(pageId) {
+            ['moduleSelectionPage', 'contentPage'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) targetPage.classList.remove('hidden');
+        }
+
+        function showModuleSelectionPage() {
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            modulesData.forEach(module => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showSubModuleSelectionPage('${module.id}')">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <i class="${module.icon || 'fas fa-folder'} text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${module.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${module.submodules.length} submódulos</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = 'Cursos de Medicina de Emergência USP';
+            document.getElementById('backButton').classList.add('hidden');
+            navigateTo('moduleSelectionPage');
+        }
+
+        function showSubModuleSelectionPage(moduleId) {
+            currentModuleId = moduleId;
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            module.submodules.forEach(submodule => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showContentPage('${moduleId}', '${submodule.id}')">
+                         <div class="flex items-center space-x-4 mb-4">
+                            <i class="fas fa-folder-open text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${submodule.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${submodule.videos.length} aulas</p>
+                    </div>`;
+            });
+
+            document.getElementById('mainTitle').textContent = module.title;
+            document.getElementById('backButton').classList.remove('hidden');
+            document.getElementById('backButton').onclick = showModuleSelectionPage;
+            navigateTo('moduleSelectionPage');
+        }
+
+        function showContentPage(moduleId, submoduleId) {
+            const module = modulesData.find(m => m.id === moduleId);
+            const submodule = module?.submodules.find(s => s.id === submoduleId);
+            if (!submodule) return;
+
+            renderContent(submodule);
+            
+            document.getElementById('mainTitle').textContent = submodule.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            backButton.onclick = () => showSubModuleSelectionPage(moduleId);
+            navigateTo('contentPage');
+        }
+        
+        function renderContent(submodule) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const materialsDropdown = document.getElementById('materialsDropdown');
+            videosContainer.innerHTML = '';
+            materialsContainer.innerHTML = '';
+
+            let firstItem = null;
+            submodule.videos.forEach(item => {
+                if (!firstItem) firstItem = { type: 'video', data: item };
+                videosContainer.innerHTML += createItemHtml('video', item);
+            });
+            submodule.materials.forEach(item => {
+                if (!firstItem) firstItem = { type: 'material', data: item };
+                materialsContainer.innerHTML += createItemHtml('material', item);
+            });
+            
+            materialsDropdown.style.display = submodule.materials.length > 0 ? 'block' : 'none';
+            if (submodule.videos.length === 0) {
+                 videosContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma aula neste submódulo.</p>';
+            }
+            
+            if (firstItem) {
+                if (firstItem.type === 'video') {
+                    loadVideo(firstItem.data.id, firstItem.data.title);
+                } else {
+                    loadMaterial(firstItem.data.link, firstItem.data.title);
+                }
+            } else {
+                updatePlayerAndSelection(null, '', 'Nenhum item disponível');
+            }
+        }
+
+        function createItemHtml(type, item) {
+            const iconClass = item.icon || (type === 'video' ? 'fas fa-video' : 'fas fa-file-pdf');
+            const onclickAction = type === 'video' 
+                ? `loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')`
+                : `loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')`;
+            const dataId = type === 'video' ? item.id : item.link;
+            return `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                     onclick="${onclickAction}" data-id="${dataId}">
+                    <div class="item-thumbnail-placeholder"><i class="${iconClass}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                    </div>
+                </div>`;
+        }
+
+        function loadVideo(videoId, lessonTitle) {
+            const isPlaceholder = !videoId || videoId.startsWith('p_');
+            const playerSrc = isPlaceholder ? '' : `https://drive.google.com/file/d/${videoId}/preview`;
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : lessonTitle;
+            updatePlayerAndSelection(videoId, playerSrc, displayTitle);
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const isPlaceholder = !link || link === '#';
+            const playerSrc = isPlaceholder ? '' : link.replace(/\/view\?usp=.*/, '/preview');
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : materialTitle;
+            updatePlayerAndSelection(link, playerSrc, displayTitle);
+        }
+
+        function updatePlayerAndSelection(itemId, playerSrc, title) {
+            document.getElementById('contentPlayer').src = playerSrc;
+            document.getElementById('lessonTitle').textContent = title;
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+            if (itemId) {
+                 const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+                if (currentSelected) currentSelected.classList.add('selected-lesson');
+            }
+            selectedItemId = itemId;
+        }
+
+        window.onload = showModuleSelectionPage;
+    </script>
+</body>
+</html>

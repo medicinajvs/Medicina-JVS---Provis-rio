@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Emergências Cardiológicas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        .selected-lesson {
+            background-color: #4299e1;
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hidden { display: none !important; }
+        
+        summary { list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+        details[open] summary .chevron { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg flex-shrink-0">
+        <div class="flex items-center space-x-4">
+            <button id="backButton" class="hidden bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </button>
+            <h1 id="mainTitle" class="text-xl font-bold text-white">Cursos Disponíveis</h1>
+        </div>
+    </header>
+
+    <div id="pageContainer" class="flex-grow">
+        <div id="courseSelectionPage" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="moduleSelectionPage" class="hidden p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <main id="contentPage" class="hidden h-full p-4 lg:grid lg:grid-cols-3 lg:gap-x-4">
+            <section class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0">
+                    <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-4 bg-gray-800 border-b border-t border-gray-700 flex-shrink-0">
+                    <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione uma aula</h2>
+                </div>
+                <div class="p-4 overflow-y-auto flex-grow">
+                     <details id="materialsDropdown" class="bg-gray-900/50 rounded-lg">
+                        <summary class="p-4 cursor-pointer text-lg font-bold text-white flex justify-between items-center">
+                            <span>Materiais de Estudo</span>
+                            <i class="fas fa-chevron-down chevron transition-transform duration-200"></i>
+                        </summary>
+                        <div id="materialsContainer" class="p-4 border-t border-gray-700 space-y-3"></div>
+                    </details>
+                </div>
+            </section>
+            <aside class="mt-4 lg:mt-0 lg:col-span-1 bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col overflow-y-auto hide-scrollbar max-h-[calc(100vh-128px)]">
+                <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+                <div id="videosContainer" class="space-y-3"></div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        let selectedItemId = null;
+        let currentCourseId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const coursesData = [
+            {
+                id: 'course_01', title: 'Curso 01 - Emergências Cardiológicas', icon: 'fas fa-heart-pulse',
+                modules: [
+                    { id: 'mod_01_01', title: 'Módulo 01 - Passo a Passo na Avaliação do ECG na Sala de Emergência', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15BSUNNpogf0D7TI0zhyWuS1FF6Fb8Nbj/view?usp=sharing'), title: 'Aula 01 - Passo 01: Noções Básicas Iniciais do ECG Normal e Taquiarritmias', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1YFC0bwR9Bgma59WOyurhFN8LbHlcOKg3/view?usp=sharing'), title: 'Aula 02 - Passo 02: Bradiarritmias', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UZ6PeAdmNSB44djuSE650wF7Szq58-ir/view?usp=sharing'), title: 'Aula 03 - Passo 03: Como Descartar Isquemia no ECG', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k_pjEbVMhW9DfBzuTEFiKDzQIX-D3V9W/view?usp=sharing'), title: 'Aula 04 - Passo 04: Avaliação QT e Miscelânea no PS (Distúrbios Hidroeletrolíticos e SVE)', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_02', title: 'Módulo 02 - Síndrome Coronariana Aguda', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MR-L1bcTSvh6jBk68hvJuLHVSOivDegH/view?usp=sharing'), title: 'Aula 01 - Introdução e Conceitos Básicos', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1EAyA3s6QjnV8cWcrprgJ5w0UegvXuiuG/view?usp=sharing'), title: 'Aula 02 - Aprendendo a Localizar o Infarto Com Supra', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1h-l94XOuZqVvzSjzDgkBP5SLZ97JHSPA/view?usp=sharing'), title: 'Aula 03 - Identificando os Padrões Eletrocardiográficos de Alto Risco: Como Liberar o Paciente Com Segurança?', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1O9lyaWOVDVZJlbkVoAbTvtC0eYyK1Zmg/view?usp=sharing'), title: 'Aula 04 - Tratamento: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HOdoqUWa-DYQo8oLeyTat_3nLF4Rz1sm/view?usp=sharing'), title: 'Aula 05 - Tratamento: Parte II', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1AyMjKLFejqWoaFgGxxB4TW_qY5gUc9hG/view?usp=sharing'), title: 'Aula 06 - Infarto de Ventrículo Direito e Complicações Mecânicas Pós Infarto', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_03', title: 'Módulo 03 - Abordagem da Insuficiência Cardíaca no PS', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1x8At1n3BLJ8VwoIXpdsL2xRVhjrKJmMI/view?usp=sharing'), title: 'Aula 01 - Fisiopatologia da Insuficiência Cardíaca Com FE Reduzida e Com FE Preservada', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Y_HXiFhY2qyGpskm74xppuPYAngq36qI/view?usp=sharing'), title: 'Aula 02 - Tratamento do Edema Agudo de Pulmão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1M8nKmrSJZK5rpw6HmAZA0GWT_idBtvtD/view?usp=sharing'), title: 'Aula 03 - Manejo das Drogas Vasoativas no Choque Cardiogênico', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_04', title: 'Módulo 04 - Minoca (Infarto Sem Lesões Obstrutivas no Cateterismo)', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ten8tIJ3W9aqLDo-15tH4hyoOwC6mEfZ/view?usp=sharing'), title: 'Aula 01 - Definição e Conceitos Iniciais. Troponina Positiva é Igual a Infarto?', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NJ8VC16bGb2AWqW_c8FBoiJSe0I8ConD/view?usp=sharing'), title: 'Aula 02 - Quando Solicitar Cateterismo no Infarto Tipo II? (Desbalanço, Oferta e Demanda)', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13khjq2dYGH4eBYRbZeSa3Crdvsi6F0cq/view?usp=sharing'), title: 'Aula 03 - Como Tratar Um Vaso Espasmo Coronariano no Pronto Socorro?', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_05', title: 'Módulo 05 - Choque', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LOFw_1WerqwxxZvfLqUC-cmteEdJuXWp/view?usp=sharing'), title: 'Aula 01 - Conceitos Iniciais e Fisiopatologia do Choque', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PIy-CJZ4WplcyaZH4g7p6ExgEVNX-M8X/view?usp=sharing'), title: 'Aula 02 - Classificação e Tipos de Choque', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FloKTE-2L-0j3tznRt2SNhh2UMn3JckF/view?usp=sharing'), title: 'Aula 03 - Diagnóstico Prático o Choque à Beira-Leito', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1VhVQ_ulVra9ASDyD72jNr5HnVlZjn6ZK/view?usp=sharing'), title: 'Aula 04 - Volume, Vasopressor e Inotrópico. Quando e Qual Utilizar?', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_06', title: 'Módulo 06 - Choque Cardiogênico', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MlcJb9gonbN6w-PZJWXntaVQS3ZtHLnK/view?usp=sharing'), title: 'Aula 01 - Conceito, Fisiopatologia e Etiologia', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19W_-cZM6OynXUYKc8VApoNexbLIMmXqS/view?usp=sharing'), title: 'Aula 02 - Tratamento do Choque Cardiogênico no Pronto Socorro', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_07', title: 'Módulo 07 - Taquiarritmias', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10KYVXZMT4wpMDSQ62nNathrJoTtrPRLw/view?usp=sharing'), title: 'Aula 01 - Diagnóstico das Taquiarritmias Supraventriculares', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wSeyDrb7Q1ozSKoJkLa8RqCtzVjIe92T/view?usp=sharing'), title: 'Aula 02 - Diagnóstico das Taquiarritmias Ventriculares', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xMa_gTR5V_Ceo6qY7_QjscXa8vUC-ZQ3/view?usp=sharing'), title: 'Aula 03 - Abordagem e Tratamento na Sala de Emergência das Taquicardias Supraventriculares', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vre11WdtTMigq6AAELjTNPDA-ofdlDLq/view?usp=sharing'), title: 'Aula 04 - Abordagem e Tratamento na Sala de Emergência das Taquicardias Ventriculares', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_08', title: 'Módulo 08 - Fibrilação e Flutter Atrial', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ehs2eWfcmKWm9guNvfN1ulrLBlIhExMl/view?usp=sharing'), title: 'Aula 01 - Introdução e Conceitos Iniciais', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hww0mKqmu8vNGPksOtD_jA1MB-zs767l/view?usp=sharing'), title: 'Aula 02 - Abordagem Sistemática na Sala de Emergência', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1uujvWqvIMme2ZrYVvHU8em_fvDRofpJt/view?usp=sharing'), title: 'Aula 03 - O Caso Mais Comum e o Mais Difícil', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_09', title: 'Módulo 09 - Bradiarritmias', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hFC2DuuiyrycxftDb51qRr-hnni-W5N9/view?usp=sharing'), title: 'Aula 01 - Abordagem Diagnóstica das Bradiarritmias', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1191yUgwY6rmXMj3Kah5OXGKPdenLtSyO/view?usp=sharing'), title: 'Aula 02 - Tratamento das Bradiarritmias no Pronto Socorro', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_10', title: 'Módulo 10 - Emergências Hipertensivas', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aLSgMS_FEtKe6LaXo1tlJisWhEjgzbtL/view?usp=sharing'), title: 'Aula 01 - Definição e Tratamento das Crises Hipertensivas', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vFnbLaTsRGOooS4kICOxscAq7OatKJsg/view?usp=sharing'), title: 'Aula 02 - Tratamento das Emergências Hipertensivas: Dissecção de Aorta, Encefalopatia Hipertensiva e AVC', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_11', title: 'Módulo 11 - TEP', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14rBMXOgLw_lqBVfg5V3ymuBj_q-W8h3J/view?usp=sharing'), title: 'Aula 01 - Abordagem do TEP Estável: Como Estratificar em Baixo, Intermediário ou Alto Risco?', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bO79dtHimXqEijYkUoCRy4CyxC7a8FP7/view?usp=sharing'), title: 'Aula 02 - Quando e Como Trombolisamos no TEP?', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_12', title: 'Módulo 12 - Sepse e Choque Séptico', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1g9QGJQgm7z-BZoK3pFVXgzkYl9tDCu9d/view?usp=sharing'), title: 'Aula 01 - Definição e Abordagem da Sepse (Surviving Sepsis Campaign: International Guidelines For Management Of Sepsis And Septic Shock 2021); Choque Séptico Refratário', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1YwgkRDw4APy32wiIlXPyugDiPC5HRCSI/view?usp=sharing'), title: 'Aula 02 - Antibioticoterapia Empírica na Sepse', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_13', title: 'Módulo 13 - Valvopatias na Emergência', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1u01ghqs7gd8X-C4qQEff7HjSBWKMbdiq/view?usp=sharing'), title: 'Aula 01 - Estenose Aórtica', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/176pBvRQkVVXkclqLjGaqxQqI9a1VAcVV/view?usp=sharing'), title: 'Aula 02 - Estenose Mitral', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ObXAhrg04feEJ5MiztZKoWnJgfYbomco/view?usp=sharing'), title: 'Aula 03 - Insuficiência Aórtica', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1B6OAAr3GSuWK_PkmRW89aofzqGXojcj2/view?usp=sharing'), title: 'Aula 04 - Insuficiência Mitral', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NLMw2S_fMLlefEk8N2S3mJDK-tnG5CP8/view?usp=sharing'), title: 'Aula 05 - Próteses', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_14', title: 'Módulo 14 - Miocardite', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Lc80Ne2nCC-X6_KZdHgEuBidgr69zSBV/view?usp=sharing'), title: 'Aula 01 - Miocardite: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LkOnttmm28OePzRAJPBC55TuKH3Y3838/view?usp=sharing'), title: 'Aula 02 - Miocardite: Parte II', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_15', title: 'Módulo 15 - Síncope', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bCL6q5dwcqcuHw1eJGHVGi6uOWZS9jja/view?usp=sharing'), title: 'Aula 01 - Síncope', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'mod_01_16', title: 'Módulo 16 - Taquiarritmias na Infância', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iXNrk1LhAiksJe5IxWUfAMCELC5NDtNV/view?usp=sharing'), title: 'Aula 01 - Taquiarritmias na Infância', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'mod_01_17', title: 'Módulo 17 - Intubação e Via Aérea Difícil', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1_Ql31IDbAeenvb3fiMRRg7wdbhObnKcF/view?usp=sharing'), title: 'Aula 01 - Intubação Orotraqueal: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1BfgCGuxCZJ13Bgda_nPWcT7ld80xXSYTJ/view?usp=sharing'), title: 'Aula 02 - Intubação Orotraqueal: Parte II', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_18', title: 'Módulo 18 - Encontro Ao Vivo', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mrf-ZsH7NnV3RIGChAO0Sly5_KqRk6TX/view?usp=sharing'), title: 'Live: Discussão de Casos Clínicos Reais de ECG no PS', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'mod_01_19', title: 'Módulo 19 - Bônus 01: Neuro Emergências Com Dr. Nalcer Canedo', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gb-GRPoIuWp5ow5V3ocg22Q5yXgB0ad2/view?usp=sharing'), title: 'Aula 01 – Abordagem Prática e Tratamento do AVC Isquêmico no Pronto Socorro', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hE5FINoOUV-KRt18QDWk1KUjIMUTRRPG/view?usp=sharing'), title: 'Aula 02 – Abordagem Prática e Tratamento do AVC Hemorrágico no Pronto Socorro', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/14f_B7K10iZqErQMRpyvPY9rUJCmZbuYI/view?usp=sharing'), title: 'Aula 03 – Exame Neurológico', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/140osZFkTy_pXK2erTo-MBL8TBLVvLFwi/view?usp=sharing'), title: 'Aula 04 – Abordagem da Vertigem/Tontura no Pronto-Socorro', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1INmM_cqhjJ_7uPhyz-JkllB0C_w1jb2m/view?usp=sharing'), title: 'Aula 05 – Crise Convulsiva no Plantão: Por Onde Começar?', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-V_VelPgQG5JnYubdQ5Ym6GcbdqHWRCh/view?usp=sharing'), title: 'Aula 06 – Análise da TC de Crânio na Emergência', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_01_20', title: 'Módulo 20 - Bônus 02: Insuficiência Cardíaca Avançada', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1s_mJOu8MnQ68oFNlOUD3sgWZo5Dw6clO/view?usp=sharing'), title: 'Aula 01 - IC Avançada: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1l73IlYohjnnsu4l8R3emetU6M1DYIydb/view?usp=sharing'), title: 'Aula 02 - IC Avançada: Parte II', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            {
+                id: 'course_02', title: 'Curso 02 - POCUS: Ultrassom à Beira Leito na Emergência', icon: 'fas fa-ultrasound',
+                modules: [
+                    { id: 'mod_02_01', title: 'Módulo 01 - Fundamentos Básicos e Janelas do ECO à Beira Leito', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1oBqfPt_HTCgH-sVE7E4I9nep5BReeYzO/view?usp=sharing'), title: 'Aula 01 - Como Escolher o PROBE Adequado e Realizar os Ajustes Iniciais Para Obter a Melhor Imagem', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PTh2fdRqYMc2ZB8jwa6lPx1uAjiBHej_/view?usp=sharing'), title: 'Aula 02 - Técnicas Para Realização do ECO à Beira Leito: Manuseio e Movimentos do PROBE', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1-KibMEXFDhuTNjwdsvPr259q-fL6TPbS/view?usp=sharing'), title: 'Aula 03 - Janelas Ecocardiográficas e Vídeo Prático de ECO POINT OF CARE Completo', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_02_02', title: 'Módulo 02 - USG de Pulmão', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aEbTLqw3sIe7fnHkVfgew2n1c2JI327H/view?usp=sharing'), title: 'Aula 01 - Como Realizar o USG Pulmonar no Pronto Socorro', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ppWAWcqyOGQAjzcqN3Nxauk3inW8LUMC/view?usp=sharing'), title: 'Aula 02 - Diagnosticando Congestão Pulmonar, Pneumotórax, Pneumonia e Derrame Pleural Pelo USG Pulmonar', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_02_03', title: 'Módulo 03 - Avaliação Hemodinâmica Com POCUS', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/19NZ2yheZUPuqDXiroeKXBGpOrS2skkBt/view?usp=sharing'), title: 'Aula 01 - Avaliação Hemodinâmica Com POCUS (Avaliação da VCI)', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'mod_02_04', title: 'Módulo 04 - Como Diagnosticar IC Pelo ECO à Beira Leito', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1xyHP6w8Uy1r_MgqLt-PUb_kNjfUTNKkR/view?usp=sharing'), title: 'Aula 01 - Como Diagnosticar IC pelo ECO', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'mod_02_05', title: 'Módulo 05 - Como Diagnosticar Tamponamento Cardíaco Pelo ECO à Beira Leito', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zDZdpbXlbgG3d3ZhwiEyk5RXX-QxVI4V/view?usp=sharing'), title: 'Aula 01 - Tamponamento: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ryefSddO7Rid0u0AhP-VQM-OPtx27kVB/view?usp=sharing'), title: 'Aula 02 - Tamponamento: Parte II', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_02_06', title: 'Módulo 06 - Como Diagnosticar TEP Pelo ECO à Beira Leito', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1HAOUECauXnrs7sZDOFbna2mLNf4eJ1gq/view?usp=sharing'), title: 'Aula 01 - Como Diagnosticar TEP Pelo POCUS', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eNmNWJlb4YB6sxgr6iXLYYC9X-l6JJet/view?usp=sharing'), title: 'Aula 02 - Como Diagnosticar TVP pelo USG Vascular', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'mod_02_07', title: 'Módulo 07 - Bônus: Masterclass POCUS em Casos Reais de Emergência', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IAWVUOjCCncEZHis3XuxcFUaozS4GN6X/view?usp=sharing'), title: 'Aula 01 - Aplicação Prática em Casos Clínicos Reais', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'mod_02_08', title: 'Módulo 08 - Bônus: Masterclass Plantão Seguro', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/15iuwqtAOZyfMWv1bZ1Ljpo5JYkgbiSSF/view?usp=sharing'), title: 'Aula 01 - Masterclass Plantão Seguro', icon: 'fas fa-video' }], materials: [{ title: 'Checklist - Masterclass Plantão Seguro', link: 'https://drive.google.com/file/d/1T6WptjcAVlr1TPL1EQQhEOsb8uIW5VE0/view?usp=drive_link', icon: 'fas fa-file-pdf' }] },
+                    { id: 'mod_02_09', title: 'Módulo 09 - Bônus: A Jornada do Paciente Grave', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1YRi6l-CQn00AhEbD4eczjwG4ewna-z6z/view?usp=sharing'), title: 'Aula 01 - A Jornada do Paciente Grave', icon: 'fas fa-video' }], materials: [] }
+                ]
+            },
+            {
+                id: 'course_03', title: 'Curso 03 - Minicurso de Procedimentos em Emergência', icon: 'fas fa-medkit',
+                modules: [
+                    { id: 'mod_03_01', title: 'Minicurso de Procedimentos em Emergência', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16IjA7GQaqu350TjuQRHoNVdvH8HQwxZc/view?usp=sharing'), title: 'Aula 01 - Como Implantar Um Marcapasso Transcutâneo?', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NpTrdro4-GxqmgBtYdTwQj1khQNcnYQX/view?usp=sharing'), title: 'Aula 02 - Como Realizar Uma Cardioversão Elétrica Sincronizada?', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i_QFpDl49TKEPbQA6W_d4yiKbRGE48Ar/view?usp=sharing'), title: 'Aula 03 - Passo a Passo do ECO Point Of Care na Emergência', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mipXwavD54cQdd6ZWLJW5Y09sIFkdPf3/view?usp=sharing'), title: 'Aula 04 - Acesso Venoso Central: CNP', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bYfn_uu6ET6_e6UZ_BsgP2PWcmoOpHO-/view?usp=sharing'), title: 'Aula 05 - Como Passar o Marcapasso Transvenoso', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            {
+                id: 'course_04', title: 'Curso 04 - Ventilação Mecânica', icon: 'fas fa-lungs',
+                modules: [
+                    { id: 'mod_04_01', title: 'Ventilação Mecânica', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cohI9LpP65wIu4S0k9BHbF9naj1PdOmW/view?usp=sharing'), title: 'Aula 01 - Introdução à Ventilação Mecânica', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fhqmRfAbXEBzf7dl_RPlq7aBzIDyHBrv/view?usp=sharing'), title: 'Aula 02 - Modos Ventilatórios e Mecânica Ventilatória', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1z8fqd62yRXgtkaiax74y0p0XygZhaYR0/view?usp=sharing'), title: 'Aula 03 - Ventilação Protetora', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1n0S7nE9ehAzu9PiMOKHJA1qxy5SnD5BG/view?usp=sharing'), title: 'Aula 04 - Parâmetros Iniciais da Ventilação Mecânica', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13GzQNngulDJENxls6R8C6FZvOphLzZFo/view?usp=sharing'), title: 'Aula 05 - Assincronia Paciente', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1h-PPYZk65-yNQCinDX8xPTO3DmzvGrwd/view?usp=sharing'), title: 'Aula 06 - Ventilação Mecânica em Situações Específicas', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1V69uiyb3HzpX4RPLa5PHtgI5Oen2irLz/view?usp=sharing'), title: 'Aula 07 - Ventilação Mecânica nas SDRA', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KKv5ao3yAz5YM57XuPtXOR2Eq-bSBAYC/view?usp=sharing'), title: 'Aula 08 - Ventilação Mecânica Não Invasiva (VNI)', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1WBV2yVq0QirfGYZA1TSzRe01JjpoXdMx/view?usp=sharing'), title: 'Aula 09 - Desmame da VM e Extubação', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            {
+                id: 'course_05', title: 'Guia de Prescrições (Livro Digital)', icon: 'fas fa-file-prescription',
+                modules: [
+                    { id: 'mod_05_01', title: 'Guia de Prescrições (Livro Digital)', videos: [], materials: [{ title: 'Guia de Prescrições (Livro Digital)', link: 'https://drive.google.com/file/d/1e4lYWKKQiVzswmbuFYJRsUr5gbJ22S6-/view?usp=drive_link', icon: 'fas fa-file-pdf' }] }
+                ]
+            }
+        ];
+        
+        // --- Funções de Navegação ---
+
+        function navigateTo(pageId) {
+            ['courseSelectionPage', 'moduleSelectionPage', 'contentPage'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        function showCourseSelectionPage() {
+            const container = document.getElementById('courseSelectionPage');
+            container.innerHTML = '';
+            coursesData.forEach(course => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showModuleSelectionPage('${course.id}')">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <i class="${course.icon} text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${course.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${course.modules.length} módulos</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = 'Emergências Cardiovasculares';
+            document.getElementById('backButton').classList.add('hidden');
+            navigateTo('courseSelectionPage');
+        }
+
+        function showModuleSelectionPage(courseId) {
+            currentCourseId = courseId;
+            const course = coursesData.find(c => c.id === courseId);
+            if (!course) return;
+            
+            if (course.modules.length === 1) {
+                showContentPage(courseId, course.modules[0].id);
+                return;
+            }
+
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            course.modules.forEach(module => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showContentPage('${courseId}', '${module.id}')">
+                         <div class="flex items-center space-x-4 mb-4">
+                            <i class="fas fa-folder-open text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${module.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${module.videos.length} aulas e ${module.materials.length} materiais.</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = course.title;
+            document.getElementById('backButton').classList.remove('hidden');
+            document.getElementById('backButton').onclick = showCourseSelectionPage;
+            navigateTo('moduleSelectionPage');
+        }
+        
+        function showContentPage(courseId, moduleId) {
+            currentCourseId = courseId;
+            const course = coursesData.find(c => c.id === courseId);
+            const module = course?.modules.find(m => m.id === moduleId);
+            if (!module) return;
+
+            renderContent(module);
+            
+            document.getElementById('mainTitle').textContent = module.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            
+            if (course.modules.length === 1) {
+                backButton.onclick = showCourseSelectionPage;
+            } else {
+                backButton.onclick = () => showModuleSelectionPage(courseId);
+            }
+
+            navigateTo('contentPage');
+        }
+        
+        // --- Funções de Renderização de Conteúdo ---
+
+        function renderContent(module) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const materialsDropdown = document.getElementById('materialsDropdown');
+            videosContainer.innerHTML = '';
+            materialsContainer.innerHTML = '';
+
+            let firstItem = null;
+            module.videos.forEach(item => {
+                if (!firstItem) firstItem = { type: 'video', data: item };
+                videosContainer.innerHTML += createItemHtml('video', item);
+            });
+            module.materials.forEach(item => {
+                if (!firstItem) firstItem = { type: 'material', data: item };
+                materialsContainer.innerHTML += createItemHtml('material', item);
+            });
+            
+            materialsDropdown.style.display = module.materials.length > 0 ? 'block' : 'none';
+            if (module.videos.length === 0) {
+                 videosContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma aula neste módulo.</p>';
+            }
+            
+            if (firstItem) {
+                if (firstItem.type === 'video') {
+                    loadVideo(firstItem.data.id, firstItem.data.title);
+                } else {
+                    loadMaterial(firstItem.data.link, firstItem.data.title);
+                }
+            } else {
+                updatePlayerAndSelection(null, '', 'Nenhum item disponível');
+            }
+        }
+
+        function createItemHtml(type, item) {
+            const onclickAction = type === 'video' 
+                ? `loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')`
+                : `loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')`;
+            const dataId = type === 'video' ? item.id : item.link;
+            return `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                     onclick="${onclickAction}" data-id="${dataId}">
+                    <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                    </div>
+                </div>`;
+        }
+
+        function loadVideo(videoId, lessonTitle) {
+            const isPlaceholder = !videoId || videoId.startsWith('placeholder');
+            const playerSrc = isPlaceholder ? '' : `https://drive.google.com/file/d/${videoId}/preview`;
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : lessonTitle;
+            updatePlayerAndSelection(videoId, playerSrc, displayTitle);
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const isPlaceholder = !link || link === '#';
+            const playerSrc = isPlaceholder ? '' : link.replace(/\/view\?usp=.*/, '/preview');
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : materialTitle;
+            updatePlayerAndSelection(link, playerSrc, displayTitle);
+        }
+
+        function updatePlayerAndSelection(itemId, playerSrc, title) {
+            document.getElementById('contentPlayer').src = playerSrc;
+            document.getElementById('lessonTitle').textContent = title;
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+            if (itemId) {
+                 const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+                if (currentSelected) currentSelected.classList.add('selected-lesson');
+            }
+            selectedItemId = itemId;
+        }
+
+        // --- Inicialização ---
+        window.onload = showCourseSelectionPage;
+    </script>
+</body>
+</html>

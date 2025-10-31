@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Aula</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca de ícones Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* bg-gray-800 */
+            overflow: hidden; /* Evita a rolagem do body principal */
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        /* Scrollbar customizada para a playlist */
+        #playlist-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #playlist-container::-webkit-scrollbar-track {
+            background: #111827; /* bg-gray-900 */
+        }
+        #playlist-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        #playlist-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+        /* Estilo para a notificação */
+        #notification {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Visualização Principal (Playlist) -->
+    <div id="main-view" class="flex flex-col lg:flex-row h-screen">
+
+        <!-- Coluna Principal (Player de Vídeo ou Placeholder) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col bg-gray-800">
+            <header class="flex items-center justify-between mb-4">
+                <h2 id="current-view-title" class="text-2xl font-bold text-white"></h2>
+                <button id="back-to-playlist" class="hidden flex items-center text-pink-400 hover:text-pink-500 font-semibold transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i>
+                    Voltar para a playlist
+                </button>
+            </header>
+            <div id="player-container" class="flex-1 flex flex-col items-center justify-center">
+                 <!-- Placeholder inicial -->
+                <div id="initial-placeholder" class="text-center text-gray-500">
+                    <i data-lucide="play-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h3 class="text-2xl font-semibold">Selecione uma aula na playlist</h3>
+                    <p>O conteúdo será exibido aqui.</p>
+                </div>
+                <!-- Iframe para o vídeo -->
+                <div id="lesson-view" class="hidden w-full h-full flex flex-col">
+                    <h1 id="lesson-view-title" class="text-xl lg:text-2xl font-bold mb-4 text-center"></h1>
+                    <div class="relative w-full max-w-5xl mx-auto aspect-video bg-black rounded-lg shadow-2xl">
+                        <iframe id="lesson-view-iframe" class="w-full h-full rounded-lg" src="" allow="autoplay; fullscreen" frameborder="0"></iframe>
+                    </div>
+                </div>
+                <!-- Visualização do Quiz -->
+                <div id="quiz-view" class="hidden w-full h-full flex flex-col items-center justify-center text-center">
+                    <i data-lucide="help-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h1 id="quiz-view-title" class="text-2xl lg:text-3xl font-bold mb-4"></h1>
+                    <p class="text-lg text-gray-400">Este é um recurso de quiz.</p>
+                    <p class="text-gray-500 mt-2">A funcionalidade para responder ao quiz estará disponível em breve.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Coluna da Direita (Playlist) -->
+        <aside id="playlist-container" class="w-full lg:w-96 bg-gray-900 p-4 flex-shrink-0 flex flex-col overflow-y-auto">
+            <div id="course-playlist-content" class="space-y-4">
+                <!-- O conteúdo da playlist será gerado aqui pelo JavaScript -->
+            </div>
+        </aside>
+
+    </div>
+    
+    <!-- Notificação / Toast -->
+    <div id="notification" class="hidden fixed bottom-5 right-5 bg-red-600 text-white py-3 px-5 rounded-lg shadow-lg">
+        <p id="notification-message"></p>
+    </div>
+
+    <script>
+        // Função para converter links do Google Drive 'view' para 'preview' para incorporação
+        const convertToEmbedUrl = (url) => {
+            if (!url) return '';
+            // Esta regex substitui /view e /view?usp=sharing pelo /preview
+            return url.replace(/\/view(\?usp=sharing)?$/, '/preview');
+        };
+
+        // Dados brutos do curso
+        const rawCourseData = [
+            {
+                moduleTitle: "01. ECG",
+                lessons: [
+                    { 
+                        title: "01. ECG normal", 
+                        resources: [
+                            { type: 'video', title: '01 - Introdução', src: 'https://drive.google.com/file/d/18ftSgh56PQ98f9t2NEM0l_db5nrWNi7W/view?usp=sharing' },
+                            { type: 'video', title: '02 - Bases do ECG', src: 'https://drive.google.com/file/d/1jEuqSU7yMKRulK0YsyLWmCb5dKeoPr-M/view?usp=sharing' },
+                            { type: 'video', title: '03 - Noções práticas de vetores', src: 'https://drive.google.com/file/d/19n41LJoeCEh-PoQZHZscfRShhwocEPkb/view?usp=sharing' },
+                            { type: 'video', title: '04 - Entendendo o que mostra o ECG', src: 'https://drive.google.com/file/d/1JaB8nW7ErQdvrC1ePqc2lfoS_FBPFIr3/view?usp=sharing' },
+                            { type: 'video', title: '05 - Como posicionar os eletrodos?', src: 'https://drive.google.com/file/d/1G_DaTMbpwGQvUr0HasHv3AVlKg_7H_hJ/view?usp=sharing' },
+                            { type: 'video', title: '06 - Como colocar os eletrodos precordiais?', src: 'https://drive.google.com/file/d/1tt6wpufEuS62uCnAqNMlWjNJPIiIwUHA/view?usp=sharing' },
+                            { type: 'video', title: '07 - Como definir o eixo do QRS?', src: 'https://drive.google.com/file/d/16uIrdz2Ks35QHpDMKkZLx7GQBmtW4h6y/view?usp=sharing' },
+                            { type: 'video', title: '08 - Qual o eixo fisiológico do QRS?', src: 'https://drive.google.com/file/d/1WDOsKWgeyicU6hZWHE7bWWTdJwo7jTxh/view?usp=sharing' },
+                            { type: 'video', title: '09 - Como definir o eixo do QRS em dois segundos?', src: 'https://drive.google.com/file/d/1N9Reae3zP8ouTe5HHtzIfu_LmoCws9RK/view?usp=sharing' },
+                            { type: 'video', title: '10 - Como definir o eixo do QRS no plano horizontal?', src: 'https://drive.google.com/file/d/1TpOvALysCjd86vvZrp0-q9TYbNTmHPuF/view?usp=sharing' },
+                            { type: 'video', title: '11 - Quais os dois primeiros passos para se interpretar um ECG?', src: 'https://drive.google.com/file/d/1coYhaS32hBb2T0MWHYSQyIDTQEPXNKNw/view?usp=sharing' },
+                            { type: 'video', title: '12 - Como definir se o ritmo de ECG é sinusal?', src: 'https://drive.google.com/file/d/1JrUZ613eoRGSHjvvSJCyeLDGfDycKKo7/view?usp=sharing' },
+                            { type: 'video', title: '13 - Como definir a frequência cardíaca no ECG?', src: 'https://drive.google.com/file/d/15flHJHB_D9Z7jOf-tG4PSVSY6ytE-_pZ/view?usp=sharing' },
+                            { type: 'video', title: '14 - Que roteiro usar para interpretar um ECG?', src: 'https://drive.google.com/file/d/1n7rWDY2GqJOkIyYsT2LX4LiBkudxYgoB/view?usp=sharing' }
+                        ] 
+                    },
+                    {
+                        title: "02. ECG alterado: alterações da onda P e do Intervalo PR",
+                        resources: [
+                            { type: 'video', title: '15 - Critérios para sobrecarga de átrio direito', src: 'https://drive.google.com/file/d/1EL2dAH8RocbNPpgDPalK0FcPBRaEjSkB/view?usp=sharing' },
+                            { type: 'video', title: '16 - Outros critérios: diagnósticos de sobrecarga de átrio direito', src: 'https://drive.google.com/file/d/1HySKKpeeCDGCXhudeDK2sQ3Ef4xK1mRO/view?usp=sharing' },
+                            { type: 'video', title: '17 - Sobrecarga de átrio esquerdo', src: 'https://drive.google.com/file/d/1J5JGqeNeAQnAvpssC5l0vXZHvDPZiF2f/view?usp=sharing' },
+                            { type: 'video', title: '18 - Outras dicas de sobrecarga de átrio esquerdo', src: 'https://drive.google.com/file/d/1JzIuaddXE9R5viAmTiBPyf86jjQUJuz0/view?usp=sharing' },
+                            { type: 'video', title: '19 - Adendo: entendendo sensibilidade e especificidade', src: 'https://drive.google.com/file/d/1ocIrJ-usNWbDiIXmhGDPWqNac4l37wp9/view?usp=sharing' },
+                            { type: 'video', title: '20 - O que preciso saber sobre intervalo PR?', src: 'https://drive.google.com/file/d/131jj6MnkO_Fj0cb9g215-i-LQW1x3tgc/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "03. ECG alterado - alterações QRS",
+                        resources: [
+                            { type: 'video', title: '21 - Introdução ao Complexo QRS', src: 'https://drive.google.com/file/d/1pDXf2qesfBU-38duWJcK3lblloPNhKDL/view?usp=sharing' },
+                            { type: 'video', title: '22 - Principais critérios para diagnóstico de sobrecarga de VE', src: 'https://drive.google.com/file/d/1TllHpwDQdI9QCF3zAq6gvLbx3UZYkFE8/view?usp=sharing' },
+                            { type: 'video', title: '23 - Outros critérios sobrecarga de VE', src: 'https://drive.google.com/file/d/1WiWD33xkqcYzPPZFQNxndnbTj1B3_VfH/view?usp=sharing' },
+                            { type: 'video', title: '24 - Como diagnosticar sobrecarga de VD', src: 'https://drive.google.com/file/d/1lwZcjH_o9THqcejkQYHKpTe2jzzwKbbG/view?usp=sharing' },
+                            { type: 'video', title: '25 - Outros critérios de sobrecarga de VD', src: 'https://drive.google.com/file/d/1RRzvaTdVBD_VHEEaT2AykIcPHJXG75wo/view?usp=sharing' },
+                            { type: 'video', title: '26 - O que pode causar baixa voltagem de QRS?', src: 'https://drive.google.com/file/d/1PtEajCAxmzD094ieCzaQQON7La6CrxoU/view?usp=sharing' },
+                            { type: 'video', title: '27 - Bloqueios de ramos: como diagnosticar', src: 'https://drive.google.com/file/d/1zHWBD1rKN7cXTDmYNpZD-ZPXL1T-WHdB/view?usp=sharing' },
+                            { type: 'video', title: '28 - Quais os critérios completos para o bloqueio de ramo esquerdo?', src: 'https://drive.google.com/file/d/1QnkB1IzwiNoeq2KiKtysqZKg4rq0XqJo/view?usp=sharing' },
+                            { type: 'video', title: '29 - Critérios e diagnósticos de bloqueio de ramo direito', src: 'https://drive.google.com/file/d/1dYGJqEwsOM2CBrt719eRFGnLHvDxQe-p/view?usp=sharing' },
+                            { type: 'video', title: '30 - Hemibloqueios: como diagnosticar', src: 'https://drive.google.com/file/d/1dBeZlwehh2E63WeiZj2KRnHw6eK9qlnj/view?usp=sharing' },
+                            { type: 'video', title: '31 - Como diagnosticar área eletricamente inativa', src: 'https://drive.google.com/file/d/1G6mBBMMbHCaQnDZlnakrdcVcQ_hCFCjZ/view?usp=sharing' },
+                            { type: 'video', title: '32 - Outros detalhes sobre área eletricamente inativa', src: 'https://drive.google.com/file/d/1HU2XhyWtTIWvo3XNVbH2afmgfS_TyXPB/view?usp=sharing' },
+                            { type: 'video', title: '33 - Resumo do QRS', src: 'https://drive.google.com/file/d/10xGIscjWSooKFhawC2kMvr36Loiv4Xkq/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "04. ECG nas síndromes coronarianas agudas",
+                        resources: [
+                            { type: 'video', title: '34 - O ECG na síndrome coronariana aguda com supra de ST', src: 'https://drive.google.com/file/d/1YayMSD0oE73LEuogOoQ6-7oo-pj-MN2g/view?usp=sharing' },
+                            { type: 'video', title: '35 - Porque o IAM causa supra de ST?', src: 'https://drive.google.com/file/d/1UWKaUY3xOgeoCaDWLoQkcaz-HaIXOYmd/view?usp=sharing' },
+                            { type: 'video', title: '36 - Quais as fases do infarto com supra?', src: 'https://drive.google.com/file/d/1t0ZrE7izAaHRn9-Ua8lZBwz_pW5i--8w/view?usp=sharing' },
+                            { type: 'video', title: '37 - Como diagnosticar um IAM com supra?', src: 'https://drive.google.com/file/d/1NcL_ffBXhiDTKbLBvbOOF38NhUGyskpj/view?usp=sharing' },
+                            { type: 'video', title: '38 - Como saber a artéria acometida pelo infarto?', src: 'https://drive.google.com/file/d/1h771Ja7xZ8CoM8W64dHKr9GckOHkL8MQ/view?usp=sharing' },
+                            { type: 'video', title: '39 - Infarto posterior: o que eu preciso saber?', src: 'https://drive.google.com/file/d/1W_qozTDXSDwqIrQNb8QD71xiCflqshVF/view?usp=sharing' },
+                            { type: 'video', title: '40 - Infarto de VD', src: 'https://drive.google.com/file/d/1_S8CJoaFoZVi1CugZNLYgsOeOIORtOpj/view?usp=sharing' },
+                            { type: 'video', title: '41 - Diagnóstico diferencial de Supra de ST', src: 'https://drive.google.com/file/d/1OPh9LcoDK-gbk5TpGZHvyI8BVSc-UVFe/view?usp=sharing' },
+                            { type: 'video', title: '42 - Praticando diagnóstico diferencial de Supra de ST', src: 'https://drive.google.com/file/d/10iwJ06Czew9efXl675qWYwgw5J7JYh6O/view?usp=sharing' },
+                            { type: 'video', title: '43 - O ECG na pericardite aguda', src: 'https://drive.google.com/file/d/15eB-zyh4oKAg7Zq7QJndQpuc-TwC9vsD/view?usp=sharing' },
+                            { type: 'video', title: '44 - Supra de ST no aneurisma de VE e na hipotermia', src: 'https://drive.google.com/file/d/1hOCziuJh9VyvHWWWniq-NjWQXVHIZ25k/view?usp=sharing' },
+                            { type: 'video', title: '45 - Síndrome de Brugada', src: 'https://drive.google.com/file/d/1VPLxCSl0kCmGtvGsMaAiDWBwObqNesPT/view?usp=sharing' },
+                            { type: 'video', title: '46 - Como diagnosticar infarto no paciente com BRE?', src: 'https://drive.google.com/file/d/1-G5bng3-7COQjpP-lG3phreOKyujavRk/view?usp=sharing' },
+                            { type: 'video', title: '47 - Supra de ST na sobrecarga de VE', src: 'https://drive.google.com/file/d/1xgOkYfBnAK9HB13_D9AX0rhEponjFLv2/view?usp=sharing' },
+                            { type: 'video', title: '48 - Repolarização precoce', src: 'https://drive.google.com/file/d/1n2Lvg5x2FjY4tiU7W-1K2Ef-lIdsn5QE/view?usp=sharing' },
+                            { type: 'video', title: '49 - Como diferenciar um supra discreto fisiológico de isquêmico?', src: 'https://drive.google.com/file/d/1dwB-W7oCtDy7Vdh1xgYJbK7GMJMYS421/view?usp=sharing' },
+                            { type: 'video', title: '50 - Conduta resumida no IAM com Supra de ST', src: 'https://drive.google.com/file/d/1Cfk4y_px2BfFnOBcwSTg5drrkuIyvYCh/view?usp=sharing' },
+                            { type: 'video', title: '51 - Introdução ao ECG nas síndromes coronarianas agudas sem supra', src: 'https://drive.google.com/file/d/1qCa3N90hSil8TH8HBbhrgC8oSOo8c0_d/view?usp=sharing' },
+                            { type: 'video', title: '52 - Síndrome de Wellens', src: 'https://drive.google.com/file/d/1O5qpuzhCZC65Y2-VK7pm2dOVoBvlJP83/view?usp=sharing' },
+                            { type: 'video', title: '53 - Diagnóstico diferencial de infra de ST', src: 'https://drive.google.com/file/d/1b7o66Ne9QXNkItk5Vn3sVyFx-d5MJKVC/view?usp=sharing' },
+                            { type: 'video', title: '54 - Continuando os diagnósticos diferenciais de infra de ST', src: 'https://drive.google.com/file/d/1VXLtioHyVNBsAsfIN5ZPf_uP6rwOOCJA/view?usp=sharing' },
+                            { type: 'video', title: '55 - O ECG no diagnóstico e tratamento da SCA sem supra', src: 'https://drive.google.com/file/d/14-TgsFdDSfmOB7PJCeNwjFosahJxJcuS/view?usp=sharing' },
+                            { type: 'video', title: '56 - Alterações da onda T', src: 'https://drive.google.com/file/d/1XQC9UBzl3W2HGGdE7b7UfZyR_DPUzecj/view?usp=sharing' },
+                            { type: 'video', title: '57 - Outras dicas sobre onda T', src: 'https://drive.google.com/file/d/1aGMHV0L7ZBRgUD_Z0kFiozPuQ7Kjkxyl/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "05. ECG alterado - Intervalo QT",
+                        resources: [
+                            { type: 'video', title: 'O que você precisa saber sobre intervalo QT?', src: 'https://drive.google.com/file/d/16xs4NtZ8uO0xSBlvxq4J7E0UjCbVlMet/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "06. ECG alterado - arritmias",
+                        resources: [
+                            { type: 'video', title: 'Introdução às arritmias cardíacas', src: 'https://drive.google.com/file/d/1K7-nAEau3QyyNHYzakWRP8A3GqetV2bj/view?usp=sharing' },
+                            { type: 'video', title: 'Introdução às taquiarritmias', src: 'https://drive.google.com/file/d/1GNw5xcD1OJCo4EoT54VwoUkc-0J2cpdI/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia sinusal', src: 'https://drive.google.com/file/d/19-m1abZhRikgR6Ee4I3ABkNlbwLH8XiR/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia atrial', src: 'https://drive.google.com/file/d/1se2H9MWtKj1e4tlBluzdtz0Vjji2lTD5/view?usp=sharing' },
+                            { type: 'video', title: 'Dicas mais avançadas sobre taquicardia atrial', src: 'https://drive.google.com/file/d/1TmKmkYx-WnYI0x670HlH3eN70p1m8so3/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia atrial multifocal', src: 'https://drive.google.com/file/d/1vttCX3pRtlfqP7rtRbFPiMc1mMuoQl9T/view?usp=sharing' },
+                            { type: 'video', title: 'O ECG na fibrilação atrial', src: 'https://drive.google.com/file/d/1cFArxnMKqiiGJCwREQkQKeWkBjb65GnR/view?usp=sharing' },
+                            { type: 'video', title: 'Outras dicas sobre FA', src: 'https://drive.google.com/file/d/17ScJPLNyKk9-IOmHm0GcxZh4NbQ7rJMU/view?usp=sharing' },
+                            { type: 'video', title: 'Flutter atrial', src: 'https://drive.google.com/file/d/1q2s2WHak60STga5x8wksuAhnkEFogcAH/view?usp=sharing' },
+                            { type: 'video', title: 'Falando mais sobre flutter atrial', src: 'https://drive.google.com/file/d/1noJbD5JlWfiFb1klYuzetGG5ouXNc2i-/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia por reentrada nodal', src: 'https://drive.google.com/file/d/1IVeXffIFqt2diA6d8jQBjhwWA6wF1mig/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia por reentrada atrioventricular', src: 'https://drive.google.com/file/d/1cMlv8JAXtdH54LzMCIH2wrY9GiXU5BlD/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia juncional', src: 'https://drive.google.com/file/d/1X7wr1fbtErktSVxh1TJkJdgi1gaiGdB4/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia de QRS largo', src: 'https://drive.google.com/file/d/1U1RXZmiu1r7phYlj-PpZJV3Xiz6SI3xp/view?usp=sharing' },
+                            { type: 'video', title: 'Critério de Brugada', src: 'https://drive.google.com/file/d/1Cs3zxxvFcuanKMnUVkPHwYqUk5pzPkE-/view?usp=sharing' },
+                            { type: 'video', title: 'Critérios de Vereckei', src: 'https://drive.google.com/file/d/1MHSuxhWNXfotLgO1xJr72FXB6DtRcdec/view?usp=sharing' },
+                            { type: 'video', title: 'Outros critérios nas taquicardias de QRS largo', src: 'https://drive.google.com/file/d/1xT1FXT2iG-VyoBque8DBHvubI_jNwxFC/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia ventricular monomórfica', src: 'https://drive.google.com/file/d/1rUfh5Zzx6OtZ8KAc-Dbu-fWKk8Bkr-JY/view?usp=sharing' },
+                            { type: 'video', title: 'Taquicardia ventricular polimórfica', src: 'https://drive.google.com/file/d/1qVBjcP2N50WUVwXUKuCSaR096DmhIUFA/view?usp=sharing' },
+                            { type: 'video', title: 'Ritmo IdioVentricular Acelerado (RIVA)', src: 'https://drive.google.com/file/d/18IVRG3kF28TJ4aC1pI7yZiH0TevBUI-q/view?usp=sharing' },
+                            { type: 'video', title: 'Fibrilação ventricular', src: 'https://drive.google.com/file/d/1dDuDDGRe-st3BICp96pAjSKEoCtlAyRF/view?usp=sharing' },
+                            { type: 'video', title: 'Tratamento de taquiarritmias instáveis', src: 'https://drive.google.com/file/d/1O2wfpozB0urDVr-tyYZS6SsAB8ZJcSGr/view?usp=sharing' },
+                            { type: 'video', title: 'Tratamento de taquiarritmias estáveis', src: 'https://drive.google.com/file/d/1wGx3YyUScuz73EuiDL5Un4aeTeV0NgTz/view?usp=sharing' },
+                            { type: 'video', title: 'Extrassístoles', src: 'https://drive.google.com/file/d/1RMgO6d5prmp0U_xZG9nAej15udt0KCmT/view?usp=sharing' },
+                            { type: 'video', title: 'Síndrome de Wolff-Parkinson-White', src: 'https://drive.google.com/file/d/15eKhW8AFdf_Hj5nCRRJnpxRgEjp0luOU/view?usp=sharing' },
+                            { type: 'video', title: 'Mais dicas sobre extrassístoles', src: 'https://drive.google.com/file/d/1H4-Mah43rHHYjnzQQrnkap3WQUOqcs42/view?usp=sharing' },
+                            { type: 'video', title: 'Introdução às bradiarritmias', src: 'https://drive.google.com/file/d/1dcFzYTeLT7ECeQapsWzlsi_hddb-HyJL/view?usp=sharing' },
+                            { type: 'video', title: 'Bradicardia sinusal', src: 'https://drive.google.com/file/d/1mHrCBGpMbG7OznKRTvEbMa5BJ3RGjQGJ/view?usp=sharing' },
+                            { type: 'video', title: 'Outras bradiarritmias sinusais', src: 'https://drive.google.com/file/d/14WhtDd14tn0TkQMLAmAeajczD0Shmfj3/view?usp=sharing' },
+                            { type: 'video', title: 'Bloqueios atrioventriculares', src: 'https://drive.google.com/file/d/1jPG6LrcufoQyoxbe-FkgmNKqQmFWJUKJ/view?usp=sharing' },
+                            { type: 'video', title: 'Mais dicas de BAV', src: 'https://drive.google.com/file/d/14A472XtXPmujf6CqUBcpFiTdniz71tD5/view?usp=sharing' },
+                            { type: 'video', title: 'Tratamento de bradiarritmias', src: 'https://drive.google.com/file/d/15GdmVU-dkpgVj7JocQXl5GjcGJCWD_MK/view?usp=sharing' },
+                            { type: 'video', title: 'O ECG nos distúrbios hidroeletrolíticos', src: 'https://drive.google.com/file/d/1zHV75h94sOilPKj5v_irFXtpGTBu9inM/view?usp=sharing' },
+                            { type: 'video', title: 'ECG no hospital geral', src: 'https://drive.google.com/file/d/1NFkRScys2PF-FzHW-pEK2usrt04b_FQy/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "07. Treinamento Prático",
+                        resources: [
+                            { type: 'video', title: 'Aula 01 - Caso 01', src: 'https://drive.google.com/file/d/1EUBmn6rlzp-4Z2FMnkLMgWbwoTVmllu3/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 02 - Caso 02', src: 'https://drive.google.com/file/d/1P0EareCpr1bSYojcFDas622h0cwjSE7W/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 03 - Caso 03', src: 'https://drive.google.com/file/d/1YQwZe5ldqXsxRcrj5pFwQu1XL0Hv-v8a/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 04 - Caso 04', src: 'https://drive.google.com/file/d/1EDv8eNAUJ9QF9VJwxAtlO3TxwCVUjQuu/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 05 - Caso 05', src: 'https://drive.google.com/file/d/14Cy0OEE2h268cgzl3OY6EMRBW92JR6VK/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 06 - Caso 06', src: 'https://drive.google.com/file/d/191WcJMIefFoBwAnpqVNga3UXclQzogDU/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 07 - Caso 07', src: 'https://drive.google.com/file/d/1rNbS0QClcBGvyOwHXTUlqLUcfjIU81CV/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 08 - Caso 08', src: 'https://drive.google.com/file/d/1clAg0X-p4mtIUA8CuxyQBWJO_kb5ze6W/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 09 - Caso 09', src: 'https://drive.google.com/file/d/1WhNBM7GcyFk2-SjNv3fluzd5ERh1BMVT/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 10 - Caso 10', src: 'https://drive.google.com/file/d/1C9ebNwTRNjK_DkKHLEv4f6duXvHqdr9F/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 11 - Caso 11', src: 'https://drive.google.com/file/d/1wQ4IvJ7B6aY7Dy-tzueVAkad36Fi_kmx/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 12 - Caso 12', src: 'https://drive.google.com/file/d/1BzMP2qA7T47HItECBw_kLR_LIZuOKiZk/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 13 - Caso 13', src: 'https://drive.google.com/file/d/1Glddmil3JW8XKc6xof0WoOdApzBF2mEj/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 14 - Caso 14', src: 'https://drive.google.com/file/d/1DWqeU4dW8b7U_rMD-6foJVVLdteM0qum/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 15 - Caso 15', src: 'https://drive.google.com/file/d/1BC_aJglgKvtGmKI54BVQjtLPWJfZzBbG/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 16 - Caso 16', src: 'https://drive.google.com/file/d/1RxXEhE_mnJP2vQuM4Jf_U8ZAV5LT9Vkb/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 17 - Caso 17', src: 'https://drive.google.com/file/d/1mCiFmRv0tYxTl3kBPLrHU9nGwrbqm2HU/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 18 - Caso 18', src: 'https://drive.google.com/file/d/117JaucJ0my3zNCBkuAXGooIOjKQbNLnP/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 19 - Caso 19', src: 'https://drive.google.com/file/d/1EoJEa_KypDWKtuvDGyxP2NzXSDAAciZs/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 20 - Caso 20', src: 'https://drive.google.com/file/d/18KsQSK6411HBR_60oNs886D0ziAy1qhi/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 21 - Caso 21', src: 'https://drive.google.com/file/d/1aQbWcTfeZNGu6SY6zCNo4P57ewox5FBu/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 22 - Caso 22', src: 'https://drive.google.com/file/d/1Phij9ehL8TtkJsw_7anF9bS8YqZi2H9c/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 23 - Caso 23', src: 'https://drive.google.com/file/d/14t7Vw3Aa_F_iG-TYXSmGGrC4zjSJXkbH/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 24 - Caso 24', src: 'https://drive.google.com/file/d/12SK-b87LUTF2sXZMb_kivvu_Qs_7XqUC/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 25 - Caso 25', src: 'https://drive.google.com/file/d/10TIV3UnwvC_DsYwOBopdSqZ0Xsx_KtQw/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 26 - Caso 26', src: 'https://drive.google.com/file/d/1hFAUiWTkAPS9QokngX8L4B9iwvSZRip/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 27 - Caso 27', src: 'https://drive.google.com/file/d/1mhGzdsI3xw0svKJ-AMdU0RmK522SMJrP/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 28 - Caso 28', src: 'https://drive.google.com/file/d/1Pd1vZnIzgnvU-ibcfYo9iOb6VIGDRZbl/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 29 - Caso 29', src: 'https://drive.google.com/file/d/1UeYyLS8_JfHr0nam7YDauKGk-rYoN-4S/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 30 - Caso 30', src: 'https://drive.google.com/file/d/15ljOe5MYla4eOIyhNS1D6ORQtFje-EwB/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 31 - Caso 31', src: 'https://drive.google.com/file/d/1gBNYgnCCKohVa58-by4Y9rf6B1SHoCMX/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 32 - Caso 32', src: 'https://drive.google.com/file/d/1NRCO4gfCZMRPxtBK_plwGXCxd6uEhzNE/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 33 - Caso 33', src: 'https://drive.google.com/file/d/1HITv-tha9BlQWPz4Rd1KXVpbPjZLHG8a/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 34 - Caso 34', src: 'https://drive.google.com/file/d/1pMROBMA1Jv3pEEIdBoh8nP7h0JzHaGA-/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 35 - Caso 35', src: 'https://drive.google.com/file/d/1pKbO_d4pch5MWn3KD_0KuKGaPSG7qo81/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 36 - Caso 36', src: 'https://drive.google.com/file/d/1auSHNK3bt4ViX8AjUlpHN5YKEoKxbLwl/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 37 - Caso 37', src: 'https://drive.google.com/file/d/1Jq5IU7g_q0egypa5sSHaIjLp6b1XrKb0/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 38 - Caso 38', src: 'https://drive.google.com/file/d/1dFgjA4Q7Fq6fTB8cZf4GC50SQt9_Zd7V/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 39 - Caso 39', src: 'https://drive.google.com/file/d/1YrYmnzJytTPISimsqqiaRsR6DWW_6HTG/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 40 - Caso 40', src: 'https://drive.google.com/file/d/1NMmVaKmOZkewOG4ACvnLk8xfCk0BJhJt/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 41 - Caso 41', src: 'https://drive.google.com/file/d/1en8Sww7bnl1dbL1XYUMTmAIIOXZsG36t/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 42 - Caso 42', src: 'https://drive.google.com/file/d/1lVWTbDMWapjORb4BAzirwDk6NGVz-925/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 43 - Caso 43', src: 'https://drive.google.com/file/d/1BB-VueTVBdqeodVZ-Fdwvtl-BtUPPSLx/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 44 - Caso 44', src: 'https://drive.google.com/file/d/19sINm4uAWAAqo9Ti-QRIoO2uaggbpKrH/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 45 - Caso 45', src: 'https://drive.google.com/file/d/1fnvqLLHbe1UssGMWPhYxKyHWcDjua3iG/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 46 - Caso 46', src: 'https://drive.google.com/file/d/17hGD3iTn2ZcFff_Pc7e4A_4VnHgAEx3Y/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 47 - Caso 47', src: 'https://drive.google.com/file/d/1DWQE69gcXA6Q6XBGQGTxzHwqHSHpxatS/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 48 - Caso 48', src: 'https://drive.google.com/file/d/18G-hySI4RFFV2Usf3UAieQ1v06B2p-rm/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 49 - Caso 49', src: 'https://drive.google.com/file/d/17-kTltUzEalbqAo2Q3YpEAoCDtX39Vhj/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 50 - Caso 50', src: 'https://drive.google.com/file/d/1xxXuFYDDb5gI9oJDG7AAitljw9dmhMQ2/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 51 - Caso 51', src: 'https://drive.google.com/file/d/1ToOemjDLF-wPaNJt5lIy1QHiEQ0IJ5be/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 52 - Caso 52', src: 'https://drive.google.com/file/d/1Ozfmk-dnhQ-D6ThHyU0RewJmkxA79PwH/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 53 - Caso 53', src: 'https://drive.google.com/file/d/1tIXPOnllZcvNo1FKTAGJ-PEKKV53aA1L/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 54 - Caso 54', src: 'https://drive.google.com/file/d/1PzqKXyhtJX14nzUPFC-fDqY07gTny53u/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 55 - Caso 55', src: 'https://drive.google.com/file/d/1RmEmH4SNXgUiVxjGMOG-atGF4THu4i3g/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 56 - Caso 56', src: 'https://drive.google.com/file/d/1PE27I829Xn3YbQq0R4jceLd55pO9i9g_/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 57 - Caso 57', src: 'https://drive.google.com/file/d/1Nm0yJFsRqYi53JSxIhHiiVVzAuDp3KaJ/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 58 - Caso 58', src: 'https://drive.google.com/file/d/1Y_kdTpHPusvZojpfxZtyKMdyzQ-Yil1k/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 59 - Caso 59', src: 'https://drive.google.com/file/d/1FzX2LItf3w_Emz5vXtRgE_1If4v57KEC/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 60 - Caso 60', src: 'https://drive.google.com/file/d/1tBLzo5BeRD1H8ccsUFvLgEBoT9H2P_Jf/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 61 - Caso 61', src: 'https://drive.google.com/file/d/1tABcepBX26WBwKZgBZU-AGqj2aryuHcS/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 62 - Caso 62', src: 'https://drive.google.com/file/d/1Y46w8HO4rsfjL48UnZENPceBufceCn7S/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 63 - Caso 63', src: 'https://drive.google.com/file/d/1RYAItqrLtkFndMy5whYhBgC0oOQIeDaA/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 64 - Caso 64', src: 'https://drive.google.com/file/d/1jayTtcAFLGX5dezFBR2EZZcedAMA0nJC/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 65 - Caso 65', src: 'https://drive.google.com/file/d/1YGcy7Y-HG_izxcJKvYXGE5_jaEVDxmjw/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 66 - Caso 66', src: 'https://drive.google.com/file/d/1FdT1fNx44pslrnLt_iruev1hw45V7Ksb/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 67 - Caso 67', src: 'https://drive.google.com/file/d/1IIy8CQTj_eDQ5BctIygWPUARAZNty0oJ/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 68 - Caso 68', src: 'https://drive.google.com/file/d/1eBOg7qfMvfl4X4fa3VFTJIxetRIvLZVF/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 69 - Caso 69', src: 'https://drive.google.com/file/d/1TPZYJytJEuhc7wBYkZR2iiKbUWNzbLWv/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 70 - Caso 70', src: 'https://drive.google.com/file/d/1ysUAukY1XwOF1_y_tpIt8QHrC9DAQAp-/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 71 - Caso 71', src: 'https://drive.google.com/file/d/1VY_q8j4PlF9M-cKE7sl7Y05ZzK5e3-lS/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 72 - Caso 72', src: 'https://drive.google.com/file/d/1sYNJ_IgpNwoNM-0b9Kr7ml30DEXW4i5X/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 73 - Caso 73', src: 'https://drive.google.com/file/d/1UbtiLNepW5tu56EEhSovhL2HyG3W7ToL/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 74 - Caso 74', src: 'https://drive.google.com/file/d/1JH1wh4S2wKvS837zuTJZ1lk6DHo0iKnr/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 75 - Caso 75', src: 'https://drive.google.com/file/d/1Amgta9GyfY58jhg-Hpfo8rBfYx7pbMwz/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 76 - Caso 76', src: 'https://drive.google.com/file/d/1iKvlYMv8fCxLAjRqTucOdT8vcFGL6MKU/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 77 - Caso 77', src: 'https://drive.google.com/file/d/1Fh9iHBi4nc3nuPeW15gZ-2z183yojoDj/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 78 - Caso 78', src: 'https://drive.google.com/file/d/1pB9_268cHJ-wgDseuLRCeXstsenWlc7r/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 79 - Caso 79', src: 'https://drive.google.com/file/d/1N-Gl9D53YPZ1wUFkR1_uswWTsY1LiJGT/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 80 - Caso 80', src: 'https://drive.google.com/file/d/1XuHXi3WsB13FB8XIhqoGS1UkOpA6IwZk/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 81 - Caso 81', src: 'https://drive.google.com/file/d/19S_Z62DabKBhFTak8lvySxOy0O1kCheg/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 82 - Caso 82', src: 'https://drive.google.com/file/d/12WYejJ-NbfsPFt_95bVTE1Nmyohh5mJj/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 83 - Caso 83', src: 'https://drive.google.com/file/d/1pSd5uPwVnQwXWQKxn12kgquonqw-zT7J/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 84 - Caso 84', src: 'https://drive.google.com/file/d/1SLbxJXhGm0u5tZgaaTaaTDxxwZkXhnMU/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 85 - Caso 85', src: 'https://drive.google.com/file/d/1lnyphIAxlHK7JGJ_WIYoY1Yut49W0Jc-/view?usp=sharing' }, 
+                            { type: 'video', title: 'Aula 86 - Caso 86', src: 'https://drive.google.com/file/d/1NUqQ4HT49FkdANsZQXCave6OaqrVYZYK/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 87 - Caso 87', src: 'https://drive.google.com/file/d/1vypfrnVdQipJG9JP-0Nt-gma9xyqovnn/view?usp=sharing' },
+                            { type: 'video', title: 'Aula 88 - Caso 88', src: 'https://drive.google.com/file/d/10BdfxDswKBAiOAa5_N-zC0Z64PY70NZ8/view?usp=sharing' }
+                        ]
+                    }
+                ]
+            },
+            {
+                moduleTitle: "02. Aplicações Clínicas do ECG (Bônus)",
+                lessons: [
+                    {
+                        title: "01. Tratamento de Síndrome Coronariana Aguda Com Supra de ST",
+                        resources: [
+                            { type: 'video', title: '01- Tratamento farmacológico', src: 'https://drive.google.com/file/d/1wLEu1L0RXzYMYdKBMk3PfBXcZBLusqby/view?usp=sharing' },
+                            { type: 'video', title: '02- AAS', src: 'https://drive.google.com/file/d/1P1fnzFNqFlYZRR-PtJMKMI4lJjwF9mrv/view?usp=sharing' },
+                            { type: 'video', title: '03- Clopidogrel', src: 'https://drive.google.com/file/d/1CZpiikK6dWN2l574S5w0tz09NtUJjIfC/view?usp=sharing' },
+                            { type: 'video', title: '04- Prasugrel', src: 'https://drive.google.com/file/d/1YIM1cp4e1PjW9mKYpvOgSJ6EoYzp-1Ym/view?usp=sharing' },
+                            { type: 'video', title: '05- Ticagrelor', src: 'https://drive.google.com/file/d/1rC1IaNC0z9g-cYKJD2xqDn4Y6UlPs4Kl/view?usp=sharing' },
+                            { type: 'video', title: '06- Inibidores da GP IIb/IIIa', src: 'https://drive.google.com/file/d/1A7sJhAHupBK3_VMTY8RGWj7dfb1P8wLI/view?usp=sharing' },
+                            { type: 'video', title: '07- Heparinas', src: 'https://drive.google.com/file/d/1ZSfqun9EUeoTr6PASFKAvAGBWSy_Uc9K/view?usp=sharing' },
+                            { type: 'video', title: '08- Nitratos e betabloqueadores', src: 'https://drive.google.com/file/d/10qjIdE4KOOjzcm5ot5NUQJ_kIuCejkCr/view?usp=sharing' },
+                            { type: 'video', title: '09- Caso clínico - revisão', src: 'https://drive.google.com/file/d/1_wak9HK0XwKwpn43-yOc2H0jvpzA0VXc/view?usp=sharing' },
+                            { type: 'video', title: '10- Bloqueadores de canal de Ca e inibidores do SDAA', src: 'https://drive.google.com/file/d/17hrBB-HOhNdNwCg0lq4IljR-Y9sbQuij/view?usp=sharing' },
+                            { type: 'video', title: '11- Estatinas', src: 'https://drive.google.com/file/d/1DAanD3y1d7fXHg5v7wDQReh7qJ2_Tc-n/view?usp=sharing' },
+                            { type: 'video', title: '12- Medidas gerais no IAMCSST', src: 'https://drive.google.com/file/d/1BbtGzZgN_i2vPwBk4-LpCbdM0CseiouK/view?usp=sharing' },
+                            { type: 'video', title: '13- Trombolise', src: 'https://drive.google.com/file/d/1JajBqTim3DnK4xAcCJ2rEr9J_3r3h3ZI/view?usp=sharing' },
+                            { type: 'video', title: '14- Reperfusão coronariana', src: 'https://drive.google.com/file/d/1G1JbVXFnORAhnAI3wYyd4A5KHH8ew97n/view?usp=sharing' },
+                            { type: 'video', title: '15- Stents, trombectomia e acesso', src: 'https://drive.google.com/file/d/1WhENkkWH2kEsJsvpe5n5Ahwsu_UYaqRZ/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "02. Tratamento de Síndrome Coronariana Aguda Sem Supra de ST",
+                        resources: [
+                            { type: 'video', title: '16. Abordagem das SCA', duration: '6 min', src: 'https://drive.google.com/file/d/12nur1xBvAavKzDAIH_qvueGZoKrlFEMm/view?usp=sharing' },
+                            { type: 'video', title: '17. Medidas gerais', duration: '19 min', src: 'https://drive.google.com/file/d/1DV56T3oF6uNmuTDstBVuDMTh_o_Po55c/view?usp=sharing' },
+                            { type: 'video', title: '18. Antiagregantes plaquetários', duration: '18 min', src: 'https://drive.google.com/file/d/1tMhvHRoOUj59VuYkSG097KmmzRi_A5U3/view?usp=sharing' },
+                            { type: 'video', title: '19. Aspirina', duration: '10 min', src: 'https://drive.google.com/file/d/1RtxaPxNG4toQScBOg2AyK19gb5_AL01u/view?usp=sharing' },
+                            { type: 'video', title: '20. Clopidogrel', duration: '18 min', src: 'https://drive.google.com/file/d/1f1e5dFRnL5Vy57lIg2im0tiVKH0J9oQ_/view?usp=sharing' },
+                            { type: 'video', title: '21. Prasugrel', duration: '11 min', src: 'https://drive.google.com/file/d/1PUHFucIqQdX2jAyNkocXMiXH6nMqW1ke/view?usp=sharing' },
+                            { type: 'video', title: '22. Ticagrelor', duration: '16 min', src: 'https://drive.google.com/file/d/1CPyPkrQItKapAUgmc4BZy7XBI2csMoxF/view?usp=sharing' },
+                            { type: 'video', title: '23. Inibidores da GP IIB - IIIA', duration: '9 min', src: 'https://drive.google.com/file/d/1AF3UGPN6ii6rnfGMdFXt8jR8wlITRTaB/view?usp=sharing' },
+                            { type: 'video', title: '24. Antitrombínicos', duration: '24 min', src: 'https://drive.google.com/file/d/1HTMFuxnODa5UCvWLsg3gCk_6DhjXBV5O/view?usp=sharing' },
+                            { type: 'video', title: '25. Tratamento adjuvante', duration: '5 min', src: 'https://drive.google.com/file/d/1P3Qmb2qhxvE8muhZ6FfwdIIhOKhDyaQ-/view?usp=sharing' },
+                            { type: 'video', title: '26. Estratégia invasiva X conservadora', duration: '14 min', src: 'https://drive.google.com/file/d/1QegYCuqxDTqBC-lyTMQWmi22ZQm-RUoP/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "03. Dor torácica na emergência",
+                        resources: [
+                            { type: 'video', title: '27- Introdução', src: 'https://drive.google.com/file/d/1BZiPpbplhiBlqd6GFuNMCHRtlP3JtsM9/view?usp=sharing' },
+                            { type: 'video', title: '28- O que preciso focar na história clínica?', src: 'https://drive.google.com/file/d/1uSHnI1VZGDEUoJKQuqMaEZ0-aCywGAeH/view?usp=sharing' },
+                            { type: 'video', title: '29- Exame físico na dor torácica aguda', src: 'https://drive.google.com/file/d/1kZ6C-L7smqwXJU7gtYLXIfzagwsGULzj/view?usp=sharing' },
+                            { type: 'video', title: '30- ECG na dor torácica aguda', src: 'https://drive.google.com/file/d/15GJqqfYcDyvmuKZVI9FO7uh0rgKyl76w/view?usp=sharing' },
+                            { type: 'video', title: '31- Como troponina e rx de tórax podem me ajudar?', src: 'https://drive.google.com/file/d/1fpe4zVzgmEamcdVK-6ZluQ3_N1BlRqbj/view?usp=sharing' },
+                            { type: 'video', title: '32- Como usar o HEART score?', src: 'https://drive.google.com/file/d/1vqStBFqCk0NT5_mqJNCG-LvhHIhrDp_p/view?usp=sharing' },
+                            { type: 'video', title: '33- Quais as formas de investigar DAC na emergência?', src: 'https://drive.google.com/file/d/1lDFIZVB-_P_w0mduoVF9nhbv2UAmF6Mn/view?usp=sharing' },
+                            { type: 'video', title: '34- Outros diagnósticos de dor torácica aguda', src: 'https://drive.google.com/file/d/1pAUTgEDc4Tjif4M2e2ewI6iNZZiI7F9H/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "04. Marca-passo na Emergência",
+                        resources: [
+                            { type: 'video', title: '35- Manejo das bradiarritmias', src: 'https://drive.google.com/file/d/1029kO9YxOXdShmVpezrI8LL2ZJYHewEe/view?usp=sharing' },
+                            { type: 'video', title: '36- Marca-passo provisórios', src: 'https://drive.google.com/file/d/1SOBq8uET89AkVDGZYoKN4xPUHpUCTXm_/view?usp=sharing' },
+                            { type: 'video', title: '37- Marca-passo transvenoso', src: 'https://drive.google.com/file/d/1rbt3e8fe-kM0w0AYL-dC4Dz-7BUQZSuI/view?usp=sharing' },
+                            { type: 'video', title: '38- Demonstração de implante de marca-passo transvenoso', src: 'https://drive.google.com/file/d/1RUWGKUvPaVtNSwGTrYfziaNZUFBvNe7L/view?usp=sharing' },
+                            { type: 'video', title: '39- Ajustes de marca-passos', src: 'https://drive.google.com/file/d/1So3_HoPqBDQm8SYcw4yI9DYF1tNHwSbL/view?usp=sharing' },
+                            { type: 'video', title: '40- Marca-passo transcutâneo', src: 'https://drive.google.com/file/d/10PZIkLr8873JNLkLy9DjeCgZFKgJryCD/view?usp=sharing' }
+                        ]
+                    },
+                    {
+                        title: "05. Dominando o ECG",
+                        resources: [
+                            { type: 'video', title: '41- Dominando os 10 padrões de ECG que matam', src: 'https://drive.google.com/file/d/1bVV7HFVT9_7KdAj1N-XhwzazejTJ0-jE/view?usp=sharing' },
+                            { type: 'video', title: '42- Dominando as 7 arritmias mais comuns no pronto socorro', src: 'https://drive.google.com/file/d/1gin7yEO3QcwGY2_J6FGQRj373J7D_1So/view?usp=sharing' },
+                            { type: 'video', title: '43- Dominando o roteiro para interpretar um ECG', src: 'https://drive.google.com/file/d/1-s4ek4EHX4WNR2XH3EqBs0H1e-GJfKez/view?usp=sharing' },
+                            { type: 'video', title: '44- Dominando eletros reais de pronto socorro', src: 'https://drive.google.com/file/d/1zR4Qb_9PCsokmIRm7GEqk2IuNe0WzGXZ/view?usp=sharing' }
+                        ]
+                    }
+                ]
+            },
+            {
+                moduleTitle: "03. Introdução à Inteligência Artificial na Medicina",
+                lessons: [
+                    {
+                        title: "01. Inteligência Artificial na Medicina",
+                        resources: [
+                            { type: 'video', title: 'Conceitos Fundamentais de IA', src: 'https://drive.google.com/file/d/1BdvxZpkIJw2ujRs2N6K9OH1-_OaFb07Z/view?usp=sharing' },
+                            { type: 'video', title: 'Bem-vindo ao futuro', src: 'https://drive.google.com/file/d/131tGTwc6ClyHSAcW5DySGuDz1Basgx5J/view?usp=sharing' },
+                            { type: 'video', title: 'Visão inicial de como usar IA na Medicina', src: 'https://drive.google.com/file/d/1ZDv3IPS00bK_w2SD9Wf78Ddi_UhAcfJI/view?usp=sharing' },
+                            { type: 'video', title: 'IA e aprendizado', src: 'https://drive.google.com/file/d/1BdvxZpkIJw2ujRs2N6K9OH1-_OaFb07Z/view?usp=sharing' },
+                            { type: 'video', title: 'Encerramento', src: 'https://drive.google.com/file/d/17BrvIUxl-rcfWTuY_vq8wimtIBK4EEyY/view?usp=sharing' }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        /**
+         * Formata uma string para o formato de título (Title Case).
+         * - Remove números e pontuação do início.
+         * - Capitaliza a primeira letra da maioria das palavras.
+         * - Mantém palavras curtas (artigos, preposições) em minúsculas.
+         * - Preserva acrônimos conhecidos (ex: ECG, IAM) em maiúsculas.
+         */
+        const formatTitle = (title) => {
+            if (!title) return '';
+
+            // 1. Remove a numeração do início
+            let cleanTitle = title.replace(/^\d+\s*[\.\-]?\s*/, '');
+
+            // 2. Formata para Title Case
+            const exceptions = ['a', 'o', 'e', 'as', 'os', 'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'para', 'com', 'sem', 'que'];
+            const acronyms = ['ECG', 'QRS', 'VE', 'VD', 'BRE', 'FA', 'BAV', 'RIVA', 'SCA', 'ST', 'IAMCSST', 'IAM', 'PR', 'QT', 'AAS', 'GP', 'SDAA', 'RX', 'DAC'];
+            
+            let words = cleanTitle.split(' ');
+            let titleCasedWords = words.map((word, index) => {
+                const upperCaseWord = word.toUpperCase().replace(/[^\w]/g, '');
+                if (acronyms.includes(upperCaseWord)) {
+                    return upperCaseWord + word.substring(upperCaseWord.length);
+                }
+
+                const lowerCaseWord = word.toLowerCase();
+                if (index > 0 && exceptions.includes(lowerCaseWord)) {
+                    return lowerCaseWord;
+                }
+
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            });
+
+            return titleCasedWords.join(' ');
+        };
+        
+        // Processa os dados brutos para formatar os títulos
+        const courseData = rawCourseData.map(module => ({
+            ...module,
+            moduleTitle: formatTitle(module.moduleTitle),
+            lessons: module.lessons.map(lesson => ({
+                ...lesson,
+                title: formatTitle(lesson.title),
+                resources: lesson.resources.map(resource => ({
+                    ...resource,
+                    title: formatTitle(resource.title)
+                }))
+            }))
+        }));
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elementos da UI
+            const playlistContainer = document.getElementById('course-playlist-content');
+            const initialPlaceholder = document.getElementById('initial-placeholder');
+            const lessonView = document.getElementById('lesson-view');
+            const quizView = document.getElementById('quiz-view');
+            const backToPlaylistBtn = document.getElementById('back-to-playlist');
+            const currentViewTitle = document.getElementById('current-view-title');
+            const lessonViewTitle = document.getElementById('lesson-view-title');
+            const lessonViewIframe = document.getElementById('lesson-view-iframe');
+            const quizViewTitle = document.getElementById('quiz-view-title');
+            let notificationTimeout;
+            let activeResourceItem = null;
+
+            // Função para mostrar notificação
+            const showNotification = (message) => {
+                const notification = document.getElementById('notification');
+                const notificationMessage = document.getElementById('notification-message');
+                notificationMessage.textContent = message;
+                notification.classList.remove('hidden', 'opacity-0');
+                notification.classList.add('opacity-100');
+                if(notificationTimeout) clearTimeout(notificationTimeout);
+                notificationTimeout = setTimeout(() => {
+                    notification.classList.remove('opacity-100');
+                    notification.classList.add('opacity-0');
+                    setTimeout(() => notification.classList.add('hidden'), 300);
+                }, 3000);
+            };
+            
+            // Função para resetar a visualização principal
+            const resetMainView = () => {
+                lessonView.classList.add('hidden');
+                quizView.classList.add('hidden');
+                initialPlaceholder.classList.remove('hidden');
+                currentViewTitle.textContent = '';
+                backToPlaylistBtn.classList.add('hidden');
+                lessonViewIframe.src = 'about:blank'; // Limpa o iframe para parar o vídeo
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = null;
+                }
+            };
+
+            // Função para abrir a visualização do recurso (vídeo ou quiz)
+            const openResourceView = (resource, resourceElement) => {
+                // Esconde o placeholder inicial
+                initialPlaceholder.classList.add('hidden');
+                
+                // Remove o destaque do item ativo anterior
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                }
+                
+                // Adiciona destaque ao novo item clicado
+                if (resourceElement) {
+                    resourceElement.classList.add('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = resourceElement;
+                }
+
+                if (resource.type === 'video' && resource.src) {
+                    lessonViewTitle.textContent = resource.title;
+                    lessonViewIframe.src = convertToEmbedUrl(resource.src);
+                    quizView.classList.add('hidden');
+                    lessonView.classList.remove('hidden');
+                } else if (resource.type === 'quiz') {
+                    quizViewTitle.textContent = resource.title;
+                    lessonView.classList.add('hidden');
+                    quizView.classList.remove('hidden');
+                } else {
+                    showNotification('Este recurso não está disponível no momento.');
+                    // Se o recurso não estiver disponível, remove o destaque
+                    if(activeResourceItem) {
+                         activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                         activeResourceItem = null;
+                    }
+                    // E se nenhuma outra aula estiver sendo exibida, mostra o placeholder
+                    if (lessonView.classList.contains('hidden') && quizView.classList.contains('hidden')) {
+                        initialPlaceholder.classList.remove('hidden');
+                    }
+                }
+            };
+            
+            // Gerar o HTML da playlist
+            playlistContainer.innerHTML = courseData.map((module, moduleIdx) => `
+                <div>
+                    <h3 class="font-bold text-lg px-2 pt-4 pb-2 text-pink-400">${module.moduleTitle}</h3>
+                    <div class="space-y-2">
+                        ${module.lessons.map((lesson, lessonIdx) => `
+                            <div class="lesson-group bg-gray-800 rounded-lg">
+                                <button class="accordion-header w-full flex justify-between items-center p-3 text-left font-semibold text-gray-300 hover:bg-gray-700/50 transition-colors"
+                                        data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}">
+                                    <span class="truncate">${lesson.title}</span>
+                                    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform flex-shrink-0 ml-2"></i>
+                                </button>
+                                <div class="accordion-content" style="max-height: 0px;">
+                                    <div class="p-2 space-y-1 border-t border-gray-700">
+                                        ${lesson.resources.map((resource, resourceIdx) => {
+                                            const icon = resource.type === 'video' ? 'play-circle' : 'help-circle';
+                                            return `
+                                            <div class="resource-item flex justify-between items-center p-3 rounded-md text-sm hover:bg-pink-600/20 cursor-pointer transition-colors" 
+                                                 data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}" data-resource-idx="${resourceIdx}">
+                                                <div class="flex items-center overflow-hidden">
+                                                    <i data-lucide="${icon}" class="w-5 h-5 mr-3 text-gray-400 flex-shrink-0"></i>
+                                                    <div class="truncate">
+                                                        <p class="truncate">${resource.title}</p>
+                                                        ${resource.duration ? `<p class="text-xs text-gray-500">${resource.duration}</p>` : ''}
+                                                    </div>
+                                                </div>
+                                                <div class="completion-marker ml-2">
+                                                    <i data-lucide="circle" class="w-4 h-4 text-gray-600"></i>
+                                                </div>
+                                            </div>`
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Adicionar event listeners
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const { moduleIdx, lessonIdx, resourceIdx } = item.dataset;
+                    const resource = courseData[moduleIdx].lessons[lessonIdx].resources[resourceIdx];
+                    openResourceView(resource, item);
+                });
+            });
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i[data-lucide]');
+                    const isExpanded = content.style.maxHeight !== '0px';
+
+                    // Fecha todos os outros accordions
+                    document.querySelectorAll('.accordion-content').forEach(otherContent => {
+                        if (otherContent !== content) {
+                            otherContent.style.maxHeight = '0px';
+                            otherContent.previousElementSibling.querySelector('i[data-lucide]').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    // Abre ou fecha o accordion clicado
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+            
+            // O botão de voltar agora reseta a view
+            backToPlaylistBtn.addEventListener('click', resetMainView); 
+
+            // Criar ícones Lucide
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

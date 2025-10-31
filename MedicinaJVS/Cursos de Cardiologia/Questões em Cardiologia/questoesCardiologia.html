@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleção de Cursos</title>
+    <!-- Inclui o Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Cor de fundo ainda mais suave */
+        }
+        /* Estilos personalizados para o cartão do curso */
+        .course-card {
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; /* Transição um pouco mais suave */
+        }
+        .course-card:hover {
+            transform: translateY(-10px); /* Efeito de elevação um pouco maior para mais impacto */
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1); /* Sombra mais difusa */
+        }
+        /* Ajuste para o gradiente do cabeçalho */
+        .header-gradient {
+            background-image: linear-gradient(to right, #6366f1, #8b5cf6); /* Gradiente de roxo para roxo mais claro */
+        }
+        /* Estilo para os botões de filtro ativos/inativos */
+        /* Estilos para .filter-button removidos pois as classes Tailwind são usadas diretamente nos botões */
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Cabeçalho da página -->
+    <header class="header-gradient text-white p-6 shadow-xl rounded-b-xl">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-4xl font-extrabold tracking-tight">Questões em Cardiologia</h1>
+            <nav>
+                <a href="#" class="text-white hover:text-purple-200 px-4 py-2 rounded-md transition-colors duration-300 font-medium">Início</a>
+                <a href="#" class="text-white hover:text-purple-200 px-4 py-2 rounded-md transition-colors duration-300 font-medium">Meus Cursos</a>
+                <a href="#" class="text-white hover:text-purple-200 px-4 py-2 rounded-md transition-colors duration-300 font-medium">Contato</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Conteúdo principal com a lista de cursos -->
+    <main class="flex-grow container mx-auto p-8">
+        <!-- Seção de Filtros/Categorias -->
+        <section class="mb-10 bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-5">Filtrar por Área</h2>
+            <div class="flex flex-wrap gap-3">
+                <button class="filter-button active px-6 py-2.5 rounded-full shadow-md transition-colors duration-300 font-medium bg-indigo-600 text-white hover:bg-indigo-700">Todos</button>
+                <button class="filter-button px-6 py-2.5 rounded-full shadow-md transition-colors duration-300 font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Cardiologia</button>
+                <button class="filter-button px-6 py-2.5 rounded-full shadow-md transition-colors duration-300 font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">ECG</button>
+                <button class="filter-button px-6 py-2.5 rounded-full shadow-md transition-colors duration-300 font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Emergência</button>
+            </div>
+        </section>
+
+        <!-- Grade de Cursos -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-10">
+            <!-- Cartão de Curso: ECG - Primeiros Passos -->
+            <div class="course-card bg-white rounded-2xl shadow-lg overflow-hidden border border-blue-100">
+                <!-- Imagem do curso (placeholder) -->
+                <img src="Imagens/ecgprimeirospassos.png" alt="Capa do Curso ECG - Primeiros Passos" class="w-full h-56 object-cover object-center">
+                <div class="p-7">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">ECG - Primeiros Passos</h3>
+                    <p class="text-gray-700 text-base mb-5">Ideal para quem está começando: domine os fundamentos do eletrocardiograma de forma simples e eficaz.</p>
+                    <div class="flex items-center text-gray-700 mb-3">
+                        <svg class="w-5 h-5 mr-1 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.683-1.538 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.565-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.929 8.62c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path></svg>
+                        <span>4.9</span>
+                    </div>
+                    <div class="text-gray-800 font-semibold mb-2">Duração: 30 horas</div>
+                    <div class="text-gray-800 text-sm mb-5">Plataforma: Questões em Cardiologia</div>
+                    <a href="ecgPrimeirosPassos.html" target="_blank" class="w-full block text-center bg-indigo-600 text-white py-3.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-300 shadow-md transform hover:scale-105">Acessar</a>
+                </div>
+            </div>
+
+            <!-- Cartão de Curso: Emergências Cardiológicas -->
+            <div class="course-card bg-white rounded-2xl shadow-lg overflow-hidden border border-green-100">
+                <!-- Imagem do curso (placeholder) -->
+                <img src="Imagens/emergenciascardiologicas.png" alt="Capa do Curso Emergências Cardiológicas" class="w-full h-56 object-cover object-center">
+                <div class="p-7">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">Emergências Cardiológicas</h3>
+                    <p class="text-gray-700 text-base mb-5">Preparação completa para o manejo de urgências e emergências cardiovasculares no ambiente clínico.</p>
+                    <div class="flex items-center text-gray-700 mb-3">
+                        <svg class="w-5 h-5 mr-1 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.683-1.538 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.565-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.929 8.62c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path></svg>
+                        <span>4.8</span>
+                    </div>
+                    <div class="text-gray-800 font-semibold mb-2">Duração: 50 horas</div>
+                    <div class="text-gray-800 text-sm mb-5">Plataforma: Questões em Cardiologia</div>
+                    <a href="emergenciasCardiologicas.html" target="_blank" class="w-full block text-center bg-indigo-600 text-white py-3.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-300 shadow-md transform hover:scale-105">Acessar</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Rodapé da página -->
+    <footer class="bg-gray-800 text-white p-6 mt-10 rounded-t-xl">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+</body>
+</html>

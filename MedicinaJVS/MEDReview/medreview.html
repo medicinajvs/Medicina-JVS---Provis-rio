@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Módulos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212; /* Fundo principal escuro */
+        }
+        .card-glow {
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .card-glow:hover {
+            border-color: #facc15; /* Efeito dourado ao passar o mouse */
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
+            transform: scale(1.05) translateY(-8px);
+            z-index: 10;
+        }
+        .text-glow-yellow {
+            font-weight: 900;
+            text-shadow: 0 0 5px rgba(250, 204, 21, 0.7), 0 0 10px rgba(250, 204, 21, 0.5);
+        }
+        .text-glow-purple {
+            text-shadow: 0 0 8px rgba(192, 132, 252, 0.8), 0 0 12px rgba(167, 139, 250, 0.6);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Header/Nav Stub -->
+    <header class="p-4 bg-black bg-opacity-50 backdrop-blur-sm sticky top-0 z-20">
+        <div class="container mx-auto flex justify-between items-center">
+             <!-- Placeholder para logo e navegação -->
+            <div class="text-xl font-bold">MEDReview</div>
+            <nav class="flex items-center gap-4">
+                <span>User</span>
+                <div class="w-8 h-8 bg-gray-600 rounded-full"></div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 md:p-8">
+        <h1 class="text-4xl font-black mb-6">Módulos</h1>
+
+        <!-- Filters -->
+        <div id="filters-container" class="flex flex-wrap items-center gap-3 mb-6">
+            <button data-category="all" class="filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-gradient-to-r from-cyan-400 to-blue-500 border border-transparent">Todos</button>
+            <button data-category="Clinica Medica" class="filter-btn px-4 py-2 bg-slate-900 text-gray-300 rounded-lg text-sm font-semibold border border-slate-700 hover:border-cyan-400 hover:text-white transition-all">Clínica Médica</button>
+            <button data-category="Cirurgia" class="filter-btn px-4 py-2 bg-slate-900 text-gray-300 rounded-lg text-sm font-semibold border border-slate-700 hover:border-cyan-400 hover:text-white transition-all">Cirurgia</button>
+            <button data-category="Pediatria" class="filter-btn px-4 py-2 bg-slate-900 text-gray-300 rounded-lg text-sm font-semibold border border-slate-700 hover:border-cyan-400 hover:text-white transition-all">Pediatria</button>
+            <button data-category="Ginecologia" class="filter-btn px-4 py-2 bg-slate-900 text-gray-300 rounded-lg text-sm font-semibold border border-slate-700 hover:border-cyan-400 hover:text-white transition-all">Ginecologia</button>
+            <button data-category="Obstetricia" class="filter-btn px-4 py-2 bg-slate-900 text-gray-300 rounded-lg text-sm font-semibold border border-slate-700 hover:border-cyan-400 hover:text-white transition-all">Obstetrícia</button>
+            <button data-category="Medicina Preventiva" class="filter-btn px-4 py-2 bg-slate-900 text-gray-300 rounded-lg text-sm font-semibold border border-slate-700 hover:border-cyan-400 hover:text-white transition-all">Medicina Preventiva</button>
+            <div class="border-l border-slate-600 h-6 self-center mx-1"></div>
+            <div class="relative flex-grow md:flex-grow-0">
+                <select class="appearance-none bg-slate-900 w-full md:w-auto text-gray-300 px-4 py-2 rounded-lg pr-8 border border-slate-700 focus:outline-none focus:border-cyan-400">
+                    <option>Selecione um Módulo</option>
+                    <!-- Opções podem ser adicionadas dinamicamente aqui -->
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-8">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <input type="text" placeholder="Pesquisar Materiais" class="bg-slate-800 border border-slate-700 text-white placeholder-gray-400 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full md:w-80 pl-10 p-2.5">
+            </div>
+        </div>
+
+        <!-- Modules Grid -->
+        <div id="modules-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Os cards serão inseridos aqui pelo JavaScript -->
+        </div>
+
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const onboardingData = {
+                type: 'onboarding',
+                category: '',
+                title: 'ONBOARDING',
+                progress: 0, 
+                image: 'Imagens/Onboarding/logo-card-onboarding.png',
+                link: 'Onboarding/medreview-onboarding.html'
+            };
+
+            // Dados dos módulos com links e caminhos de imagem
+            const modulesData = {
+                "Clinica Medica": [
+                    { type: 'module', category: 'CLÍNICA', title: 'HEPATOLOGIA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Clínica Médica/logo-card-hepatologia.png', link: 'Clínica Médica/medreview-hepatologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'INFECTOLOGIA', progress: 0, aulas: 12, apostilas: 11, trilhas: 6, image: 'Imagens/Clínica Médica/logo-card-infectologia.png', link: 'Clínica Médica/medreview-infectologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'HEMATOLOGIA', progress: 0, aulas: 11, apostilas: 11, trilhas: 7, image: 'Imagens/Clínica Médica/logo-card-hematologia.png', link: 'Clínica Médica/medreview-hematologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'NEUROLOGIA', progress: 0, aulas: 15, apostilas: 12, trilhas: 8, image: 'Imagens/Clínica Médica/logo-card-neurologia.png', link: 'Clínica Médica/medreview-neurologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'GASTROENTEROLOGIA', progress: 0, aulas: 13, apostilas: 14, trilhas: 9, image: 'Imagens/Clínica Médica/logo-card-gastroenterologia.png', link: 'Clínica Médica/medreview-gastroenterologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'ENDOCRINOLOGIA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Clínica Médica/logo-card-endocrinologia.png', link: 'Clínica Médica/medreview-endocrinologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'TOXICOLOGIA', progress: 0, aulas: 9, apostilas: 9, trilhas: 6, image: 'Imagens/Clínica Médica/logo-card-toxicologia.png', link: 'Clínica Médica/medreview-toxicologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'PNEUMOLOGIA', progress: 0, aulas: 11, apostilas: 12, trilhas: 7, image: 'Imagens/Clínica Médica/logo-card-pneumologia.png', link: 'Clínica Médica/medreview-pneumologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'NEFROLOGIA', progress: 0, aulas: 14, apostilas: 13, trilhas: 8, image: 'Imagens/Clínica Médica/logo-card-nefrologia.png', link: 'Clínica Médica/medreview-nefrologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'REUMATOLOGIA', progress: 0, aulas: 12, apostilas: 11, trilhas: 9, image: 'Imagens/Clínica Médica/logo-card-reumatologia.png', link: 'Clínica Médica/medreview-reumatologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'CARDIOLOGIA', progress: 0, aulas: 16, apostilas: 15, trilhas: 10, image: 'Imagens/Clínica Médica/logo-card-cardiologia.png', link: 'Clínica Médica/medreview-cardiologia.html' },
+                    { type: 'module', category: 'CLÍNICA', title: 'DERMATOLOGIA', progress: 0, aulas: 8, apostilas: 8, trilhas: 4, image: 'Imagens/Clínica Médica/logo-card-dermatologia.png', link: 'Clínica Médica/medreview-dermatologia.html' },
+                ],
+                "Cirurgia": [
+                    { type: 'module', category: 'CIRURGIA', title: 'TRAUMA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Cirurgia/logo-card-trauma.png', link: 'Cirurgia/medreview-trauma.html' },
+                    { type: 'module', category: 'CIRURGIA', title: 'ABDOME AGUDO', progress: 0, aulas: 12, apostilas: 11, trilhas: 6, image: 'Imagens/Cirurgia/logo-card-abdome-agudo.png', link: 'Cirurgia/medreview-abdome-agudo.html' },
+                    { type: 'module', category: 'CIRURGIA', title: 'PERIOPERATÓRIO', progress: 0, aulas: 11, apostilas: 11, trilhas: 7, image: 'Imagens/Cirurgia/logo-card-perioperatório.png', link: 'Cirurgia/medreview-perioperatório.html' },
+                    { type: 'module', category: 'CIRURGIA', title: 'HÉRNIA ABDOMINAL', progress: 0, aulas: 15, apostilas: 12, trilhas: 8, image: 'Imagens/Cirurgia/logo-card-hérnia-abdominal.png', link: 'Cirurgia/medreview-hérnia-abdominal.html' },
+                    { type: 'module', category: 'CIRURGIA', title: 'COLOPROCTOLOGIA', progress: 0, aulas: 13, apostilas: 14, trilhas: 9, image: 'Imagens/Cirurgia/logo-card-coloproctologia.png', link: 'Cirurgia/medreview-coloproctologia.html' },
+                    { type: 'module', category: 'CIRURGIA', title: 'BARIÁTRICA', progress: 0, aulas: 9, apostilas: 9, trilhas: 5, image: 'Imagens/Cirurgia/logo-card-bariátrica.png', link: 'Cirurgia/medreview-bariátrica.html' },
+                ],
+                "Pediatria": [
+                    { type: 'module', category: 'PEDIATRIA', title: 'NEONATOLOGIA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Pediatria/logo-card-neonatologia.png', link: 'Pediatria/medreview-neonatologia.html' },
+                    { type: 'module', category: 'PEDIATRIA', title: 'NUTRIÇÃO INFANTIL', progress: 0, aulas: 12, apostilas: 11, trilhas: 6, image: 'Imagens/Pediatria/logo-card-nutrição-infantil.png', link: 'Pediatria/medreview-nutrição-infantil.html' },
+                    { type: 'module', category: 'PEDIATRIA', title: 'CRESCIMENTO E DESENVOLVIMENTO', progress: 0, aulas: 11, apostilas: 11, trilhas: 7, image: 'Imagens/Pediatria/logo-card-crescimento-e-desenvolvimento.png', link: 'Pediatria/medreview-crescimento-e-desenvolvimento.html' },
+                    { type: 'module', category: 'PEDIATRIA', title: 'VACINAÇÃO', progress: 0, aulas: 15, apostilas: 12, trilhas: 8, image: 'Imagens/Pediatria/logo-card-vacinação.png', link: 'Pediatria/medreview-vacinação.html' },
+                    { type: 'module', category: 'PEDIATRIA', title: 'URGÊNCIA E EMERGÊNCIA', progress: 0, aulas: 13, apostilas: 14, trilhas: 9, image: 'Imagens/Pediatria/logo-card-urgência-e-emergência.png', link: 'Pediatria/medreview-urgência-e-emergência.html' },
+                    { type: 'module', category: 'PEDIATRIA', title: 'DOENÇAS DA INFÂNCIA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Pediatria/logo-card-doenças-da-infância.png', link: 'Pediatria/medreview-doenças-da-infância.html' },
+                ],
+                "Ginecologia": [
+                    { type: 'module', category: 'GINECO', title: 'BASES', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Ginecologia/logo-card-bases.png', link: 'Ginecologia/medreview-bases.html' },
+                    { type: 'module', category: 'GINECO', title: 'AMENORREIAS', progress: 0, aulas: 12, apostilas: 11, trilhas: 6, image: 'Imagens/Ginecologia/logo-card-amenorreias.jpg', link: 'Ginecologia/medreview-amenorreias.html' },
+                    { type: 'module', category: 'GINECO', title: 'PLANEJAMENTO FAMILIAR', progress: 0, aulas: 11, apostilas: 11, trilhas: 7, image: 'Imagens/Ginecologia/logo-card-planejamento-familiar.png', link: 'Ginecologia/medreview-planejamento-familiar.html' },
+                    { type: 'module', category: 'GINECO', title: 'GINECOLOGIA GERAL', progress: 0, aulas: 15, apostilas: 12, trilhas: 8, image: 'Imagens/Ginecologia/logo-card-ginecologia-geral.png', link: 'Ginecologia/medreview-ginecologia-geral.html' },
+                    { type: 'module', category: 'GINECO', title: 'ONCOLOGIA GINECOLÓGICA', progress: 0, aulas: 13, apostilas: 14, trilhas: 9, image: 'Imagens/Ginecologia/logo-card-oncologia-ginecológica.png', link: 'Ginecologia/medreview-oncologia-ginecológica.html' },
+                    { type: 'module', category: 'GINECO', title: 'MASTOLOGIA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Ginecologia/logo-card-mastologia.png', link: 'Ginecologia/medreview-mastologia.html' },
+                    { type: 'module', category: 'GINECO', title: 'UROGINECOLOGIA', progress: 0, aulas: 14, apostilas: 13, trilhas: 8, image: 'Imagens/Ginecologia/logo-card-uroginecologia.png', link: 'Ginecologia/medreview-uroginecologia.html' },
+                ],
+                "Obstetricia": [
+                    { type: 'module', category: 'OBSTETRÍCIA', title: 'GESTAÇÃO E PRÉ-NATAL', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Obstetrícia/logo-card-gestação-e-pré-natal.png', link: 'Obstetrícia/medreview-gestação-e-pré-natal.html' },
+                    { type: 'module', category: 'OBSTETRÍCIA', title: 'PARTO E PUERPÉRIO', progress: 0, aulas: 12, apostilas: 11, trilhas: 6, image: 'Imagens/Obstetrícia/logo-card-parto-e-puerpério.jpg', link: 'Obstetrícia/medreview-parto-e-puerpério.html' },
+                    { type: 'module', category: 'OBSTETRÍCIA', title: 'OBSTETRÍCIA PATOLÓGICA', progress: 0, aulas: 11, apostilas: 11, trilhas: 7, image: 'Imagens/Obstetrícia/logo-card-obstetrícia-patológica.png', link: 'Obstetrícia/medreview-obstetrícia-patológica.html' },
+                    { type: 'module', category: 'OBSTETRÍCIA', title: 'DOENÇAS ASSOCIADAS À GESTAÇÃO', progress: 0, aulas: 15, apostilas: 12, trilhas: 8, image: 'Imagens/Obstetrícia/logo-card-doenças-associadas-à-gestação.png', link: 'Obstetrícia/medreview-doenças-associadas-à-gestação.html' },
+                ],
+                "Medicina Preventiva": [
+                    { type: 'module', category: 'PREVENTIVA', title: 'EPIDEMIOLOGIA', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Medicina Preventiva/logo-card-epidemiologia.png', link: 'Medicina Preventiva/medreview-epidemiologia.html' },
+                    { type: 'module', category: 'PREVENTIVA', title: 'ESTATÍSTICA', progress: 0, aulas: 12, apostilas: 11, trilhas: 6, image: 'Imagens/Medicina Preventiva/logo-card-estatística.png', link: 'Medicina Preventiva/medreview-estatística.html' },
+                    { type: 'module', category: 'PREVENTIVA', title: 'ÉTICA E BIOÉTICA', progress: 0, aulas: 11, apostilas: 11, trilhas: 7, image: 'Imagens/Medicina Preventiva/logo-card-ética-e-bioética.png', link: 'Medicina Preventiva/medreview-ética-e-bioética.html' },
+                    { type: 'module', category: 'PREVENTIVA', title: 'SAÚDE DO TRABALHADOR', progress: 0, aulas: 15, apostilas: 12, trilhas: 8, image: 'Imagens/Medicina Preventiva/logo-card-saúde-do-trabalhador.png', link: 'Medicina Preventiva/medreview-saúde-do-trabalhador.html' },
+                    { type: 'module', category: 'PREVENTIVA', title: 'SUS E MFC', progress: 0, aulas: 13, apostilas: 14, trilhas: 9, image: 'Imagens/Medicina Preventiva/logo-card-sus-e-mfc.jpg', link: 'Medicina Preventiva/medreview-sus-e-mfc.html' },
+                    { type: 'module', category: 'PREVENTIVA', title: 'VIGILÂNCIA EM SAÚDE', progress: 0, aulas: 10, apostilas: 10, trilhas: 5, image: 'Imagens/Medicina Preventiva/logo-card-vigilância-em-saúde.png', link: 'Medicina Preventiva/medreview-vigilância-em-saúde.html' },
+                ]
+            };
+
+
+            const grid = document.getElementById('modules-grid');
+            const filtersContainer = document.getElementById('filters-container');
+            const filterButtons = filtersContainer.querySelectorAll('.filter-btn');
+
+            function createCardHTML(module) {
+                return `
+                    <a href="${module.link}" class="block rounded-xl overflow-hidden card-glow group text-white">
+                        <div class="bg-gray-800 h-full flex flex-col">
+                            <div class="relative aspect-[420/565] overflow-hidden">
+                                <img src="${module.image}" alt="Imagem do módulo de ${module.title}" class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                
+                            </div>
+                            <div class="p-4 flex flex-col flex-grow">
+                                <h3 class="font-bold text-lg">${module.title}</h3>
+                                <div class="flex items-center gap-2 text-gray-400 text-sm my-2">
+                                    <span>${module.progress}%</span>
+                                    <div class="w-full bg-gray-600 rounded-full h-1.5">
+                                        <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${module.progress}%"></div>
+                                    </div>
+                                </div>
+                                ${module.type !== 'onboarding' ? `
+                                <div class="mt-auto pt-2 space-y-1 text-xs text-gray-300">
+                                   <p class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 8-8 5 8 5 8-5-8-5z"/><path d="M20 13v4c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-4"/><path d="m4 13 8 5 8-5"/></svg> ${module.aulas} Aulas</p>
+                                   <p class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg> ${module.apostilas} Apostilas</p>
+                                   ${module.trilhas ? `<p class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg> ${module.trilhas} Trilhas Flashcards</p>` : ''}
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </a>`;
+            }
+
+            function renderAllModules() {
+                grid.innerHTML = createCardHTML(onboardingData); // Adiciona o card ONBOARDING primeiro
+                Object.values(modulesData).forEach(categoryModules => {
+                    if(categoryModules.length > 0) {
+                        categoryModules.forEach(module => {
+                            grid.innerHTML += createCardHTML(module);
+                        });
+                    }
+                });
+            }
+
+            function renderModules(category) {
+                grid.innerHTML = '';
+                const modulesToRender = modulesData[category] || [];
+                if (modulesToRender.length > 0) {
+                    modulesToRender.forEach(module => {
+                        grid.innerHTML += createCardHTML(module);
+                    });
+                } else {
+                    grid.innerHTML = '<p class="col-span-full text-center text-gray-400">Nenhum módulo disponível para esta categoria.</p>';
+                }
+            }
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove o estilo ativo de todos os botões
+                    filterButtons.forEach(btn => {
+                        btn.classList.remove('bg-gradient-to-r', 'from-cyan-400', 'to-blue-500', 'border-transparent');
+                        btn.classList.add('bg-slate-900', 'border-slate-700');
+                    });
+
+                    // Adiciona o estilo ativo ao botão clicado
+                    button.classList.add('bg-gradient-to-r', 'from-cyan-400', 'to-blue-500', 'border-transparent');
+                    button.classList.remove('bg-slate-900', 'border-slate-700');
+                    
+                    const category = button.dataset.category;
+                    if(category === 'all') {
+                        renderAllModules();
+                    } else {
+                        renderModules(category);
+                    }
+                });
+            });
+
+            // Exibição inicial
+            renderAllModules();
+        });
+    </script>
+
+</body>
+</html>

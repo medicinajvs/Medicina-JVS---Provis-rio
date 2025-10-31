@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula - Abordagem Inicial do Paciente Grave</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Azul para destaque */
+            border: 2px solid #63b3ed; /* Borda para visibilidade */
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Estilos para os menus suspensos de sub-módulos */
+        .sub-module-details {
+            background-color: #2d3748;
+            border-radius: 0.375rem; /* rounded-lg */
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+        .sub-module-summary {
+            padding: 0.75rem 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .sub-module-summary:hover {
+            background-color: #4a5568;
+        }
+        .sub-module-summary::-webkit-details-marker {
+            display: none; /* Esconde o marcador padrão */
+        }
+        .sub-module-summary .icon {
+            transition: transform 0.2s ease-in-out;
+        }
+        .sub-module-details[open] > .sub-module-summary .icon {
+            transform: rotate(90deg); /* Gira o ícone quando aberto */
+        }
+        .lessons-list-container {
+            padding: 0.5rem;
+            border-top: 1px solid #4a5568;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Emergência na Palma da Mão</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções dos módulos principais serão preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-t-lg"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <div class="p-4 bg-gray-800">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula</h2>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas (agora com sub-módulos) -->
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <div id="lessonsContainer" class="space-y-2">
+                <!-- Aulas e sub-módulos serão injetados aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Estrutura de dados completa com módulos e sub-módulos
+        const modulesData = [
+            {
+                main_id: 'module_01', main_title: 'Módulo 01 - Abordagem Inicial do Paciente Grave',
+                sub_modules: [
+                    { title: 'E-Books', items: [
+                        { link: 'https://drive.google.com/file/d/1C_KDbH1kUMydpeMSPpdcViYUnWoNl-py/view?usp=drive_link', title: 'E-Book - Módulo 01', type: 'ebook' },
+                        { link: 'https://drive.google.com/file/d/1TPvWTrD-HjmxG1nOi6GVVGNOBr5tahw4/view?usp=drive_link', title: 'E-Book do Evento Emergência na Palma da Mão - Versão Completa', type: 'ebook' }
+                    ]},
+                    { title: 'Raciocínio Clínico', items: [
+                        { link: 'https://drive.google.com/file/d/12DAQAAc6cvr4C2wlbPiB8Sx7jei03IYM/view?usp=sharing', title: 'Aula 01 - Conceitos Essenciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12DManWxoCM-V9PMrcmgeW7scWC3J-wIR/view?usp=sharing', title: 'Aula 02 - Construindo a Probabilidade', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12DOtrrpGhbrZGdaTGoCdd8n6UIgLXJLu/view?usp=sharing', title: 'Aula 03 - Escolhendo o Teste Apropriado', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12Djkf5B0G0npTz7hZ01OGJcZB1sdo9CX/view?usp=sharing', title: 'Aula 04 - Armadilhas e Mensagens Finais', type: 'video' }
+                    ]},
+                    { title: 'Avaliação Inicial do Paciente Grave', items: [
+                        { link: 'https://drive.google.com/file/d/12E1EO0Ik7aE0TZD60PB1QmsR1Gw94mcz/view?usp=sharing', title: 'Aula 01 - Quem Precisa de Sala de Emergência?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12GcSn_T40p2n4ME3RaN_Lz3HfGJXm1CL/view?usp=sharing', title: 'Aula 02 - Avaliação Inicial Sistematizada', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12GtgY4om_opqFshjyneqeJDM0JwSA9vw/view?usp=sharing', title: 'Aula 03 - As Três Principais Síndromes em Emergência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12HBHXISL4cJNYi9ojWunWLJh3jIIACe5/view?usp=sharing', title: 'Aula 04 - A Extensão do Exame Físico: O Ultrassom Beira-Leito', type: 'video' }
+                    ]},
+                    { title: 'Suporte Respiratório', items: [
+                        { link: 'https://drive.google.com/file/d/12HFMIlx-rGRmB0lrKA7wZDOOcryZBUvB/view?usp=sharing', title: 'Aula 01 - Suporte Não-Invasivo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12HmajtKB6TWW9lY_7EGxoXbpJfNU0tv1/view?usp=sharing', title: 'Aula 02 - Ventilação Não-Invasiva', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12Ir2Pazmo4U9FcbC_eqJVmSsjkB29jwD/view?usp=sharing', title: 'Aula 03 - A Decisão de Intubar', type: 'video' }
+                    ]},
+                    { title: 'Via Aérea', items: [
+                        { link: 'https://drive.google.com/file/d/12JNuRfjk3XWIPIYqJOM8dAijNfwfjH78/view?usp=sharing', title: 'Aula 01 - Dispositivos de Via Aérea: Bolsa-Válvula-Máscara', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12JPyyfBhgn1J6hEMtF8w6WOt9LRh08kg/view?usp=sharing', title: 'Aula 02 - Dispositivos de Via Aérea: Máscara Laríngea', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12KF_SI-OLPk-utTtw55iv45lJPnZbe9t/view?usp=sharing', title: 'Aula 03 - Dispositivos de Via Aérea: Laringoscopia e Intubação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12KNYzH6KT8oyiS_mZtjz5bwxKyFrrsTY/view?usp=sharing', title: 'Aula 04 - Sequência Rápida de Intubação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12Lmc6mgaj_BajCHGehxNps0E8Cen88QI/view?usp=sharing', title: 'Aula 05 - Drogas da Sequência Rápida de Intubação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12MGgnc-rE7bzzJ8mQiKuPRGRHHUJfFcJ/view?usp=sharing', title: 'Aula 06 - Sequência Atrasada de Intubação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12O4aYWgHBXCm3HlsLUN_IcbygYgF1WXu/view?usp=sharing', title: 'Aula 07 - Preditores de Via Aérea Difícil', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12ODM22Z54JdLeLgsw072HL0Mr8cMy1Bx/view?usp=sharing', title: 'Aula 08 - Via Aérea Fisiologicamente Difícil', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12OQwzB-zqmSksiJ820BjrLxtloeSod_0/view?usp=sharing', title: 'Aula 09 - Algoritmos de Via Aérea Difícil', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12PU_ZjLXXD_J-NbbFHJpXtZH0f55LIGi/view?usp=sharing', title: 'Aula 10 - Via Aérea em Situações Especiais: Obeso, Gestante e Criança', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12PWsYnG_jNqeKTXmsnZKTS3wmDbcZOtI/view?usp=sharing', title: 'Aula 11 - Técnicas Avançadas de IOT', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12Q92yOUoEVoIMrMZ-5WqQij4mzpwHRDD/view?usp=sharing', title: 'Aula 12 - Via Aérea Cirúrgica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12UM36oGOHCQuUQ67lqSB4AVuEDrNEob8/view?usp=sharing', title: 'Aula 13 - Caso Clínico: Técnicas Avançadas de Intubação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12V0tNv05NNCmktdd6edcOIk9zeS_yG_k/view?usp=sharing', title: 'Aula 14 - Caso Clínico: Sequência Atrasada de Intubação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12VH6EL2Vu1eZ9lAop4teffE0uaR4ir1H/view?usp=sharing', title: 'Aula 15 - Caso Clínico: Via Aérea', type: 'video' }
+                    ]},
+                    { title: 'Ventilação Mecânica', items: [
+                        { link: 'https://drive.google.com/file/d/12VLCFp_bXT3M6tAJxDdrH-fX7jTbdFfM/view?usp=sharing', title: 'Aula 01 - Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12WobhTsYv8A1S17eO4n524Lu8WmDNOR9/view?usp=sharing', title: 'Aula 02 - Como Ligar o Ventilador?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12XMyFtQBGpcaZQiC7Eh9-8FgXmPbNQb2/view?usp=sharing', title: 'Aula 03 - Modos e Modalidades', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12ZAgjYt8Xv4rY9WxFW_iI4sD_pvvnjnS/view?usp=sharing', title: 'Aula 04 - Modos e Modalidades', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12ZBiqwFucNKF9Q12MXLbgL5QNuHffDpb/view?usp=sharing', title: 'Aula 05 - Ajustes Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12_zaQkMSQELAt5fTlrV5Tpd_3khgRVL9/view?usp=sharing', title: 'Aula 06 - Ajustes Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12dQEN-8X1m2wacNDwr7ABlEaQSPGdAzL/view?usp=sharing', title: 'Aula 07 - Ajustes Secundários', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12en97OekZapSAMtmgzas04Noq-cXn1Sf/view?usp=sharing', title: 'Aula 08 - Assincronias na Ventilação Mecânica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12fXesi14836EwlOSQJoBc3ZVdc-5TF_u/view?usp=sharing', title: 'Aula 09 - Piora Respiratória Aguda no Paciente Intubado', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12fujHAJP0pbL5IcnKWl4-wtV0LTPV4NJ/view?usp=sharing', title: 'Aula 10 - Desmame da Ventilação Mecânica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12gDU2DUSeYCaARGFa3C1H0wiZ8tzTLnr/view?usp=sharing', title: 'Aula 11 - Caso Clínico: Ventilação Mecânica I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12gJFEpKOXbxtE_UL1S2l0-HYdYKd9vhU/view?usp=sharing', title: 'Aula 12 - Caso Clínico: Ventilação Mecânica II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12hDF8ql8tqDd54KdC4ukdlt0sdKouX8J/view?usp=sharing', title: 'Aula 13 - Caso Clínico: Ventilação Mecânica III', type: 'video' }
+                    ]},
+                    { title: 'Suporte Hemodinâmico', items: [
+                        { link: 'https://drive.google.com/file/d/12ibHFBKCi-GpgJeNgIB9Ne9x4gLFpC3h/view?usp=sharing', title: 'Aula 01 - Ressuscitação Volêmica e Fluidos: Introdução', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12kLa1OGQ0COKEVHyP-fUMOzl9jOr6pSD/view?usp=sharing', title: 'Aula 02 - Ressuscitação Volêmica e Fluidos: Fases do Tratamento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12rNrqOGmLMMd4oM5qALMQ0jxo33ktLRH/view?usp=sharing', title: 'Aula 03 - Ressuscitação Volêmica e Fluidos: Qual Fluido Utilizar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12m3nyE_LN_ON8v4iMdtUnWdhZDuKBjaW/view?usp=sharing', title: 'Aula 04 - Ressuscitação Volêmica e Fluidos: Quanto Fluido Utilizar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12mFL9mRyiqU2GUTcZXuX8jsg7LU2HbOk/view?usp=sharing', title: 'Aula 05 - Ressuscitação Volêmica e Fluidos: Quando Parar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12sEvacE_k2ZmE3iua1QokUscTUUJrq_D/view?usp=sharing', title: 'Aula 06 - Hemodinâmica Avançada: O Que Interfere na Perfusão Orgânica?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12sqpCBburnSDXt5_wEdETbtyETVlsOeh/view?usp=sharing', title: 'Aula 07 - Hemodinâmica Avançada: O Retorno Venoso', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12szSCarZjXmqONarNXf-EbxibagPVmBp/view?usp=sharing', title: 'Aula 08 - Drogas Vasoativas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12uQwk4Ke0x3m9AiofYR5C7ZxOZ4oSLHW/view?usp=sharing', title: 'Aula 09 - Caso Clínico: Suporte Cardiovascular', type: 'video' }
+                    ]},
+                    { title: 'Choque', items: [
+                        { link: 'https://drive.google.com/file/d/1WgeW4dUbeFEc8hw91V9jy1iCxatLEtvD/view?usp=sharing', title: 'Aula 01 - Choque: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1EeE4QDLyQz1ZDV8u5c0V2reoqanO250f/view?usp=sharing', title: 'Aula 02 - Abordagem Inicial do Choque: Passo a Passo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1RLe9pjcmJ_EacX1Xzo0Sb0PaLKTix5J2/view?usp=drive_link', title: 'Aula 03 - Abordagem Inicial do Choque: Resumo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1vSm98gc6mpLJC4wsoP2Hn8APHVXBC4sm/view?usp=sharing', title: 'Aula 04 - Avaliação do Choque com Ultrassom e Choque Obstrutivo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/18yYBx3XKP7Q0ZSypvTEmxAxhXfaopFrx/view?usp=sharing', title: 'Aula 05 - Choque Cardiogênico: Como Acontece?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1YK_HOO8JEgDj90LEBXg76klR2bscT8vv/view?usp=sharing', title: 'Aula 06 - Choque Cardiogênico: O Passo a Passo - Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/19geul2f9D_uzLfVOZsCs_1Ns4x5eafFU/view?usp=sharing', title: 'Aula 07 - Choque Cardiogênico: O Passo a Passo - Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1piUHV5RP9Rfogw30M7aa6QYGWorO1l1C/view?usp=sharing', title: 'Aula 08 - Choque Cardiogênico: Resumindo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Cb28Z8RF1cpLFK_FkqzBTS7Nilv8G9Cn/view?usp=sharing', title: 'Aula 09 - Sepse e Choque Séptico: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1-ZmsGJErUPmg5bgdliEX9zO7AoeO9snJ/view?usp=sharing', title: 'Aula 10 - Sepse e Choque Séptico: Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/173zSlxRqNg_Ax9hNb8dz02YD_GFQCbH3/view?usp=sharing', title: 'Aula 11 - Sepse e Choque Séptico: Tratamento - Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15zBpt0zQlHgAoz-GtGRwdnx0Fh9XXuEV/view?usp=sharing', title: 'Aula 12 - Sepse e Choque Séptico: Tratamento - Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Q1ACa_hJqqapER67f4VLTE3o93Hgb3cH/view?usp=sharing', title: 'Aula 13 - Sepse e Choque Séptico: Resumo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nY1s_DQcsNSgfmAQ9vb-lLNttT1DXHaL/view?usp=sharing', title: 'Aula 14 - Anafilaxia e Choque Anafilático: Fisiopatologia e Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1E-SFtOmU7VLKmO33go0uOtSVqBIYTNRO/view?usp=sharing', title: 'Aula 15 - Anafilaxia e Choque Anafilático: Manejo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1zjL-Pwuu78Nl_JiVDNLPOiwgb1B7GZLH/view?usp=sharing', title: 'Aula 16 - Anafilaxia e Choque Anafilático: Erros Comuns', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Xf2QzvIqFsoYEPYbefNKjyYsAtxQ6QV_/view?usp=sharing', title: 'Aula 17 - Choque Hipovolêmico Não-Hemorrágico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/11CDb824SfMtmeuGcOM8n9mgPAWfaKRMe/view?usp=sharing', title: 'Aula 18 - Caso Clínico: Choque I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1cNVnVt8U_d2DiOi24ENaXYbkCifRQmRa/view?usp=sharing', title: 'Aula 19 - Caso Clínico: Choque II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1zPkKM-1mZAmS0KZ81_4E40M2g0u_otzf/view?usp=sharing', title: 'Aula 20 - Caso Clínico: Choque III', type: 'video' }
+                    ]},
+                    { title: 'Sedação e Analgesia', items: [
+                        { link: 'https://drive.google.com/file/d/1QuVCsQu0-5gxpMVQREStrnYr9TwJlZ11/view?usp=sharing', title: 'Aula 01 - Analgesia e Sedação para Procedimento: Introdução e Conceitos', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1aqlxZ_HxA9s4YnDLGeRU252tp2uUOfpv/view?usp=sharing', title: 'Aula 02 - Analgesia e Sedação para Procedimentos: Drogas Específicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1aZyU0-c0r_ffnSf077Pd17fqptJ5drkp/view?usp=sharing', title: 'Aula 03 - Analgesia e Sedação para Procedimentos: Situações Específicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1UVUuabUG9G1dRFvrdgXaNEion9UpQsGG/view?usp=sharing', title: 'Aula 04 - Sedação do Paciente Crítico: Inicio da Sedação na Sala de Emergência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1gRGWx0N66w59YxKbYzXHmHId5FK-BFUp/view?usp=sharing', title: 'Aula 05 - Sedação do Paciente Crítico: Medicações', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/18mKVNghm--OZ4t4zh3gu662wDN4ZVhlq/view?usp=sharing', title: 'Aula 06 - Dor e Analgesia no PS: Introdução e Fisiopatologia da Dor', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1grDbrGbfosAxpTnraJeVkHnDFU4kBBF0/view?usp=sharing', title: 'Aula 07 - Dor e Analgesia no PS: Tratamento Multimodal', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/11l1ygJ7-49VE2EdKbNZ31wsss7q4A1oQ/view?usp=sharing', title: 'Aula 08 - Dor e Analgesia no PS: Dor Nociceptiva Analgésicos e AINEs', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1kBKCoY6IOvm8FiFtcq4LDPzbnfZ_euyE/view?usp=sharing', title: 'Aula 09 - Dor e Analgesia no PS: Dor Nociceptiva Opioides', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1eayGTmlWclMLy_z7kuUJZTxlF8Hdk6Xj/view?usp=sharing', title: 'Aula 10 - Dor e Analgesia no PS: Dor Neuropática', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ReIsYhamHvNCiDGNLG-pj7ylaRcAc6fA/view?usp=sharing', title: 'Aula 11 - Dor e Analgesia no PS: Resumo das Principais Medicações', type: 'video' }
+                    ]},
+                    { title: 'Intoxicações Exógenas', items: [
+                        { link: 'https://drive.google.com/file/d/1TLUhZkap9Lk5tgoj6REYJch68ph9uMjT/view?usp=sharing', title: 'Aula 01 - Abordagem Inicial do Paciente Intoxicado: Introdução', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1_AzukTpkib_VOpXfKa8oNV4cfpuHyTsG/view?usp=sharing', title: 'Aula 02 - Abordagem Inicial do Paciente Intoxicado: Reconhecendo as Toxíndromes', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1qqjujfXHgC49qvNoSUDmj-75McUwcXBC/view?usp=sharing', title: 'Aula 03 - Abordagem Inicial do Paciente Intoxicado: O Que Pedir de Exames?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/10pGNfr26jJMSoU4UgYBu63dcyezNTB0r/view?usp=sharing', title: 'Aula 04 - Abordagem Inicial do Paciente Intoxicado: Como Manejar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1k2uaaNbWnDG5csyG2bNZWEZBNUh1D4ce/view?usp=sharing', title: 'Aula 05 - Abordagem Inicial do Paciente Intoxicado: Amarrando Tudo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/147T9_uELMvmUrnlzaONluYHQxIrUlQY7/view?usp=sharing', title: 'Aula 06 - Síndrome Colinérgica: Como Reconhecer?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1RFXwrW0cphDsa7GNYPe8OMqXXtvtLCuR/view?usp=sharing', title: 'Aula 07 - Síndrome Colinérgica: Como Manejar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1hRL0Km5o5zZeIbc-UuIZgstmSqIb4Yo6/view?usp=sharing', title: 'Aula 08 - Síndrome Narcótica: Como Reconhecer?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1tQDNxUu2kjpHZrTUb_mE3z_K9-PlfcM5/view?usp=sharing', title: 'Aula 09 - Síndrome Narcótica: Como Manejar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1fBZajg5eFVMByTAXKUAd9I-viDKeieGC/view?usp=sharing', title: 'Aula 10 - Síndrome Adrenérgica e Diferenciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1maWxrPamYYxkrXfprN39kB7kA0J01ZRa/view?usp=sharing', title: 'Aula 11 - Intoxicação por Cocaína', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1HLrgjwY1E1DLRL0gXoIzUD7FxDMdzxZW/view?usp=sharing', title: 'Aula 12 - Intoxicação por Anfetamina e Derivados', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1MpFQzicf_tiw1oP7erjQ22kf37oxDQre/view?usp=sharing', title: 'Aula 13 - Síndrome Alucinógena', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1eMXMd9Z3pXWvoL0cyfC4B6D-jCp940zo/view?usp=sharing', title: 'Aula 14 - Síndrome Serotoninérgica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Awl1dlvMUpLIS-If6oVyK48NyhGO124o/view?usp=sharing', title: 'Aula 15 - Síndrome Anticolinérgica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1dJ7IW8WFdhZYf-truinSa6zdwZyLp4Ey/view?usp=sharing', title: 'Aula 16 - Intoxicação por Antidepressivos Tricíclicos', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/18ohgsJFRYJMg3IyNKrrb2riXC0pOLfjo/view?usp=sharing', title: 'Aula 17 - Intoxicação por Antipsicóticos', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1DXYWVabw3Oh4trZRhSTl2oU-QuZ-Gc7C/view?usp=sharing', title: 'Aula 18 - Síndrome Sedativo-Hipnótica: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1mFcapfI1T_JI-_E6qnCOJfkGlTJ7K2gS/view?usp=sharing', title: 'Aula 19 - Síndrome Sedativo-Hipnótica: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AsEZNxb9-HUcHrvT3oXGW4HmDK2gPpLY/view?usp=sharing', title: 'Aula 20 - Caso Clínico: Intoxicação', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_02', main_title: 'Módulo 02 - Emergências Cardiológicas',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 02', items: [
+                        { link: 'https://drive.google.com/file/d/1BJfZqhRRvW94hGNP6v7A9DrKqST7vI-x/view?usp=drive_link', title: 'E-Book - Módulo 02', type: 'ebook' }
+                    ]},
+                    { title: 'Dor Torácica', items: [
+                        { link: 'https://drive.google.com/file/d/14hELAVoRtdarim_7IuEAxfA2zvuh9BEy/view?usp=sharing', title: 'Aula 01 - Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14iPDYdXpBT3IqfSQFRf76XnS1YURZS7F/view?usp=sharing', title: 'Aula 02 - Descartando Catástrofes: Síndrome Coronariana Aguda', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14mg-0Ynu6Y5Ivn9m5EyDeRDpB72-26Tp/view?usp=sharing', title: 'Aula 03 - Descartando Catástrofes: Dissecção Aguda de Aorta', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14oOYprCsp5FBbhValxb_aGUDk3xChjVE/view?usp=sharing', title: 'Aula 04 - Descartando Catástrofes: TEP', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14pfSZuZksrgfSQ1giGNGRNUunsp_1lpR/view?usp=sharing', title: 'Aula 05 - Outros Diferenciais', type: 'video' }
+                    ]},
+                    { title: 'Síndromes Coronarianas Agudas', items: [
+                        { link: 'https://drive.google.com/file/d/14pvPkp4QDNI6ytWvDwL1nSp40ulpUOzQ/view?usp=sharing', title: 'Aula 01 - Conceitos Iniciais da SCA', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/158JiTOotYRcGllsq8etqtYqvE2nYaLnt/view?usp=sharing', title: 'Aula 02 - Caso Clínico SCA: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14sPYT4UrZKiXDSsYxbFw1yq5pbM6SCPw/view?usp=sharing', title: 'Aula 03 - História, Exame Físico e ECG', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14si5UeAikL_liINeMJ0PT68vVeELqgzb/view?usp=sharing', title: 'Aula 04 - A Troponina', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/158VKnH-WRgmizxE3qbCaKXQLNlAt_7rX/view?usp=sharing', title: 'Aula 05 - Caso Clínico SCA: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14sufOxUcBy_Ba1hD0POExNC70f0f5Q8d/view?usp=sharing', title: 'Aula 06 - O ECG na SCA', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/158oz3WBkR9L3m98AOzI0bCwAjy3YJCug/view?usp=sharing', title: 'Aula 07 - Caso Clínico SCA: Parte III', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14vWqaE3hiVpYFRlS0SWyasWwrN0oighZ/view?usp=sharing', title: 'Aula 08 - Como Sistematizar a Avaliação da SCA no PS?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14wxAnBk036uZJ5qcuK7EfshJjygx1_Bg/view?usp=sharing', title: 'Aula 09 - O Que Pedir de Exames?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14x8rvdPlrsGygAR4kL7N9PjZspjMX6gk/view?usp=sharing', title: 'Aula 10 - Como Estratificar o Risco?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14y4fjoxrag17Pts2-U7EEeo1YRQRRO2X/view?usp=sharing', title: 'Aula 11 - Como Definir a Estratégia?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14ymojErUWYImqWBzF-0SwncYNALEskgG/view?usp=sharing', title: 'Aula 12 - SCASSST: Os 3 As - Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14z9QZmRytj13myvazi1o41IMynK69S6k/view?usp=sharing', title: 'Aula 13 - SCASSST: Os 3 As - Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14zA2-EJyCGfhXwF_xPS5B_M3NSlzmb3l/view?usp=sharing', title: 'Aula 14 - Como Decidir entre Trombólise e ATC Primária?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/150CfiVn8qqU-GyGPYUQYp29T44uDVXlC/view?usp=sharing', title: 'Aula 15 - Trombólise', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/152lE-h32ix57zOQAukZuTxp5EpMRyS4J/view?usp=sharing', title: 'Aula 16 - Angioplastia Primária', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1534AwyVxDfs7o2hf4PRjIxOAij9J-qdL/view?usp=sharing', title: 'Aula 17 - SCACSST: Peculiaridades no Tratamento Inicial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/153nn0Bll9TaVFVbLkZ4VgFHAI3kljOqq/view?usp=sharing', title: 'Aula 18 - Tratamento Adjuvante na SCA', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/154UMySC-SAzqS3X8JYRxMbFMhK3AX3zv/view?usp=sharing', title: 'Aula 19 - Situações Especiais na SCA', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/155CXEl9Ve4z4uZDfnlXZi0EW8m1feIO4/view?usp=sharing', title: 'Aula 20 - Prescrição de Alta na SCA', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/155QOP9uWbgEk-9cDhgSB8OQ2MqzfOm2B/view?usp=sharing', title: 'Aula 21 - MINOCA', type: 'video' }
+                    ]},
+                    { title: 'Síndromes Aórticas Agudas', items: [
+                        { link: 'https://drive.google.com/file/d/15AEdQkP0rh5ePSAUlPdajjQ1tKTf1T5P/view?usp=sharing', title: 'Aula 01 - Conceitos Iniciais e Classificação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15C-8rRnjofjGlfjBDjqjrvEhavby6jbx/view?usp=sharing', title: 'Aula 02 - Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15CS_f_tZfxbFDtQCcSGvEb8Zap4Wvpfv/view?usp=sharing', title: 'Aula 03 - Tratamento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15CePCfAK7kRlSTK2kn4l3Ygvbb267hZO/view?usp=sharing', title: 'Aula 04 - Caso Clínico', type: 'video' }
+                    ]},
+                    { title: 'Tromboembolismo Pulmonar', items: [
+                        { link: 'https://drive.google.com/file/d/15D-tNWhl_Idk6mA-igB3KtyTXew_A0lk/view?usp=sharing', title: 'Aula 01 - Fisiopatologia do TEP', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15D_Xq0HQeZ9yCAv57pwZMTkyy5TULqaw/view?usp=sharing', title: 'Aula 02 - Como Diagnosticar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15D0QvSN6UrMsFmxdWNOX7RjfpQm8UlQw/view?usp=sharing', title: 'Aula 03 - Avaliando o Risco de Morte', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15EXEf-syWbB97FuNBCYf4uErAPxNQlue/view?usp=sharing', title: 'Aula 04 - Tratamento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15E7OCBvHkjcjSt7dO4r7br59VkdNhp2g/view?usp=sharing', title: 'Aula 05 - Caso Clínico', type: 'video' }
+                    ]},
+                    { title: 'Pericardites Agudas', items: [
+                        { link: 'https://drive.google.com/file/d/133azjzRqz5roIIfy_O2L5kv_W88CTgaZ/view?usp=sharing', title: 'Aula 01 - O Que é, e Como Se Manifesta?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1IRiR6WNHiRlqXtnSPCRXdl1Tji4deJQC/view?usp=sharing', title: 'Aula 02 - Como Pode Chegar no Meu Plantão?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1M64JLI8I-DJs1UNKDQaaDFdL6A1F3GdA/view?usp=sharing', title: 'Aula 03 - Manejo', type: 'video' }
+                    ]},
+                    { title: 'Insuficiência Cardíaca no PS e Edema Agudo de Pulmão', items: [
+                        { link: 'https://drive.google.com/file/d/1f7p5dNPqelynyaxhhC1RlNOKy3xiErK2/view?usp=sharing', title: 'Aula 01 - O Que é, e o Que Causa?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1bM9AXYf4-TfBgqhZdTkfQr_sQxh5OV5V/view?usp=sharing', title: 'Aula 02 - Como Vai Aparecer no Meu Plantão?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ypijlwWVutVqz0_eMiwgUCKVlhbtCJ6g/view?usp=sharing', title: 'Aula 03 - Quais Exames Podem Me Ajudar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1BVI8bHiSSqUme9j1TGDYisCtvQodTQNB/view?usp=sharing', title: 'Aula 04 - Como Tratar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1X78RU16VW-SL_aoVqUnWpVPIUXwtH7Rs/view?usp=sharing', title: 'Aula 05 - Como Prescrever?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1r-_z5ZB9kUT09PQKQdiP3UhVjj3YS11k/view?usp=sharing', title: 'Aula 06 - Caso Clínico', type: 'video' }
+                    ]},
+                    { title: 'Taquiarritmias', items: [
+                        { link: 'https://drive.google.com/file/d/1tadjGhoh3wcLn7oj55wLAtyRMr70Ov46/view?usp=drive_link', title: 'Aula 01 - Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1muI88mZF-oa_iBZNC7DQHpF4Nm8iW468/view?usp=sharing', title: 'Aula 02 - Quais Arritmias Vamos Procurar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1TPXI1xf_1wAixGWsYO6KBtwYjshxqJNF/view?usp=drive_link', title: 'Aula 03 - Algoritmo Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1hOL0gbrlfURh22wH3n_IzSrlS5moh2g1/view?usp=sharing', title: 'Aula 04 - As Taquis Supras', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1IViv0quFvK3OoN1Z1cWvcWMN_F74RVO6/view?usp=sharing', title: 'Aula 05 - Pré-Excitação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15RvKth9QA--LmScNQnQlctHg7PZ7w5lX/view?usp=sharing', title: 'Aula 06 - Taquiarritmias de QRS Largo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1xHT800BRC0QppXW_maweu5WmjRZM_L3w/view?usp=sharing', title: 'Aula 07 - Arritmias Supraventriculares: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1OyiBaP3Nv1qp76xEuqvaLJfW8HTP6_9I/view?usp=sharing', title: 'Aula 08 - Arritmias Supraventriculares: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1C3mtR97_ZnVyopjN9BEYbbY4CrOTuJHq/view?usp=sharing', title: 'Aula 09 - Introdução', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1UaecRx0QXOHL5498R7s4i2p1JRbHt49U/view?usp=sharing', title: 'Aula 10 - Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1m9eGacXAz89rsTSodgOGm2lW5w--M_z0/view?usp=sharing', title: 'Aula 11 - Classificação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1MfdQe6-PwO_TozYoeHUDvEycZb5DqLd5/view?usp=sharing', title: 'Aula 12 - Manejo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1rWJvnQDM1AKkGpTfJJ7a-I66ylTMXkBi/view?usp=sharing', title: 'Aula 13 - Resumo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/19f6YCrnBvXOo6le6S-XQttVw-yG1bSyq/view?usp=sharing', title: 'Aula 14 - Caso Clínico: Fibrilação Atrial', type: 'video' }
+                    ]},
+                    { title: 'Arritmias Ventriculares', items: [
+                        { link: 'https://drive.google.com/file/d/1NBkuOsadnEirxsj7JBUXISXQldoXRgVn/view?usp=sharing', title: 'Aula 01 - Manejo das Arritmias Ventriculares', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/11bJcFDzS9_ukpq91rf371sbgOsiDaBo_/view?usp=sharing', title: 'Aula 02 - Tempestade Elétrica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Yle2kJwXr6GzHULhf2Pk2vjGQb7ZSUK3/view?usp=drive_link', title: 'Aula 03 - Cardioversão Elétrica Sincronizada', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1RNFT6q0-uMW8RubDNE9qCuz1Lm9pN7dq/view?usp=sharing', title: 'Aula 04 - Caso Clínico: Arritmias Ventriculares', type: 'video' }
+                    ]},
+                    { title: 'Bradiarritmias e DCEI', items: [
+                        { link: 'https://drive.google.com/file/d/1dwYp_mWd7tnwPOyUphj3_h8CxrWPYqHI/view?usp=sharing', title: 'Aula 01 - Classificação das Bradiarritmias', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1IW3UkfrZ0PYG49ZqKV_6R-5VR178M_mW/view?usp=sharing', title: 'Aula 02 - Manejo Geral das Bradiarritmias', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1hEIfvdUlF0FLKJGsjlfZIWWHS6NwvPhz/view?usp=sharing', title: 'Aula 03 - Indicações de Marcapasso na Emergência: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1KSTyFhHy99cbCG8uiISoA0Pyup9Ha-W0/view?usp=sharing', title: 'Aula 04 - Indicações de Marcapasso na Emergência: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1bBE1eXbcwc5N6ycSpCI_ZwUHHQIgmhzV/view?usp=sharing', title: 'Aula 05 - Como Instalar um Marcapasso Transcutâneo?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/16iIFUPLNQGYcbRAJqhFeMsgYo1tWsErJ/view?usp=sharing', title: 'Aula 06 - Como Instalar um Marcapasso Transvenoso?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1fyoLM13ffhXyMur-pRXs19dMjlpIqRrb/view?usp=sharing', title: 'Aula 07 - Como Identificar um DCEI na Emergência?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1S2Kp86rfXBWwhp87TxwvKcs4SODsdD0-/view?usp=sharing', title: 'Aula 08 - O ECG no Paciente com Marcapasso', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14EKHADbkEVHkLuHrSRKuA13AwpGNoP3a/view?usp=drive_link', title: 'Aula 09 - Como Diagnosticar IAM em um Paciente com Marcapasso?', type: 'video' }
+                    ]},
+                    { title: 'Emergências Hipertensivas', items: [
+                        { link: 'https://drive.google.com/file/d/1K_skv7D6rskv8ezVFYy515-v-QUwbvUx/view?usp=sharing', title: 'Aula 01 - Hipertensão no PS: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1XIc_TjBHlgyTnXPTGYLgnOOTUWVWjo8f/view?usp=sharing', title: 'Aula 02 - Emergências Hipertensivas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1yYUymLOEMhj3mXyY43RFmPaAcfMONtlj/view?usp=sharing', title: 'Aula 03 - Hipertensão Grave Assintomática', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/12U21nAM6wDh0I-ASCLEBeI2YMBwGVO_B/view?usp=sharing', title: 'Aula 04 - Hipertensão no PS: Resumo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14LKsrPdDItTt2a6pbEHTBHL8_f54yCep/view?usp=sharing', title: 'Aula 05 - Caso Clínico: Crise Hipertensiva - Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1-HrnTDBxeJ2firPA3N7FIAT-wAGMHKfx/view?usp=sharing', title: 'Aula 06 - Caso Clínico: Crise Hipertensiva - Parte II', type: 'video' }
+                    ]},
+                    { title: 'Parada Cardiorespiratória', items: [
+                        { link: 'https://drive.google.com/file/d/1c7OELCRGK-kBJCDqrn89ttoQQBojFmAe/view?usp=sharing', title: 'Aula 01 - Suporte Básico de Vida', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1-6PkeQP_zbIpxfqAeYNT0LCmuML6RiN5/view?usp=sharing', title: 'Aula 02 - Fibrilação Ventricular e Traquicardia Ventricular', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1_K8YahCvCjbAVmmhTNMNIv-0CN9klUBa/view?usp=sharing', title: 'Aula 03 - AESP e Assistolia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ew1FV-m6QRSgs0bjcboYhnZZN04B8B3l/view?usp=sharing', title: 'Aula 04 - Resumo das Medicações', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1vTYSPpBsa52ifkl92ArPpK5oaEtZY-Dc/view?usp=sharing', title: 'Aula 05 - Protocolo Casa', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1raulbjNlEcKehoDOfCm6WAu1QJc3mgD-/view?usp=sharing', title: 'Aula 06 - Cuidados Pós-PCR: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1vOq5zeP7qL1oAplYfMOeXQ7qZMbpWntq/view?usp=sharing', title: 'Aula 07 - Cuidados Pós-PCR: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1OCHLD75mnumHaYl6W8gLhFERnJWFutkK/view?usp=sharing', title: 'Aula 08 - Situações Especiais: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1yaNaVlop5APftkCWsEvSU7mFD4NbZBO7/view?usp=sharing', title: 'Aula 09 - Situações Especiais: Parte II', type: 'video' }
+                    ]},
+                    { title: 'Intoxicação por Anticoagulantes Orais', items: [
+                        { link: 'https://drive.google.com/file/d/1Z1LFsa7c6xQVytJIfIb9BwceXyArM7b0/view?usp=sharing', title: 'Aula 01 - Inibidores da Vitamina K', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1XWtF2FQ9LlyoEu2RK62gvgLXz-CjaJnP/view?usp=sharing', title: 'Aula 02 - DOACs', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_03', main_title: 'Módulo 03 - Emergências Respiratórias',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 03', items: [
+                        { link: 'https://drive.google.com/file/d/1-tDb2tmYUBwnhB829xEviyGnedjnQ5hB/view?usp=drive_link', title: 'E-Book - Módulo 03', type: 'ebook' }
+                    ]},
+                    { title: 'Dispneia', items: [
+                        { link: 'https://drive.google.com/file/d/13vY4um3ERhxcUXRae9P_qVeyBnOnIcP3/view?usp=sharing', title: 'Aula 01 - Dispneia na Emergência: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13w9v9x9eOve8IF0w_I_SUIdjyWkx6cMi/view?usp=sharing', title: 'Aula 02 - Dispneia na Emergência: Construindo a Probabilidade (Pré-Teste)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13xfToy0G6w1mngCujLCGdYqM0XVFyz8N/view?usp=sharing', title: 'Aula 03 - Dispneia na Emergência: Escolhendo o Teste Correto', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13y5Bq6q6BUfKXX9QM0haQg0g3rz6R43K/view?usp=sharing', title: 'Aula 04 - Dispneia na Emergência: Outros Diferenciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13yI8qWCJTRu840VmCzWFRrk9VfcOTPhT/view?usp=drive_link', title: 'Aula 05 - Piora Respiratória Aguda no Paciente Intubado', type: 'video' }
+                    ]},
+                    { title: 'Pneumonia', items: [
+                        { link: 'https://drive.google.com/file/d/140eWfo3oI1Zf541QB2xNC2Q60SNN9wBh/view?usp=sharing', title: 'Aula 01 - Pneumonia: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14380lIAJlimCQcruPjByEgTC3Pw6Wyxe/view?usp=sharing', title: 'Aula 02 - Pneumonia Adquirida da Comunidade: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/145lLEsEEDDYjWQD6_flRH_Owfxs2BFdn/view?usp=sharing', title: 'Aula 03 - Pneumonia Adquirida da Comunidade: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1461OY7PAHJjp440TSePapi4fcURBHg0d/view?usp=sharing', title: 'Aula 04 - Pneumonia Aspirativa', type: 'video' }
+                    ]},
+                    { title: 'Derrame Pleural', items: [
+                        { link: 'https://drive.google.com/file/d/147PEKS8pu2HKI4IzuPzTmETrQ6Nq-o1j/view?usp=sharing', title: 'Aula 01 - Derrame Pleural: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/149oa-WPyl9ffyy9V-25g8GM3r0YgbY5T/view?usp=sharing', title: 'Aula 02 - Toracocentese Diagnóstica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/147V5_gS3lkWLL9panEilDMOQDR-ENQQU/view?usp=sharing', title: 'Aula 03 - Definindo o Diagnóstico', type: 'video' }
+                    ]},
+                    { title: 'Asma', items: [
+                        { link: 'https://drive.google.com/file/d/14AAAlIdnZFvdQ3GXBzXU2uvXZIHjEOCq/view?usp=sharing', title: 'Aula 01 - Asma no Pronto-Socorro: Diagnóstico e Classificação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14AbT-VQSTPutduWXstJTvAgdxzauA44w/view?usp=sharing', title: 'Aula 02 - Asma no Pronto-Socorro: Manejo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14AHCrzUbu9i2w_aoIHwhQls3jhOxXaTH/view?usp=sharing', title: 'Aula 03 - Asma no Pronto-Socorro: Simplificando', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14B69IkDwn8GjxRFfDK2olNTXsQxZdSC6/view?usp=sharing', title: 'Aula 04 - Asma no Pronto-Socorro: Segredos Ocultos (Indo além do Gina)', type: 'video' }
+                    ]},
+                    { title: 'DPOC Exacerbado', items: [
+                        { link: 'https://drive.google.com/file/d/14BKxYjvwl7r7c4b0f_41BW6K_0BPRqrS/view?usp=sharing', title: 'Aula 01 - Exacerbação de DPOC: Avaliação Inicial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14BZ-l7oW_U1t7klWIgN4O_qdPGkQ2hEs/view?usp=sharing', title: 'Aula 02 - Exacerbação de DPOC: Manejo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14CrjWt35pnVqCPcpHqfl_d5WEZAkREfG/view?usp=drive_link', title: 'Aula 03 - Ventilação na DPOC e Asma', type: 'video' }
+                    ]},
+                    { title: 'Hemoptise', items: [
+                        { link: 'https://drive.google.com/file/d/14ED49jVRl0OJYlOdegorImJYE9wlmRrS/view?usp=sharing', title: 'Aula 01 - Hemoptise: Conceitos e Nomes', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14GG6vkuxh_he9eLX3yqokt6pbuTAAYKv/view?usp=sharing', title: 'Aula 02 - Hemoptise: Causas de Hemoptise', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14HswfbNuQty2ttflioziYqj1DKLQf8QO/view?usp=sharing', title: 'Aula 03 - Hemoptise: Manejo na Emergência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14GwU58md4X6KYv0Xzp_1-Q3vFgfrohp4/view?usp=sharing', title: 'Aula 04 - Hemoptise: Investigação Durante o Manejo', type: 'video' }
+                    ]},
+                    { title: 'Síndrome do Desconforto Respiratório Agudo', items: [
+                        { link: 'https://drive.google.com/file/d/14JWwzudPmqhHBlpw1cExNDnanriX6nar/view?usp=sharing', title: 'Aula 01 - SDRA: Fisiopatologia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14Jg4ewmR0rR6kwXlPKityugbfI85vm3z/view?usp=sharing', title: 'Aula 02 - SDRA: Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14K9wYEMJwktITfilZk5W_QCTP6i2VsuB/view?usp=sharing', title: 'Aula 03 - SDRA: Tratamento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14KUzhI2QP_oDFTHCmyl8JOZf9wswDoE3/view?usp=sharing', title: 'Aula 04 - SDRA: Hipoxemia Refratária', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14KIIn7lyosNLkcXElhLXIaUFkP0jE0E7/view?usp=sharing', title: 'Aula 05 - Ventilação na SDRA', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14LGIlMKWPNtgjVOZ2S05KVC6H5J-QlfM/view?usp=sharing', title: 'Aula 06 - Caso Clínico', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_04', main_title: 'Módulo 04 - Emergências Infectológicas',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 04', items: [
+                        { link: 'https://drive.google.com/file/d/1eHYqoV_sYidUAPWV_4732TRqftKOP4g-/view?usp=drive_link', title: 'E-Book - Módulo 04', type: 'ebook' }
+                    ]},
+                    { title: 'Dengue Grave', items: [
+                        { link: 'https://drive.google.com/file/d/1v8bV2kWFB_QEgkfe2A7uqPDP2HnPiW2q/view?usp=sharing', title: 'Aula 01 - Arboviroses no Departamento de Emergência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1n4vMc64KCuiFoNjMHBvapP19wJGVqZyC/view?usp=sharing', title: 'Aula 02 - HND e Classificações', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1HYZjKOguuCQFA7wPS9T6tPynym7sE8Of/view?usp=sharing', title: 'Aula 03 - Manejo da Dengue', type: 'video' }
+                    ]},
+                    { title: 'COVID-19', items: [
+                        { link: 'https://drive.google.com/file/d/191XCYPd_41_Of0kxqMDJL6vyqm4FdEDH/view?usp=sharing', title: 'Aula 01 - Síndrome Gripal', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1S4ZaGyEU71Fs8P_qymzJgawh2Et-qpzT/view?usp=sharing', title: 'Aula 02 - COVID-19: Definição e Casos Leves', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1aBZy-ZER2a9oflcJ07dyTmBQI4ebOoZm/view?usp=sharing', title: 'Aula 03 - Suporte ao Paciente Crítico', type: 'video' }
+                    ]},
+                    { title: 'HIV na Emergência', items: [
+                        { link: 'https://drive.google.com/file/d/1SuFGhayWi0csNw_FIN2088cKjAz2VeGM/view?usp=sharing', title: 'Aula 01 - HIV na Emergência: Abordagem Inicial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Sk9dsBQUTV14nDVuOICQI67ldgvejvMG/view?usp=sharing', title: 'Aula 02 - HIV na Emergência: Síndromes Neurológicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1cqtB2q3aAfcZYoWj_2kZ4E56XMgHyDFk/view?usp=sharing', title: 'Aula 03 - HIV na Emergência: Síndromes Respiratórias', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1_RJWPlUbVYz6n5G0XJt7eejZBnluCyRi/view?usp=sharing', title: 'Aula 04 - HIV na Emergência: Caso Clínico', type: 'video' }
+                    ]},
+                    { title: 'Antibióticos', items: [
+                        { link: 'https://drive.google.com/file/d/1uWy_2dNoOnIoNUNY1pSusrtAP7LAHx2k/view?usp=sharing', title: 'Aula 01 - Antibióticos no Pronto-Socorro', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_05', main_title: 'Módulo 05 - Emergências Onco-Hematológicas',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 05', items: [
+                        { link: 'https://drive.google.com/file/d/1I46RRGPRGUvwqEIIS5j5ngA92-IqurMr/view?usp=drive_link', title: 'E-Book - Módulo 05', type: 'ebook' }
+                    ]},
+                    { title: 'Hemocomponentes', items: [
+                        { link: 'https://drive.google.com/file/d/1IzDsmKmA3__QzAE5huQfoOW-4hB8P5fB/view?usp=sharing', title: 'Aula 01 - Hemocomponentes: Quais são? Indicações e Prescrição', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1zV5qdJHvEcOsPDf4-FcGJa--Q0hT-22D/view?usp=sharing', title: 'Aula 02 - Indicações de Hemocomponentes na Emergência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ZMeGZQAWNaIrfhhBESPfUAMjk7rhNEWu/view?usp=sharing', title: 'Aula 03 - Reações Transfusionais', type: 'video' }
+                    ]},
+                    { title: 'Neutropenia Febril', items: [
+                        { link: 'https://drive.google.com/file/d/1m7jY7eETSHVVk1IogRBf0mwFb9UM1O9i/view?usp=sharing', title: 'Aula 01 - Neutropenia Febril: Definição e Estratificação de Risco', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1T5eqqv0Ign7sHrJ0fErmBbaRtzy5b7yq/view?usp=sharing', title: 'Aula 02 - Neutropenia Febril: Indo a Fundo', type: 'video' }
+                    ]},
+                    { title: 'Síndrome de Lise Tumoral', items: [
+                        { link: 'https://drive.google.com/file/d/1ATOeGxAz4l6ENRpXwWjDJA56F9F_dlLA/view?usp=sharing', title: 'Aula 01 - Síndrome de Lise Tumoral: Definição e Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1LCVACmUfpkzzKYogcH-KqFlS1a7FPbjm/view?usp=sharing', title: 'Aula 02 - Síndrome de Lise Tumoral: Como Manejar no Pronto-Socorro?', type: 'video' }
+                    ]},
+                    { title: 'Leucoses Agudas', items: [
+                        { link: 'https://drive.google.com/file/d/1TXRtugaNDZv9uNpIeXCWf9VWURZ3y1Sd/view?usp=sharing', title: 'Aula 01 - Leucoses Agudas na Emergência', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_06', main_title: 'Módulo 06 - Emergências Nefrológicas',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 06', items: [
+                        { link: 'https://drive.google.com/file/d/1b_TgrPtXxhe_qe2dh6j6zxb5M-z5BWE1/view?usp=drive_link', title: 'E-Book - Módulo 06', type: 'ebook' }
+                    ]},
+                    { title: 'Injúria Renal Aguda', items: [
+                        { link: 'https://drive.google.com/file/d/1iQ2AZjb53i61qIQJpGRy7mvW4dM0Ndf9/view?usp=sharing', title: 'Aula 01 - Injúria Renal Aguda: Definição', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1th5Y3nKdvDWE6305HFzBcu7mb79-eFL4/view?usp=sharing', title: 'Aula 02 - Injúria Renal Aguda: Etiologias', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1FF5PHs7p22agnvKiTDngGFmhu0Yfg-3i/view?usp=sharing', title: 'Aula 03 - Injúria Renal Aguda: Avaliação no PS', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AzLXhtWEDGRfuZTNhEBEFEqeaguYr34U/view?usp=sharing', title: 'Aula 04 - Injúria Renal Aguda: Fluxograma Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1rXsHcH75Z1f2xcc8VKABCWGSZ10tCEHV/view?usp=sharing', title: 'Aula 05 - Injúria Renal Aguda: Manejo', type: 'video' }
+                    ]},
+                    { title: 'Distúrbios do Potássio', items: [
+                        { link: 'https://drive.google.com/file/d/1Fv6CnF_SVDuPGz7Ur-tGj_cqLDHw-fBB/view?usp=sharing', title: 'Aula 01 - Hipercalemia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1yRWu4mXQuSI4a5by7MnzLAjUbml0LQ4o/view?usp=sharing', title: 'Aula 02 - Hipercalemia: Como Tratar e Investigar?', type: 'video' }
+                    ]},
+                    { title: 'Distúrbios do Cálcio', items: [
+                        { link: 'https://drive.google.com/file/d/1wwu1BXWYy895nirLxL_788v2Ql3jsBT3/view?usp=sharing', title: 'Aula 01 - Hipercalcemia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1lgPoC3vSIfouPUa_vH769VoEH1oFXbI-/view?usp=sharing', title: 'Aula 02 - Hipocalcemia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1p6GgCIER5kr2giBQKqgVIJxB1PCMu3oA/view?usp=drive_link', title: 'Aula 03 - Caso Clínico', type: 'video' }
+                    ]},
+                    { title: 'Distúrbios do Sódio', items: [
+                        { link: 'https://drive.google.com/file/d/1wu0C0hWJWzohuFpvemWdUywMrqIAAIO9/view?usp=sharing', title: 'Aula 01 - Hipernatremia: Etiologias e Investigação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1DB_BasWmHyuxZtMcyO8JLIBlmN1PYazn/view?usp=sharing', title: 'Aula 02 - Hipernatremia: Tratamento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13OAR-Bw9jCjPwMsjtYRnBPAl-CtawmGS/view?usp=sharing', title: 'Aula 03 - Hiponatremia: Conceitos Mágicos', type: 'video' }
+                    ]},
+                    { title: 'Os Eletrólitos Esquecidos', items: [
+                        { link: 'https://drive.google.com/file/d/1x1RAIUS0qWY7kgiecaw2Ds6fK_0KwwjJ/view?usp=sharing', title: 'Aula 01 - Hipomagnesemia: Conceitos Para Nunca Mais Esquecer', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nQse6VcKjrSXePqOPh-GuC834Sk3gWza/view?usp=sharing', title: 'Aula 02 - Hipofosfatemia', type: 'video' }
+                    ]},
+                    { title: 'Rabdomiólise', items: [
+                        { link: 'https://drive.google.com/file/d/1k6fkTI6a1ZrBhSIDCg0niKz0zm79cf-Y/view?usp=sharing', title: 'Aula 01 - Rabdomiólise', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_07', main_title: 'Módulo 07 - Emergências do Trato Gastrointestinal',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 07', items: [
+                        { link: 'https://drive.google.com/file/d/1sKFbAlUWzQaq5dCy1k7sZapjyq6yiaee/view?usp=drive_link', title: 'E-Book - Módulo 07', type: 'ebook' }
+                    ]},
+                    { title: 'Insuficiência Hepática Aguda', items: [
+                        { link: 'https://drive.google.com/file/d/1A3ytYcNRj64r9ZpFogd7ANikgJ8ygYzi/view?usp=sharing', title: 'Aula 01 - Lesão Hepática Aguda: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1A4AROnXYCM7RMYTVkH9sPwfxl15XiHAv/view?usp=sharing', title: 'Aula 02 - Lesão Hepática Aguda: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1A6lG69Uqdt5lrKqpEQvjrW07Ye0Vj72A/view?usp=sharing', title: 'Aula 03 - Lesão Hepática Aguda: Parte III', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1A4va3LCHq1ttOrYce-atjLWgYlhPtb3U/view?usp=sharing', title: 'Aula 04 - Caso Clínico de Lesão Hepática', type: 'video' }
+                    ]},
+                    { title: 'Cirrose Descompensada', items: [
+                        { link: 'https://drive.google.com/file/d/1A6AxnBoPUY-2YWyDnc4drsOzuDix_6ff/view?usp=sharing', title: 'Aula 01 - Emergências no Hepatopata: Quem são?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AD0v8Fk7BSXj0yOB1SBlkNO2yfY0b8rS/view?usp=sharing', title: 'Aula 02 - Emergências no Hepatopata: Encefalopatia Hepática', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ACbgD_RWQsmQB0wUniqQAqiTetqIsFSc/view?usp=sharing', title: 'Aula 03 - Emergências no Hepatopata: Peritonites - Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AE5ocbpqX6zYB3-wfuQ1SmHW-RLNSIhO/view?usp=sharing', title: 'Aula 04 - Emergências no Hepatopata: Peritonites - Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AEZh3BmRcm6v_lrCFe2pmvUazyCFj41A/view?usp=sharing', title: 'Aula 05 - Emergências no Hepatopata: Profilaxia de PBE no Cirrótico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AHvRSV3d34wQ1FGNiSmqsGeHKmpSUltj/view?usp=sharing', title: 'Aula 06 - Emergências no Hepatopata: Síndrome Patorrenal', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AHFpIX8r_UJ5D_jfGABgq8ADzRIERqmz/view?usp=sharing', title: 'Aula 07 - As 5 Indicações de Albumina no Hepatopata', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AIHnP2xfrzIh2UBNf8KYwdfs3VybifEd/view?usp=sharing', title: 'Aula 08 - Emergências no Hepatopata: Hemorragia Digestiva Alta', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AJrJd8-LOePg4YWWo-0vVbEeBIl-SQZJ/view?usp=sharing', title: 'Aula 09 - Caso Clínico: Hepatopata', type: 'video' }
+                    ]},
+                    { title: 'Hemorragia Digestiva Alta', items: [
+                        { link: 'https://drive.google.com/file/d/1AKasvhQ2imZRTsZ_5hc4W9zGw4glL76I/view?usp=sharing', title: 'Aula 01 - Hemorragia Digestiva Alta: Origem do Sangramento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AMGEC59r9Jcu5Rwxrt97amLtw6AiOfBj/view?usp=sharing', title: 'Aula 02 - Hemorragia Digestiva Alta: Abordagem Inicial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AQplugEdhD_XFyJ4G31GwQVZ5_xLGMX4/view?usp=sharing', title: 'Aula 03 - Hemorragia Digestiva Alta: Tratamento Específico', type: 'video' }
+                    ]},
+                    { title: 'Hemorragia Digestiva Baixa', items: [
+                        { link: 'https://drive.google.com/file/d/1ARwHu9CQTsCo0W_maJaCaKt9j4vpyllP/view?usp=sharing', title: 'Aula 01 - Hemorragia Digestiva Baixa', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_08', main_title: 'Módulo 08 - Emergências Neurológicas e Psiquiátricas',
+                sub_modules: [
+                    { title: 'E-Book: Módulo 08', items: [
+                        { link: 'https://drive.google.com/file/d/1KdirDJy4Tr8pOct7UzasIPSqhpjT-xhm/view?usp=drive_link', title: 'E-Book - Módulo 08', type: 'ebook' }
+                    ]},
+                    { title: 'Rebaixamento do Nível de Consciência', items: [
+                        { link: 'https://drive.google.com/file/d/1AUxJhBhiVb09b0UaC0yP5TLAct0Lrc94/view?usp=sharing', title: 'Aula 01 - Rebaixamento do Nível de Consciência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AVXVfaaoO-ZVxVgjRBtML9VFeYtIVCSS/view?usp=sharing', title: 'Aula 02 - Caso Clínico: Rebaixamento do Nível de Consciência', type: 'video' }
+                    ]},
+                    { title: 'AVC Isquêmico', items: [
+                        { link: 'https://drive.google.com/file/d/1AYfHh32yV318KNgChlBuQR6u0scnj4yK/view?usp=sharing', title: 'Aula 01 - Abordagem Inicial do AVCi', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1A_13t_dUgc64pq6FGiKu9L7BO0hxkK7A/view?usp=sharing', title: 'Aula 02 - Manejo Pós-Trombólise e Sem Trombólise', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Aa_gPsF2x1tYkKaUUFG91Z3ryb4KHLuG/view?usp=sharing', title: 'Aula 03 - Trombectomia Mecânica', type: 'video' }
+                    ]},
+                    { title: 'AVC Hemorrágico', items: [
+                        { link: 'https://drive.google.com/file/d/1AaePn-1Yz1wbpa-ES7dETnmXYCieh8TD/view?usp=sharing', title: 'Aula 01 - AVC Hemorrágico: Apresentação Inicial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AaqjPpb8i1D8m8gCXKJT0H4zatcQIy7E/view?usp=sharing', title: 'Aula 02 - AVC Hemorrágico: Abordagem', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AbSZ3pYzJob-kqV9dcPemQStT_lttOdk/view?usp=sharing', title: 'Aula 03 - AVC Hemorrágico: Hipertensão Intracraniana no AVC Hemorrágico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AdOGW815Lj3H5pExFVt6qD4tX9MEl9af/view?usp=sharing', title: 'Aula 04 - Caso Clínico: AVC Hemorrágico', type: 'video' }
+                    ]},
+                    { title: 'Hemorragia Subaracnóide', items: [
+                        { link: 'https://drive.google.com/file/d/1AeaKiz1SkMDDXuSUdCOnTdX6FqYhTsrV/view?usp=sharing', title: 'Aula 01 - Hemorragia Subaracnóide: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Ag59tKeor3bGWH3qceDu0zJ3nqZiXk1Q/view?usp=sharing', title: 'Aula 02 - Hemorragia Subaracnóide: Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AgbEqstsBmVGvdz770-Mnc1TWdrmnuZn/view?usp=sharing', title: 'Aula 03 - Caso Clínico: Hemorragia Subaracnóide', type: 'video' }
+                    ]},
+                    { title: 'Hipertensão Intracraniana', items: [
+                        { link: 'https://drive.google.com/file/d/1AjaQL5hxqmSAqHpTKT7y-F-CFnDWNVUR/view?usp=sharing', title: 'Aula 01 - Hipertensão Intracraniana: O Que é?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AjgpKdbvfEzXaGd1udMrIakgSgrSGKsU/view?usp=sharing', title: 'Aula 02 - Hipertensão Intracraniana: Como Identificar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AlcJ6me_pUrjVSkC9k3OEfmMQrvSirV_/view?usp=sharing', title: 'Aula 03 - Hipertensão Intracraniana: Como Manejar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Aktx25rp_LwzRLdDQz7OCCrWTvnkLizi/view?usp=sharing', title: 'Aula 04 - Hipertensão Intracraniana: Caso Clínico', type: 'video' }
+                    ]},
+                    { title: 'Meningites', items: [
+                        { link: 'https://drive.google.com/file/d/1AlgZxQ1bdYj52kDgUukhqhKL7yjY51ef/view?usp=sharing', title: 'Aula 01 - Meningites: Quais as Principais Etiologias?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AnjBcWhIxDmrtLSnNU_j_GBzrVkIS55i/view?usp=sharing', title: 'Aula 02 - Meningites: Como Reconhecer as Meningites no Pronto-Socorro?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AqpcHHO63i2ONBy-BBNanIkoE8HH-tXU/view?usp=sharing', title: 'Aula 03 - Meningites: Como Manejar no Pronto-Socorro?', type: 'video' }
+                    ]},
+                    { title: 'Delirium e Agitação Psicomotora', items: [
+                        { link: 'https://drive.google.com/file/d/1ArEtguszZYdUrX51pveBY1j98ykIOz52/view?usp=sharing', title: 'Aula 01 - O Paciente Agitado na Emergência: Avaliação Inicial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Arlq4nuE8GML-O6bJ_mxVGQlfhp4wLEx/view?usp=sharing', title: 'Aula 02 - O Paciente Agitado na Emergência: Manejo da Agitação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ArEkmG5sRnz3fjSYBAnU76KXgdnmIqL2/view?usp=sharing', title: 'Aula 03 - Delirium: Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AquGN7a29Wuqh1tLt3o65LuG7dO_pjG8/view?usp=sharing', title: 'Aula 04 - Delirium: Tratamento', type: 'video' }
+                    ]},
+                    { title: 'Abstinência Alcóolica', items: [
+                        { link: 'https://drive.google.com/file/d/1AvfvdqkUINE7aUSKFJF6HTgMPyUUrQvm/view?usp=sharing', title: 'Aula 01 - Abstinência Alcóolica: Introdução', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AxMJWm5btpbik6iFPP-pmuowOSBoMsDv/view?usp=sharing', title: 'Aula 02 - Abstinência Alcóolica: Quadro Clínico e Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1AyF0WaWt75dO8bb21Wn7Nv4pdzJy52QR/view?usp=sharing', title: 'Aula 03 - Abstinência Alcóolica: Abordagem Inicial', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_09', main_title: 'Módulo 09 - Emergências Endocrinológicas',
+                sub_modules: [
+                    { title: 'Emergências Hiperglicêmicas', items: [
+                        { link: 'https://drive.google.com/file/d/1AyTuBXXEy5BjEfD0liZic75ncvJpzSzI/view?usp=sharing', title: 'Aula 01 - Cetoacidose Diabética: Fisiopatologia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B-_tMDwhhZTibpWCILEZBzo-HoUcmnrY/view?usp=sharing', title: 'Aula 02 - Cetoacidose Diabética: Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B26B2ABcnx43zCKNYC0AW5ZTlXNWDk09/view?usp=sharing', title: 'Aula 03 - Cetoacidose Diabética: Tratamento', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B-R2gcVgzvSkC4b_bOkTPM7O7hc7ZlFy/view?usp=sharing', title: 'Aula 04 - Cetoacidose Diabética: Resumo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B1dK3loozgFhPX0THxw7vItZq35ftI9g/view?usp=sharing', title: 'Aula 05 - Estado Hiperosmolar Hiperglicêmico: Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B3MA5uKfhJuH_dsnBaqjvnwz3YME7xz3/view?usp=sharing', title: 'Aula 06 - Hipoglicemia: Fisiopatologia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B5CJ_gmszE_SW5SziCkRBY2NNiLVsP1i/view?usp=sharing', title: 'Aula 07 - Hipoglicemia: Diagnóstico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B3e8Y0SsIUPQe5BRHnIAywsGOCawZ4Ro/view?usp=sharing', title: 'Aula 08 - Hipoglicemia: Tratamento', type: 'video' }
+                    ]},
+                    { title: 'Emergências da Tireoide', items: [
+                        { link: 'https://drive.google.com/file/d/1B6hcSgn6a3Fp2xHCfRVqgYswTsv91LxV/view?usp=sharing', title: 'Aula 01 - Crise Tireotóxica', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1B6f2_C_gsCkww-18YxA59ekUXh5b9Xi9/view?usp=sharing', title: 'Aula 02 - Mixedema', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_10', main_title: 'Módulo 10 - Emergências Cirúrgicas e Trauma',
+                sub_modules: [
+                    { title: 'Abordagem Inicial do Politraumatizado', items: [
+                        { link: 'https://drive.google.com/file/d/15TW5JdtUbjao371JKLpEHcJUDahJjJ55/view?usp=sharing', title: 'Aula 01 - Abordagem Inicial do Politraumatizado', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1dxPY97041XDvq1TMYZ_4M1-6ajJNbSaN/view?usp=sharing', title: 'Aula 02 - Breathing', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1d_SIgHt9ufPUn3qqB-NToLddU2gsr5fo/view?usp=sharing', title: 'Aula 03 - Desability', type: 'video' }
+                    ]},
+                    { title: 'Traumatismo Cranioencefálico', items: [
+                        { link: 'https://drive.google.com/file/d/1kKTtOfK0ofkgujj2xbe6a65NBbkirIyX/view?usp=sharing', title: 'Aula 01 - TCE: Epidemiologia e Mecanismo de Trauma', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13vDOtjQEk8xzvKLP4iKn5RmsjCI1fJQ5/view?usp=sharing', title: 'Aula 02 - TCE: Decisões', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ux2J5il3bTB2P1BFo-gQyOH-KP6Wj34l/view?usp=sharing', title: 'Aula 03 - TCE: Moderado e Grave', type: 'video' }
+                    ]},
+                    { title: 'Trauma Torácico', items: [
+                        { link: 'https://drive.google.com/file/d/1_fQFZ7i9DY6MmamvG_p5s4agY-kIA5Kw/view?usp=sharing', title: 'Aula 01 - Epidemiologia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14Gqk4wwyRcqZxPuTv95LWCmO2lb4shlD/view?usp=sharing', title: 'Aula 02 - Lesões Potencialmente Fatais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Gm7jcSc5eBhT-P3wIBBQvJ3om3iqcvdH/view?usp=sharing', title: 'Aula 03 - Radiografia', type: 'video' }
+                    ]},
+                    { title: 'Trauma Abdominal', items: [
+                        { link: 'https://drive.google.com/file/d/1Tu6zEUSxWVND0iRCu70QjrC91XezQTf5/view?usp=sharing', title: 'Aula 01 - Trauma Abdominal', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1eWlxNv-aCd6D3d2pxCdAhC8DzQVgJLch/view?usp=sharing', title: 'Aula 02 - Tomografia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1WlG3Pzi_KbkyPrF7X_-_jEhUAmcW61Hx/view?usp=sharing', title: 'Aula 03 - Tratamento', type: 'video' }
+                    ]},
+                    { title: 'Grande Queimado', items: [
+                        { link: 'https://drive.google.com/file/d/19ZmUcCnJ3V4tzeoIdrWix7Omd2l4a0QB/view?usp=sharing', title: 'Aula 01 - Grande Queimado: Introdução e Epidemiologia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Q_yxlBaA_Tmkf0qkBKT3pYRPqrtzz_aD/view?usp=drive_link', title: 'Aula 02 - Qual a Prioridade do Tratamento?', type: 'video' }
+                    ]},
+                    { title: 'Afogamento', items: [
+                        { link: 'https://drive.google.com/file/d/1OAX7Vz9bTDahv2bIxSZpUcyrONc7I--W/view?usp=sharing', title: 'Aula 01 - Afogamento: Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/16y5dlNNd3dKfDaJWfsUh0Lvpm8Bw6R-w/view?usp=sharing', title: 'Aula 02 - Afogamento: Parte II', type: 'video' }
+                    ]},
+                    { title: 'Hipotermia', items: [
+                        { link: 'https://drive.google.com/file/d/1-Bgc9basOV3UD-_rBX7_ZN8Y_VU7gm3W/view?usp=sharing', title: 'Aula 01 - Grupos de Risco e Classificação', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1jAZnjPgt9H28FQx72Y_A16ilaD-BLIJM/view?usp=sharing', title: 'Aula 02 - Manejo', type: 'video' }
+                    ]},
+                    { title: 'Abdome Agudo', items: [
+                        { link: 'https://drive.google.com/file/d/1d2rZVWrQGiSkUQjK75TUK5TCSAhUURxy/view?usp=sharing', title: 'Aula 01 - Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1OSMkbGm_rO4Tn_QL4Gm8pfMsj4oI8OtC/view?usp=sharing', title: 'Aula 02 - Quais Exames Solicitar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1xFxKTeZdcrc2CMEIaZjhjVLtd484XmEI/view?usp=sharing', title: 'Aula 03 - Caso Clínico I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1wIStQlZwdSPnrOmcyv6f4Zw-GNetkEaU/view?usp=sharing', title: 'Aula 04 - Caso Clínico II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1jtYB-3JnhLoX_qGBxgpHH1x1k3bG87NC/view?usp=sharing', title: 'Aula 05 - Caso Clínico III', type: 'video' }
+                    ]},
+                    { title: 'Pancreatite Aguda', items: [
+                        { link: 'https://drive.google.com/file/d/1bg0_IPVp3yAOJ69x2IG-86gwCIvOP6cI/view?usp=sharing', title: 'Aula 01 - Quando Suspeitar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Jggojwsh7wcDoXD2p5F03wtgoA5HSOgq/view?usp=sharing', title: 'Aula 02 - Estratificação de Risco', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1hciqGWlyPdZJuUjujJC3pdp8Am2KIzLn/view?usp=sharing', title: 'Aula 03 - Tratamento', type: 'video' }
+                    ]},
+                    { title: 'Oclusão Arterial Aguda', items: [
+                        { link: 'https://drive.google.com/file/d/1RzoZXWvHuT4w5mMeDR5IM-KouTqYpHZ0/view?usp=drive_link', title: 'Aula 01 - Como Identificar?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1imv6wW0GWsQmVw65KA_aa-NJOwo37d2Y/view?usp=drive_link', title: 'Aula 02 - Manejo', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_11', main_title: 'Módulo 11 - Emergências Ginecológicas e Obstétricas',
+                sub_modules: [
+                    { title: 'Parto no PS: O Que o Emergencista Precisa Saber?', items: [
+                        { link: 'https://drive.google.com/file/d/1Y6QKubsO5SOesCqM7hpykG88-hZ71iM1/view?usp=sharing', title: 'Aula 01 - Assistência ao Trabalho de Parto', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1aleglJ_EEHxjsS35R7Ty0V26zSCGb1lq/view?usp=sharing', title: 'Aula 02 - Hemorragia Pós-Parto', type: 'video' }
+                    ]},
+                    { title: 'Sangramento Uterino na Emergência', items: [
+                        { link: 'https://drive.google.com/file/d/1NwlXPITTGegJ9oC_av-obLdLFeeToPLb/view?usp=sharing', title: 'Aula 01 - Sangramento Uterino na Emergência: O Que Fazer?', type: 'video' }
+                    ]},
+                    { title: 'Doenças Hipertensivas no Ciclo Gravídico Perperal', items: [
+                        { link: 'https://drive.google.com/file/d/1ApkPhl6XKDLs9AFcceJ8YYtRxpRZOH-8/view?usp=sharing', title: 'Aula 01 - Etiologia, Diagnóstico, Classificação e Profilaxia', type: 'video' },
+                        { link: 'https://drive.googe.com/file/d/14j3mGxOQRMS0UgejIAUBqLdbAabx3Aqx/view?usp=sharing', title: 'Aula 02 - Manejo no Setor de Emergência', type: 'video' }
+                    ]},
+                    { title: 'Atendimento à Vítima de Violência Sexual', items: [
+                        { link: 'https://drive.google.com/file/d/1bVXE4x7esstcriq-hqxoMGEMiovhR_LN/view?usp=sharing', title: 'Aula 01 - Atendimento à Vítima de Violência Sexual: O Que Fazer no Setor de Urgência?', type: 'video' }
+                    ]},
+                    { title: 'PCR na Gestante', items: [
+                        { link: 'https://drive.google.com/file/d/1q2Wj-hvA5bMyXact5wTltqKh0c_UstWp/view?usp=sharing', title: 'Aula 01 - PCR na Gestante', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_12', main_title: 'Módulo 12 - Outras Emergências',
+                sub_modules: [
+                    { title: 'Epistaxe', items: [
+                        { link: 'https://drive.google.com/file/d/1jZLe6lAwvdd45Pf6wBucWSrcDdS_61G6/view?usp=sharing', title: 'Aula 01 - Definições e Fisiopatologia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1KpMkk_GYsJlYNWGItajuzZdPAii8jnVy/view?usp=sharing', title: 'Aula 02 - Avaliação Inicial e Diferenciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1xfMD-RMap72pxK20YTeVQb2MCtqnejIc/view?usp=sharing', title: 'Aula 03 - Manejo na Emergência', type: 'video' }
+                    ]},
+                    { title: 'Fraturas Expostas', items: [
+                        { link: 'https://drive.google.com/file/d/1wGouURfVcbF-LmyHv6kQjwXkto3Ly0QC/view?usp=sharing', title: 'Aula 01 - Fraturas Expostas', type: 'video' }
+                    ]},
+                    { title: 'Farmacodermias Leves', items: [
+                        { link: 'https://drive.google.com/file/d/1y3IFEVLHv0l7faN5mSBA9qGqS14aMt4b/view?usp=sharing', title: 'Aula 01 - Farmacodermias Leves', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_13', main_title: 'Módulo 13 - Exames Fundamentais na Emergência',
+                sub_modules: [
+                    { title: 'Exames Fundamentais na Emergência', items: [
+                        { link: 'https://drive.google.com/file/d/1PIkcWY88C02Jk5dJcqKsGMiu0VK0UsVg/view?usp=sharing', title: 'Aula 01 - Análise Sistemática dos Exames de Imagem: TC Crânio', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1I_ocZuAmk4XvaUVbhmQgUAQCG6WNlM69/view?usp=sharing', title: 'Aula 02 - Análise Sistemática dos Exames de Imagem: TC Tórax', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1wg9i2xo1Pp7gj95sPFNXha70jKDcSDHA/view?usp=sharing', title: 'Aula 03 - Análise Sistemática dos Exames de Imagem: TC Abdome - Parte I', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1vR-zgg_f6c7eRNnNPqdXQb-wUezsYlqP/view?usp=sharing', title: 'Aula 04 - Análise Sistemática dos Exames de Imagem: TC Abdome - Parte II', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ON7dnb9igr36sAQmD-F970iNnmGOXe95/view?usp=sharing', title: 'Aula 05 - Ultrassom Point Of Care: Conceito Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/14nTp9hxY5HzIm_xhnNshpCUAUdEZBxQ6/view?usp=sharing', title: 'Aula 06 - Ultrassom Pulmonar: Patologias Específicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1g2PnUwm9RU6JnbV-l2XMWQvpxLN_NL5e/view?usp=sharing', title: 'Aula 07 - Ultrassom Pulmonar: Consolidações e Derrame Pleural', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1FbZXJ64C3RuDFb9CFG8RDzZcFmbtB4iu/view?usp=sharing', title: 'Aula 08 - Ultrassom Pulmonar: Padrão de Linhas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1WjF1rpnKUaKr_uiwl4WqJv53f8z66fio/view?usp=sharing', title: 'Aula 09 - Ultrassom Pulmonar: Técnica, Lung Sliding e Modo M', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1mG4oH0QSVkmFLHPjuC0n9yQVPlR6fblc/view?usp=sharing', title: 'Aula 10 - Ecocardiografia na Emergência: Derrame Pericárdico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/11BhDSxnrQsJmyq3uD3NU7Bj8TnqVpsQy/view?usp=sharing', title: 'Aula 11 - Ecocardiografia na Emergência: Sobrecarga de VD', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1A6IRHfEKHfUyIeb25OYqAAGn4HmtDKH1/view?usp=sharing', title: 'Aula 12 - Ecocardiografia na Emergência: Função Ventricular Esquerda', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1iAUKVznr7SInw_KEPA1X_RDtTaU09q_c/view?usp=sharing', title: 'Aula 13 - Ecocardiografia na Emergência: Janelas Básicas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1CFTx2AsD-T5eg2liaM0nrGYvOIxM7UXC/view?usp=sharing', title: 'Aula 14 - ECG (Intensivo de ECG): Conceitos Iniciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/18IlRMfwvOLVfgiEdULXC6s2IgtdBTwAL/view?usp=sharing', title: 'Aula 15 - Como Abordar a Dor Torácica no PS', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1czhkWUXNs9X8VGQU42pU7L-M43KcfS2V/view?usp=sharing', title: 'Aula 16 - Suspeita de Síndrome Coronariana Aguda', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ecd3E8t34SK2Lh_GEIVnbVmHNRC8yrvl/view?usp=sharing', title: 'Aula 17 - Suspeita de Dissecção Aguda de Aorta', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/19_SFIk5-XGgATTCz8UZUv9lCwg91kuQT/view?usp=sharing', title: 'Aula 18 - Suspeita de Tromboembolismo Pulmonar', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1huVj4r-_0qnv509AgfXqIFk9hnEF2QBS/view?usp=sharing', title: 'Aula 19 - Amarrando os Conceitos e Diagnóstico Diferencial', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/11Y6FQfr3mX_Wy31dcCozkF_3cvvEZ8B9/view?usp=sharing', title: 'Aula 20 - Gasometria Arterial', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_14', main_title: 'Módulo 14 - Encontros Ao-Vivo',
+                sub_modules: [
+                    { title: 'Encontros Ao-Vivo', items: [
+                        { link: 'https://drive.google.com/file/d/13o4K6VpKeICntZ2FnNHfVwKJkb_rbvNH/view?usp=sharing', title: 'Aula 01 - Como Eu Manejo Infarto Sem Sufoco?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13oEF8VP1Y9ihNF_R0BB9YO98Fk_Kp9_-/view?usp=sharing', title: 'Aula 02 - Como Não Errar no AVC?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13ourBeqyUA9A3XFJi6dkM-Z6owLoEW3-/view?usp=sharing', title: 'Aula 03 - Os 5 Passos de Sucesso no Manejo do Choque Hemodinâmico', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13pWuSdAaASDWX1KOShg3Kxx5RWwLgP1L/view?usp=sharing', title: 'Aula 04 - Intubação Orotraqueal Sem Medo', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13qupQEpZhMhemoVmdXgK362CYY-O9wf7/view?usp=sharing', title: 'Aula 05 - Caso Clínico de Choque: Dr. Vinicius Zofoli', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/13sO_krbjQ5PlDYfCqGMyp8nLtWZ31rmn/view?usp=sharing', title: 'Aula 06 - Síncope: Da Chegada ao Diagnóstico', type: 'video' }
+                    ]}
+                ]
+            }
+        ];
+
+        // Processa os dados para adicionar IDs e ícones
+        function processModulesData(data) {
+            return data.map(mainModule => ({
+                ...mainModule,
+                sub_modules: mainModule.sub_modules.map(subModule => ({
+                    ...subModule,
+                    items: subModule.items.map(item => ({
+                        ...item,
+                        id: extractIdFromGoogleDriveLink(item.link) || item.link
+                    }))
+                }))
+            }));
+        }
+
+        const processedModulesData = processModulesData(modulesData);
+
+        function loadContent(itemId, itemTitle, itemLink) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && itemLink) {
+                // Adiciona /preview para links do Google Drive para tentar incorporar
+                const previewLink = itemLink.replace(/view\?usp=sharing|edit\?usp=drive_link.*|view\?usp=drive_link/, 'preview');
+                contentPlayer.src = previewLink;
+            } else {
+                contentPlayer.src = '';
+            }
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            selectedItemId = itemId;
+            const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+        }
+
+        function renderMainModuleContent(mainModuleId) {
+            const lessonsContainer = document.getElementById('lessonsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+            const contentPlayer = document.getElementById('contentPlayer');
+
+            if (!lessonsContainer || !lessonTitleElement || !contentPlayer) return;
+
+            const mainModule = processedModulesData.find(m => m.main_id === mainModuleId);
+
+            if (!mainModule) {
+                console.error(`Módulo com ID ${mainModuleId} não encontrado.`);
+                lessonsContainer.innerHTML = '<p>Módulo não encontrado.</p>';
+                return;
+            }
+
+            let sidebarHtml = '';
+            let firstItem = null;
+
+            if(mainModule.sub_modules.length === 0) {
+                 sidebarHtml = '<p class="text-gray-400">Nenhuma aula disponível para este módulo ainda.</p>';
+            } else {
+                mainModule.sub_modules.forEach((subModule, index) => {
+                    let itemsHtml = '';
+                    subModule.items.forEach(item => {
+                        if (!firstItem) {
+                            firstItem = item;
+                        }
+                        const iconClass = item.type === 'ebook' ? 'fas fa-book-open' : 'fas fa-play-circle';
+                        itemsHtml += `
+                            <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] mt-2"
+                                 onclick="loadContent('${item.id}', '${item.title}', '${item.link}')" data-id="${item.id}">
+                                <div class="item-thumbnail-placeholder">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${item.title}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    const isOpen = index === 0 ? 'open' : '';
+
+                    sidebarHtml += `
+                        <details class="sub-module-details" ${isOpen}>
+                            <summary class="sub-module-summary">
+                                <span>${subModule.title}</span>
+                                <i class="fas fa-chevron-right icon"></i>
+                            </summary>
+                            <div class="lessons-list-container">
+                                ${itemsHtml}
+                            </div>
+                        </details>
+                    `;
+                });
+            }
+
+            lessonsContainer.innerHTML = sidebarHtml;
+
+            if (firstItem) {
+                loadContent(firstItem.id, firstItem.title, firstItem.link);
+            } else {
+                contentPlayer.src = '';
+                lessonTitleElement.textContent = 'Selecione uma aula';
+                if (selectedItemId) {
+                    const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                    if (prevSelected) prevSelected.classList.remove('selected-lesson');
+                }
+                selectedItemId = null;
+            }
+        }
+
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Limpa opções existentes para o caso de reinicialização
+            moduleSelector.innerHTML = '';
+
+            processedModulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.main_id;
+                option.textContent = module.main_title;
+                moduleSelector.appendChild(option);
+            });
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderMainModuleContent(event.target.value);
+            });
+
+            if (processedModulesData.length > 0) {
+                moduleSelector.value = processedModulesData[9].main_id;
+                renderMainModuleContent(processedModulesData[9].main_id);
+            }
+        }
+
+        // Inicializa a plataforma quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

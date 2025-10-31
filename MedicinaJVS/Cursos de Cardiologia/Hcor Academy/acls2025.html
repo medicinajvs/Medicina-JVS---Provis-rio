@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curso EAD Preparatório para o ACLS</title>
+    <!-- Inclui o Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Ícones Phosphor para visualizações modernas -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/dist/phosphor.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Cor de fundo suave */
+        }
+        /* Estilo para o círculo numerado */
+        .numbered-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px; /* Tamanho do círculo */
+            height: 24px;
+            border-radius: 50%;
+            background-color: #e0e7ff; /* Cor de fundo do círculo */
+            color: #4f46e5; /* Cor do número */
+            font-size: 0.875rem; /* Tamanho da fonte do número */
+            font-weight: 600;
+            margin-right: 12px; /* Espaçamento à direita */
+            flex-shrink: 0; /* Impede que o círculo diminua */
+        }
+        /* Estilo para o círculo numerado ativo */
+        .numbered-circle.active {
+            background-color: #4f46e5; /* Cor de fundo azul para ativo */
+            color: white; /* Texto branco para ativo */
+        }
+        .sidebar-item {
+            padding: 12px 16px; /* py-3 px-4 */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 8px; /* Cantos arredondados para os itens */
+            margin: 4px 8px; /* Margem entre os itens */
+        }
+        .sidebar-item:hover {
+            background-color: #e0e7ff; /* light blue-100 on hover */
+            color: #4f46e5; /* text blue-700 on hover */
+        }
+        .sidebar-item.active {
+            background-color: #e0e7ff; /* Cor de fundo para o item ativo */
+            color: #4f46e5; /* Cor do texto para o item ativo */
+            font-weight: 600;
+        }
+        .sub-item {
+            padding: 8px 16px 8px 60px; /* py-2 px-4, com padding esquerdo para indentação */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            margin: 0px 8px; /* Ajusta margem para sub-itens */
+            border-radius: 8px;
+        }
+        .sub-item:hover {
+            background-color: #e0e7ff; /* light blue-100 on hover */
+            color: #4f46e5; /* text blue-700 on hover */
+        }
+        .sub-item.active {
+            color: #4f46e5; /* Cor do texto para o sub-item ativo */
+            font-weight: 600;
+        }
+        .dot-green {
+            color: #22c55e; /* green-500 */
+        }
+        .sub-items-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out; /* Transição suave para abertura/fechamento */
+        }
+        .sub-items-container.open {
+            max-height: 500px; /* Um valor grande o suficiente para a altura máxima */
+            transition: max-height 0.3s ease-in;
+        }
+        /* Classe para ocultar elementos de conteúdo dinâmico */
+        .content-hidden {
+            display: none;
+        }
+         /* Estilos para o carrossel de perguntas */
+        .question-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            max-width: 700px;
+            margin: 20px auto;
+        }
+        .question-option {
+            background-color: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s ease-in-out;
+            position: relative;
+        }
+        .question-option:hover {
+            background-color: #e5e7eb;
+        }
+        .question-option input[type="radio"] {
+            margin-right: 12px;
+            appearance: none; /* Hide default radio */
+            width: 20px;
+            height: 20px;
+            border: 2px solid #9ca3af;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .question-option input[type="radio"]:checked {
+            background-color: #2563eb; /* Blue-600 */
+            border-color: #2563eb;
+        }
+        .question-option input[type="radio"]:checked::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: white;
+        }
+        .question-option .arrow-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4b5563; /* Gray-600 */
+        }
+        .video-wrapper {
+            width: 100%; /* Ocupa a largura total do seu pai */
+            max-width: 100%; /* Garante que não ultrapassa */
+            margin: 0; /* Remove margens automáticas */
+            padding: 0; /* Remove padding que possa estar a restringir */
+            box-shadow: none; /* Remove a sombra do pai se desejar o vídeo a ir até às bordas */
+            background-color: #e0e0e0; /* Fundo cinza claro para a área do vídeo */
+            min-height: 300px; /* Altura mínima para ser visível mesmo sem vídeo */
+            display: flex; /* Para centralizar o conteúdo do erro, se houver */
+            align-items: center;
+            justify-content: center;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.5rem; /* rounded-lg */
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Barra Lateral de Navegação (Menu Esquerdo) -->
+    <div class="w-72 bg-white text-gray-800 flex flex-col shadow-lg relative z-10">
+        <!-- Campo de Pesquisa -->
+        <div class="p-4 border-b border-gray-200">
+            <div class="relative">
+                <input type="text" placeholder="Buscar" class="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+            </div>
+        </div>
+
+        <!-- Itens de Navegação -->
+        <nav class="flex-1 overflow-y-auto mt-2">
+            <ul>
+                <li class="sidebar-item" data-content-id="info-importantes" data-content-type="teorica">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">1</div>
+                        <span>Informações Importantes</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500"></i>
+                </li>
+                <li class="sidebar-item" data-content-id="intro-curso" data-content-type="teorica">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">2</div>
+                        <span>Introdução ao Curso</span>
+                        <span class="ml-2 text-gray-500 text-sm">(1/1)</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500"></i>
+                </li>
+                <!-- Módulo 3: Bradicardias Sintomáticas -->
+                <li class="sidebar-item expandable-module" data-target="bradicardias-subitems" id="bradicardias-module">
+                    <div class="flex items-center">
+                        <div class="numbered-circle active" id="bradicardias-num-circle">3</div>
+                        <span>Bradicardias Sintomáticas</span>
+                        <span class="ml-2 text-gray-500 text-sm">(2/2)</span>
+                    </div>
+                    <i class="ph ph-caret-down text-lg text-gray-500 module-caret-icon"></i>
+                </li>
+                <!-- Sub-itens para Bradicardias - Envolvidos em um container controlável pelo JS -->
+                <div id="bradicardias-subitems" class="sub-items-container open">
+                    <li class="sub-item active" data-content-id="bradicardias-revisao" data-content-type="teorica">
+                        <i class="ph ph-circle-fill text-xs mr-3 dot-green"></i>
+                        <span>Bradicardias Sintomáticas - Revisão Teórica</span>
+                    </li>
+                    <li class="sub-item" data-content-id="bradicardias-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Bradicardias Sintomáticas - Cenário Prático</span>
+                    </li>
+                </div>
+
+                <!-- Módulo 4: Taquicardias -->
+                <li class="sidebar-item expandable-module" data-target="taquicardias-subitems" id="taquicardias-module">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">4</div>
+                        <span>Taquicardias</span>
+                        <span class="ml-2 text-gray-500 text-sm">(4/4)</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500 module-caret-icon"></i>
+                </li>
+                <div id="taquicardias-subitems" class="sub-items-container">
+                    <li class="sub-item" data-content-id="taquicardias-revisao" data-content-type="teorica">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Taquicardias - Revisão Teórica</span>
+                    </li>
+                    <li class="sub-item" data-content-id="taquicardias-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Taquicardias - Cenário Prático (Geral)</span>
+                    </li>
+                    <li class="sub-item" data-content-id="tsv-estavel-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Taquicardias - Cenário Prático (TSV Estável)</span>
+                    </li>
+                    <li class="sub-item" data-content-id="tv-estavel-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Taquicardias - Cenário Prático (TV Estável)</span>
+                    </li>
+                </div>
+
+                <!-- Módulo 5: Parada Cardiorrespiratória (PCR) -->
+                <li class="sidebar-item expandable-module" data-target="pcr-subitems" id="pcr-module">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">5</div>
+                        <span>Parada Cardiorrespiratória (PCR)</span>
+                        <span class="ml-2 text-gray-500 text-sm">(3/3)</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500 module-caret-icon"></i>
+                </li>
+                <div id="pcr-subitems" class="sub-items-container">
+                    <li class="sub-item" data-content-id="parada-cardiorespiratoria" data-content-type="teorica">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Parada Cardiorrespiratória (PCR) - Revisão Teórica</span>
+                    </li>
+                    <li class="sub-item" data-content-id="pcr-assistolia-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>PCR - Cenário Prático (Assistolia)</span>
+                    </li>
+                    <li class="sub-item" data-content-id="pcv-fibrilacao-ventricular-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>PCR - Cenário Prático (Fibrilação Ventricular)</span>
+                    </li>
+                </div>
+
+                <!-- Módulo 6: Cuidados Pós-PCR -->
+                <li class="sidebar-item expandable-module" data-target="pos-pcr-subitems" id="pos-pcr-module">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">6</div>
+                        <span>Cuidados Pós-PCR</span>
+                        <span class="ml-2 text-gray-500 text-sm">(2/2)</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500 module-caret-icon"></i>
+                </li>
+                <div id="pos-pcr-subitems" class="sub-items-container">
+                    <li class="sub-item" data-content-id="cuidados-pos-pcr" data-content-type="teorica">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Cuidados Pós-PCR - Revisão Teórica</span>
+                    </li>
+                    <li class="sub-item" data-content-id="cuidados-pos-pcr-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Cuidados Pós-PCR - Cenário Prático</span>
+                    </li>
+                </div>
+
+                <!-- Módulo 7: Megacode -->
+                <li class="sidebar-item expandable-module" data-target="megacode-subitems" id="megacode-module">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">7</div>
+                        <span>Megacode - Revisão dos Algoritmos</span>
+                        <span class="ml-2 text-gray-500 text-sm">(2/2)</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500 module-caret-icon"></i>
+                </li>
+                <div id="megacode-subitems" class="sub-items-container">
+                    <li class="sub-item" data-content-id="megacode-revisao" data-content-type="teorica">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Megacode - Revisão Teórica</span>
+                    </li>
+                    <li class="sub-item" data-content-id="megacode-cenario" data-content-type="cenario">
+                        <i class="ph ph-circle-fill text-xs mr-3 text-gray-400"></i>
+                        <span>Megacode - Cenário Prático</span>
+                    </li>
+                </div>
+
+                <li class="sidebar-item" data-content-id="leitura-complementar" data-content-type="teorica">
+                    <div class="flex items-center">
+                        <div class="numbered-circle">8</div>
+                        <span>Leitura Complementar</span>
+                        <span class="ml-2 text-gray-500 text-sm">(1/1)</span>
+                    </div>
+                    <i class="ph ph-caret-right text-lg text-gray-500"></i>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Botão de Colapso da Barra Lateral -->
+        <button class="absolute top-1/2 -right-4 transform -translate-y-1/2 bg-white text-gray-500 p-1 rounded-full shadow-md focus:outline-none hover:bg-gray-100">
+            <i class="ph ph-caret-double-left text-lg"></i>
+        </button>
+    </div>
+
+    <!-- Conteúdo Principal Dinâmico -->
+    <div class="flex-1 flex flex-col bg-white rounded-tl-lg rounded-bl-lg shadow-xl relative overflow-hidden">
+        <!-- Barra Superior (Header Principal) -->
+        <header class="bg-blue-900 text-white p-4 flex items-center justify-between shadow-md relative z-10 rounded-tl-lg">
+            <div class="flex items-center text-sm">
+                <span>ACLS Review</span>
+                <span class="ml-2 px-2 py-0.5 bg-blue-700 rounded-full text-xs font-semibold">HCOR Academy</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm">JDC Santiago - Q&A Respostas</span>
+                <button class="text-gray-300 hover:text-white focus:outline-none">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Área de Conteúdo Dinâmica -->
+        <main id="dynamic-content-area" class="flex-1 p-8 overflow-y-auto">
+            <!-- Conteúdo será injetado aqui pelo JavaScript -->
+        </main>
+
+        <!-- Botões de Ação Flutuantes (Direita) -->
+        <div class="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-3">
+            <button class="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform transform hover:scale-110">
+                <i class="ph ph-chat-text text-xl"></i>
+            </button>
+            <button class="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform transform hover:scale-110">
+                <i class="ph ph-book-bookmark text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Função utilitária para extrair o ID do ficheiro do Google Drive e formatar o iframe
+        function getDriveEmbedHtml(driveUrl) {
+            const fileIdMatch = driveUrl.match(/\/d\/(.+?)\//);
+            if (!fileIdMatch || fileIdMatch.length < 2) {
+                console.error('ID do ficheiro do Google Drive não encontrado na URL:', driveUrl);
+                return `<div class="bg-red-200 text-red-800 p-4 rounded-lg">Erro: Vídeo não disponível. URL inválida.</div>`;
+            }
+            const fileId = fileIdMatch[1];
+            const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+            return `
+                <div class="video-container">
+                    <iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            `;
+        }
+
+        // Estrutura de dados para os cenários práticos
+        const allModuleScenarios = {
+            'bradicardias-cenario': [
+                // --- Passo 1: Vídeo Inicial ---
+                {
+                    id: 'bradicardias-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário Bradicardias',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Bradicardias Sintomáticas</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1aN4HX7EhXpvteFhNcOWzboFyt5mHynxU/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- Passo 2: Pergunta 1 (Ramificação) ---
+                {
+                    id: 'bradicardias-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/2)',
+                    questions: [
+                        {
+                            text: 'Qual a conduta nesse momento?',
+                            options: [
+                                { text: 'Tratamento de 1ª linha: administrar atropina 1mg', isCorrect: true, nextStepId: 'bradicardias-video-after-q1-correct' },
+                                { text: 'Tratamento de 1ª linha: administrar atropina 0,5mg', isCorrect: false, nextStepId: 'bradicardias-video-q1-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                // --- Passo 3 (Após Q1 Correta): Vídeo de Continuação ---
+                {
+                    id: 'bradicardias-video-after-q1-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Bradicardias - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1uxtagEKRZuss4nWtUgNVOzvc6p2xEqrQ/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- Passo 4 (Após Q1 Incorreta): Vídeo de Feedback de Erro ---
+                {
+                    id: 'bradicardias-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Bradicardias - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1hRtLnKkn1l-Iu34YU-6zf8q6n2w1lqwv/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- Passo 5: Pergunta 2 (Caminhos Convergidos) ---
+                {
+                    id: 'bradicardias-q2',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/2)',
+                    questions: [
+                        {
+                            text: 'Diante dessa evolução clínica, optamos por não administrar a terceira dose de atropina. Desta forma, qual conduta podemos tomar nesse momento?',
+                            options: [
+                                { text: 'Tratamento de segunda linha: Terapia farmacológica ou marcapasso transcutâneo.', isCorrect: true, nextStepId: 'bradicardias-video-final' },
+                                { text: 'Chamar o especialista', isCorrect: false, nextStepId: 'bradicardias-video-q2-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                // --- Passo 6 (Após Q2 Incorreta): Vídeo de Feedback de Erro ---
+                {
+                    id: 'bradicardias-video-q2-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Bradicardias - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1TskpCJmReVeE6HqW4UtCZDCmDB_Sidp4/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- Passo 7: Vídeo Final (Ponto de Convergência) ---
+                {
+                    id: 'bradicardias-video-final',
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Bradicardias - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1ry6PQNTSAhma2RCLZMAvc4tQ4_kcWbnd/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- Passo 8: Pontuação Final ---
+                { id: 'bradicardias-score', type: 'score' }
+            ],
+            'taquicardias-cenario': [
+                {
+                    id: 'taquicardias-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário Taquicardias',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Taquicardias</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/16pocD5X9jRh53ebZD_trdRqsV2gLPDu8/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'taquicardias-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (Taquicardias)',
+                    questions: [
+                        {
+                            text: 'Diante dos achados clínicos e eletrocardiográficos ao monitor, qual o diagnóstico e qual conduta seguir?',
+                            options: [
+                                { text: 'Taquicardia Ventricular (TV) Monomórfica estável / Amiodarona 150mg', isCorrect: false, nextStepId: 'taquicardias-video-q1-wrong-feedback' },
+                                { text: 'Taquicardia Ventricular (TV) Monomórfica instável / Cardioversão Elétrica Sincronizada', isCorrect: true, nextStepId: 'taquicardias-video-final' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'taquicardias-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Taquicardias Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Taquicardias - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1TtYmDIxHy7_nLqFrU__xfjGODOZveJmh/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'taquicardias-video-final', // Este é o ponto de convergência, direto para o final do cenário
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário Taquicardias',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Taquicardias - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1K1qAr1sDv71Hkqe_v4kB0nPZ4EHv0fi2/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                { id: 'taquicardias-score', type: 'score' }
+            ],
+            'tsv-estavel-cenario': [
+                {
+                    id: 'tsv-estavel-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário TSV Estável',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1UHYqv6T3369lWHNBAQcptgNETK_3ZQNr/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tsv-estavel-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/3)',
+                    questions: [
+                        {
+                            text: 'Qual a primeira conduta a ser tomada nesse cenário?',
+                            options: [
+                                { text: 'Realização de manobra vagal', isCorrect: true, nextStepId: 'tsv-estavel-video-q1-correct' },
+                                { text: 'Administração de Adenosina 6mg', isCorrect: false, nextStepId: 'tsv-estavel-video-q1-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'tsv-estavel-video-q1-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (TSV Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1qySJr6aslsjukQli85DQ4KUVWEm95x6i/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tsv-estavel-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (TSV Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1g1YnF8t31VjX0g3ga01eB71p2PcUm0Xr/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tsv-estavel-q2', // Próxima pergunta após Q1 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/3)',
+                    questions: [
+                        {
+                            text: 'Sem resposta à realização da manobra vagal, qual a conduta seguinte?',
+                            options: [
+                                { text: 'Administração de Adenosina 6mg', isCorrect: true, nextStepId: 'tsv-estavel-video-q2-correct' },
+                                { text: 'Administração de Adenosina 12mg', isCorrect: false, nextStepId: 'tsv-estavel-video-q2-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'tsv-estavel-video-q2-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (TSV Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1ofvJtpZJ4xRgYAOp8atwJT_vNB5jDUZS/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tsv-estavel-video-q2-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (TSV Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1RWTFzTsnld6wCOv7ePJbQ7PVCOQBzivx/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tsv-estavel-q3', // Próxima pergunta após Q2 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (3/3)',
+                    questions: [
+                        {
+                            text: 'Sem resposta à realização da primeira dose de Adenosina, qual a conduta seguinte?',
+                            options: [
+                                { text: 'Administração de Adenosina 6mg', isCorrect: false, nextStepId: 'tsv-estavel-video-q3-wrong-feedback' },
+                                { text: 'Administração de Adenosina 12mg', isCorrect: true, nextStepId: 'tsv-estavel-video-final' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'tsv-estavel-video-q3-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (TSV Q3)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1phbBtfsKDN32L1uOriZMTwJEVVY_y4sH/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tsv-estavel-video-final',
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário TSV Estável',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TSV Estável - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1OUNpI94Zqa0u1NXtRNv_p-QBJRtUdmBK/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                { id: 'tsv-estavel-score', type: 'score' }
+            ],
+            'tv-estavel-cenario': [
+                {
+                    id: 'tv-estavel-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário TV Estável',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TV Estável</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1j83RNisa6sjvy9-VK9D9c72YA1lJe563/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tv-estavel-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/2)',
+                    questions: [
+                        {
+                            text: 'Qual conduta seguir?',
+                            options: [
+                                { text: 'Cardioversão Elétrica Sincronizada com carga inicial de 100J', isCorrect: false, nextStepId: 'tv-estavel-video-q1-wrong-feedback' },
+                                { text: 'Administrar amiodarona 150 mg no Soro Glicosado 5% ou Soro Fisiológico 0,9% de 100ml EV em 10 min', isCorrect: true, nextStepId: 'tv-estavel-video-q1-correct' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'tv-estavel-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (TV Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TV Estável - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1HEFv6DsSKkZn6xy5RmI6sPb7Mo3Z9-hm/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tv-estavel-video-q1-correct', // Próxima pergunta após Q1 (caminhos convergidos)
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (TV Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TV Estável - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1K2OmQu9vBBCP1Ddo6dbh2A-aOXqt1ws_/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tv-estavel-q2', // Próxima pergunta após Q1 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/2)',
+                    questions: [
+                        {
+                            text: 'Qual conduta seguir?',
+                            options: [
+                                { text: 'Cardioversão Elétrica Sincronizada com carga inicial de 100J', isCorrect: false, nextStepId: 'tv-estavel-video-q2-wrong-feedback' },
+                                { text: 'Administrar uma segunda dose de amiodarona 150 mg no Soro Glicosado 5% ou Soro Fisiológico 0,9% de 100ml EV em 10 min', isCorrect: false, nextStepId: 'tv-estavel-video-q2-wrong-feedback' } // Ambas erradas para demonstrar. O caminho final será o mesmo.
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'tv-estavel-video-q2-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (TV Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TV Estável - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/11fbNSYx8orJX5UhKkk7-WYE0I1Qzz9c6/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'tv-estavel-video-final',
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário TV Estável',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: TV Estável - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1A8aL1sFaqMyFjtDxAflK1Nq0BSe6olwm/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                { id: 'tv-estavel-score', type: 'score' }
+            ],
+            'pcr-assistolia-cenario': [
+                {
+                    id: 'pcr-assistolia-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário PCR (Assistolia)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCR (Assistolia)</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/14Z40MZCiEGbii9Ef8aQC9z36yh2ua_PN/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcr-assistolia-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/2)',
+                    questions: [
+                        {
+                            text: 'Após a monitorização cardíaca mostrar linha reta ao monitor, qual deve ser a conduta a seguir?',
+                            options: [
+                                { text: 'Checar CAbos (conexões e eletrodos), GAnho (aumentar o ganho) e DErivações (trocar a derivação) para confirmar que se trata de uma Assistolia.', isCorrect: true, nextStepId: 'pcr-assistolia-video-q1-correct' },
+                                { text: 'Administrar Adrenalina imediatamente pois a linha reta ao monitor sempre representa assistolia.', isCorrect: false, nextStepId: 'pcr-assistolia-video-q1-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pcr-assistolia-video-q1-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Assistolia Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCR (Assistolia) - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1z5Nb6d2iG1Ejuhs2l-AUCl5_4xMNgk90/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcr-assistolia-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Assistolia Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCR (Assistolia) - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1xSap5i2OGk2cQg5sRH_VMarANSEc3IxL/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcr-assistolia-q2', // Próxima pergunta após Q1 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/2)',
+                    questions: [
+                        {
+                            text: 'Ao analisar o ritmo, qual conduta seguir?',
+                            options: [
+                                { text: 'Administrar imediatamente Adrenalina 1mg', isCorrect: false, nextStepId: 'pcr-assistolia-video-q2-wrong-feedback' },
+                                { text: 'Continuar com a RCP de qualidade, aplicando medicação apenas no 3º ciclo se a assistolia persistir.', isCorrect: true, nextStepId: 'pcr-assistolia-video-final' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pcr-assistolia-video-q2-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Assistolia Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCR (Assistolia) - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1ZtyrhSO78_-ngS4Qi7WtVoGVez-wSE9s/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcr-assistolia-video-final',
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário PCR (Assistolia)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCR (Assistolia) - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1wBLBaVzgpfnooakQyZ3RDwz4e91QnclF/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                { id: 'pcr-assistolia-score', type: 'score' }
+            ],
+            'pcv-fibrilacao-ventricular-cenario': [
+                {
+                    id: 'pcv-fv-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário PCV (Fibrilação Ventricular)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCV (Fibrilação Ventricular)</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1-_Gn9C-QDep6nCnil4cXrb5sL9H7bt_r/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcv-fv-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/2)',
+                    questions: [
+                        {
+                            text: 'Ao identificar que se trata de uma fibrilação ventricular, qual conduta seguir?',
+                            options: [
+                                { text: 'Desfibrilação imediata com carga máxima (200J)', isCorrect: true, nextStepId: 'pcv-fv-video-q1-correct' },
+                                { text: 'Realizar Cardioversão Elétrica Sincronizada', isCorrect: false, nextStepId: 'pcv-fv-video-q1-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pcv-fv-video-q1-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (FV Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCV (Fibrilação Ventricular) - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/18qZRazvcmETIJEPfoJ-yKmTrIPOP1W35/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcv-fv-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (FV Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCV (Fibrilação Ventricular) - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/11xDYm07ZNPOZRGgFjVCQVN3WPXCQ16I4/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pcv-fv-q2', // Próxima pergunta após Q1 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/2)',
+                    questions: [
+                        {
+                            text: 'Qual conduta seguir?',
+                            options: [
+                                { text: 'Manter as compressões torácicas e administrar Amiodarona 300mg', isCorrect: true, nextStepId: 'pcv-fv-video-final' },
+                                { text: 'Manter as compressões torácicas e administrar Amiodarona 150mg', isCorrect: true, nextStepId: 'pcv-fv-video-final' } // Ambas são certas para esta pergunta, levam ao mesmo final
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pcv-fv-video-final',
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário PCV (Fibrilação Ventricular)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: PCV (Fibrilação Ventricular) - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1oTwNPay8GKBxY2hG55lnGhDxghgbiAfR/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                { id: 'pcv-fv-score', type: 'score' }
+            ],
+            'cuidados-pos-pcr-cenario': [
+                {
+                    id: 'pos-pcr-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário Cuidados Pós-PCR',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1p2JZHh7FekRkq5IpNei6z8g6Xww6hZss/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pos-pcr-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/3)',
+                    questions: [
+                        {
+                            text: 'Qual conduta seguir?',
+                            options: [
+                                { text: 'Estabelecer uma via aérea invasiva', isCorrect: true, nextStepId: 'pos-pcr-video-q1-correct' },
+                                { text: 'Manter ventilação com bolsa-válvula-máscara', isCorrect: false, nextStepId: 'pos-pcr-video-q1-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pos-pcr-video-q1-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Pós-PCR Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1S1HntyckfZGdiOF7JAlEAIOSu4SHktOA/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pos-pcr-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Pós-PCR Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1jlPMPi2YA4qWHESDt_knQtJPsc-WahU6/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pos-pcr-q2', // Próxima pergunta após Q1 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/3)',
+                    questions: [
+                        {
+                            text: 'Pensando em reduzir danos neurológicos, qual medida deve ser orientada nesse momento?',
+                            options: [
+                                { text: 'C.D.T. – Controle Direcionado de Temperatura, objetivando uma temperatura alvo entre 32-37,5ºC.', isCorrect: true, nextStepId: 'pos-pcr-video-q2-correct' },
+                                { text: 'O paciente não tem indicação de C.D.T.', isCorrect: false, nextStepId: 'pos-pcr-video-q2-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pos-pcr-video-q2-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Pós-PCR Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1KxHT6xqvKGbcGgo9YnHQu8CFFWY_wwdq/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pos-pcr-video-q2-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Pós-PCR Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1OaBAmKmX5LeK2PzScRmPU9B5yrFugq7d/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pos-pcr-q3', // Próxima pergunta após Q2 (caminhos convergidos)
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (3/3)',
+                    questions: [
+                        {
+                            text: 'Tendo em vista os achados eletrocardiográficos em parede inferior, qual o provável diagnóstico e a conduta a seguir?',
+                            options: [
+                                { text: 'Angina Instável, encaminhar à UTI.', isCorrect: false, nextStepId: 'pos-pcr-video-q3-wrong-feedback' },
+                                { text: 'Infarto agudo do miocárdio com supradesnivelamento do segmento ST, acionar a equipe de hemodinâmica para intervenção coronária percutânea imediata.', isCorrect: true, nextStepId: 'pos-pcr-video-final' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'pos-pcr-video-q3-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Pós-PCR Q3)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1_uq9LT6RrChdnKcl-unaNCcTRm9fygNN/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                {
+                    id: 'pos-pcr-video-final',
+                    type: 'video',
+                    title: 'Vídeo Final do Cenário Cuidados Pós-PCR',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Cuidados Pós-PCR - Conclusão</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1idUKAFD_kQDqsgD-RjSDhCfhvG2yEHxL/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                { id: 'pos-pcr-score', type: 'score' }
+            ],
+            'megacode-cenario': [
+                // --- STEP 1: Initial Video ---
+                {
+                    id: 'megacode-video-inicial',
+                    type: 'video',
+                    title: 'Introdução ao Cenário Megacode',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/14zCbHvCBKQTgiW6azuFK6rWFs2kgKLqK/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 2: Question 1 (Branching) ---
+                {
+                    id: 'megacode-q1',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (1/5)', // Added counter for clarity
+                    questions: [
+                        {
+                            text: 'Diante dos achados clínicos e eletrocardiográficos ao monitor, qual o diagnóstico e qual conduta seguir?',
+                            options: [
+                                { text: 'Taquicardia Ventricular (TV) monomórfica estável / Amiodarona 150mg EV', isCorrect: false, nextStepId: 'megacode-video-q1-wrong-feedback' },
+                                { text: 'Taquicardia Ventricular (TV) monomórfica instável / Cardioversão Elétrica Sincronizada', isCorrect: true, nextStepId: 'megacode-video-after-q1-correct' } // Direct jump to next video if correct
+                            ]
+                        }
+                    ]
+                },
+                // --- STEP 3 (Branch from Q1 Incorrect): Video explaining error ---
+                {
+                    id: 'megacode-video-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1BK3Al80pGb7zws2baLri7oPpXHvt_Dzk/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 4 (After Q1 Wrong Feedback): Another Video ---
+                {
+                    id: 'megacode-video-after-q1-wrong-feedback',
+                    type: 'video',
+                    title: 'Vídeo de Continuação (Pós-Erro Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Continuação</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1hin1JM5PNM1ehk31l4haHwuGvuju-zNh/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 5 (After Q1 Correct Path): Video for correct choice ---
+                {
+                    id: 'megacode-video-after-q1-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Q1)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Conduta Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1gukMvn137B0VQtq69YmJFLhi8jPCvnO9/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 6: Question 2 (Converged paths) ---
+                {
+                    id: 'megacode-q2',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (2/5)',
+                    questions: [
+                        {
+                            text: 'Diante da evolução para fibrilação ventricular, qual conduta seguir?',
+                            options: [
+                                { text: 'Desfibrilação com carga máxima 200J e início de RCP de qualidade imediatamente após o choque', isCorrect: true, nextStepId: 'megacode-video-after-q2-correct' }, // Correct answer, leads to common video
+                                { text: 'Realizar nova Cardioversão Elétrica Sincronizada', isCorrect: false, nextStepId: 'megacode-video-q2-wrong-feedback' } // Incorrect answer, leads to common video (no error video here)
+                            ]
+                        }
+                    ]
+                },
+                // --- STEP 7 (Após Q2 Incorreta): Vídeo de Feedback de Erro ---
+                {
+                    id: 'megacode-video-q2-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Conduta Incorreta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1q47Uca-WxTvWFd7C9RvYjdU9-TwyH_ke/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 8: Vídeo de Continuação (Pós-Erro Q2) ---
+                {
+                    id: 'megacode-video-after-q2-incorrect',
+                    type: 'video',
+                    title: 'Vídeo de Continuação (Pós-Erro Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Continuação Pós-Erro Q2</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1OCdEZi5MCm7swd5bntJna3fdf7ZQM_4J/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 9: Vídeo de Continuação (Pós-Acerto Q2) ---
+                {
+                    id: 'megacode-video-after-q2-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Q2)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Conduta Pós-Q2 Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1H_f-g571Xrp425BqiT_bRwT-AhT0vDQ9/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 10: Pergunta 3 (Ramificação) ---
+                {
+                    id: 'megacode-q3',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (3/5)',
+                    questions: [
+                        {
+                            text: 'Estamos no segundo ciclo da Fibrilação Ventricular, qual a primeira droga a ser administrada?',
+                            options: [
+                                { text: 'Amiodarona 300mg', isCorrect: false, nextStepId: 'megacode-video-q3-wrong-feedback' },
+                                { text: 'Adrenalina 1mg', isCorrect: true, nextStepId: 'megacode-video-after-q3-correct' }
+                            ]
+                        }
+                    ]
+                },
+                // --- STEP 11 (Após Q3 Incorreta): Vídeo de Feedback de Erro ---
+                {
+                    id: 'megacode-video-q3-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q3)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Erro de Medicação</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1erTtExAZu7XTV1h890wP11b6ttNC_6hC/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 12: Vídeo de Continuação (Pós-Erro Q3) ---
+                {
+                    id: 'megacode-video-after-q3-wrong-feedback',
+                    type: 'video',
+                    title: 'Vídeo de Continuação (Pós-Erro Q3)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Continuação Pós-Erro Q3</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1wRozVqlQt9HaBwXgNDvTZxZt3V6RIOvd/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 13: Vídeo de Continuação (Pós-Acerto Q3) ---
+                {
+                    id: 'megacode-video-after-q3-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Q3)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Medicação Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/14RhzxZCra1PRRuAkb_yB9FqFXnSkGFZP/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 14: Pergunta 4 (Ramificação) ---
+                {
+                    id: 'megacode-q4',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (4/5)',
+                    questions: [
+                        {
+                            text: 'Ao identificar o ritmo organizado no monitor, qual a conduta nesse momento?',
+                            options: [
+                                { text: 'Checar Pulso central para confirmar que se trata de uma AESP', isCorrect: true, nextStepId: 'megacode-video-after-q4-correct' },
+                                { text: 'Reiniciar imediatamente a RCP pois esse ritmo não é passível de ter pulso', isCorrect: false, nextStepId: 'megacode-video-q4-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                // --- STEP 15: Vídeo de Feedback de Erro (Q4) ---
+                {
+                    id: 'megacode-video-q4-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q4)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Erro de Avaliação de Ritmo</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1ml7y3eL_qWfO09WqGrvcmTon1HcauKk6/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 16: Vídeo de Continuação (Pós-Erro Q4) ---
+                {
+                    id: 'megacode-video-after-q4-wrong-feedback',
+                    type: 'video',
+                    title: 'Vídeo de Continuação (Pós-Erro Q4)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Continuação Pós-Erro Q4</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1OCdEZi5MCm7swd5bntJna3fdf7ZQM_4J/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 17: Vídeo de Continuação (Pós-Acerto Q4) ---
+                {
+                    id: 'megacode-video-after-q4-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Q4)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Avaliação Correta</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1H_f-g571Xrp425BqiT_bRwT-AhT0vDQ9/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 18: Pergunta 5 (Ramificação) ---
+                {
+                    id: 'megacode-q5',
+                    type: 'questions',
+                    title: 'Pergunta do Cenário (5/5)',
+                    questions: [
+                        {
+                            text: 'Como o paciente não responde aos chamados e está comatoso, vamos iniciar o C.D.T (Controle Direcionado de Temperatura), qual a temperatura alvo e por quanto tempo deve ser mantida?',
+                            options: [
+                                { text: '32-37,5ºC por 24h', isCorrect: true, nextStepId: 'megacode-video-after-q5-correct' },
+                                { text: '32-36ºC por 72h', isCorrect: false, nextStepId: 'megacode-video-q5-wrong-feedback' }
+                            ]
+                        }
+                    ]
+                },
+                // --- STEP 19: Vídeo de Feedback de Erro (Q5) ---
+                {
+                    id: 'megacode-video-q5-wrong-feedback',
+                    type: 'video',
+                    title: 'Feedback de Erro (Q5)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Erro em CDT</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1NoXYD8GbwK1tiooma1S04lLndTo2m5nI/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 20: Vídeo de Continuação (Pós-Erro Q5) ---
+                {
+                    id: 'megacode-video-after-q5-wrong-feedback',
+                    type: 'video',
+                    title: 'Vídeo de Continuação (Pós-Erro Q5)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Continuação Pós-Erro Q5</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/1wRozVqlQt9HaBwXgNDvTZxZt3V6RIOvd/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 21: Vídeo de Continuação (Pós-Acerto Q5) ---
+                {
+                    id: 'megacode-video-after-q5-correct',
+                    type: 'video',
+                    title: 'Vídeo: Conduta Correta (Q5)',
+                    contentHtml: `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - CDT Correto</h1>
+                        <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                            ${getDriveEmbedHtml('https://drive.google.com/file/d/14RhzxZCra1PRRuAkb_yB9FqFXnSkGFZP/view?usp=drive_link')}
+                        </div>
+                    `
+                },
+                // --- STEP 22: Pergunta 6 (Ramificação Final) ---
+                {
+                    id: 'megacode-q6',
+                    type: 'questions',
+                    title: 'Pergunta Final do Cenário (6/5)',
+                    questions: 
+                        {
+                            text: 'Qual conduta seguir?',
+                            options: [
+                                { text: 'Administrar Noradrenalina 0,1-0,5mcg/kg/min em bomba de infusão contínua em acesso venoso central', isCorrect: true, nextStepId: 'megacode-video-final' },
+                                { text: 'Administrar Atropina 1mg', isCorrect: false, nextStepId: 'megacode-video-q6-wrong-feedback' }
+                            ]
+                        }
+                    },
+                    // --- STEP 23: Vídeo de Feedback de Erro (Q6) ---
+                    {
+                        id: 'megacode-video-q6-wrong-feedback',
+                        type: 'video',
+                        title: 'Feedback de Erro (Q6)',
+                        contentHtml: `
+                            <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático - Megacode - Erro de Vasopressor</h1>
+                            <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                                ${getDriveEmbedHtml('https://drive.google.com/file/d/1ldfHJcSi_RUAiUgHfTVvLnOBIWzoJVXC/view?usp=drive_link')}
+                            </div>
+                        `
+                    },
+                    // --- STEP 24: Vídeo Final (Ponto de Convergência) ---
+                    {
+                        id: 'megacode-video-final',
+                        type: 'video',
+                        title: 'Vídeo Final do Cenário',
+                        contentHtml: `
+                            <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático: Megacode - Conclusão</h1>
+                            <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 video-wrapper">
+                                ${getDriveEmbedHtml('https://drive.google.com/file/d/1gukMvn137B0VQtq69YmJFLhi8jPCvnO9/view?usp=drive_link')}
+                            </div>
+                        `
+                    },
+                    // --- STEP 25: Pontuação Final ---
+                    { id: 'megacode-score', type: 'score' }
+                ]
+            };
+
+        const theoreticalContent = {
+            'info-importantes': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">1 - Informações Importantes</h1>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1pqt0I9TTOL_t3vYg21vm5U0WCPdHah8e/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Bem-vindo ao Curso EAD Preparatório para o ACLS. Aqui você encontrará todas as informações essenciais para o seu aprendizado.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Introdução aos objetivos do curso.</li>
+                    <li>Requisitos mínimos para participação.</li>
+                    <li>Como navegar pela plataforma.</li>
+                    <li>Suporte técnico e acadêmico.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors opacity-50 cursor-not-allowed">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500"></span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">Introdução ao Curso</span>
+                    </a>
+                </div>
+            `,
+            'intro-curso': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">2 - Introdução ao Curso</h1>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1QYxHiAXgFt1id025wXPRK6PsYFoDh4Uq/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Este módulo apresenta a estrutura completa do curso, os tópicos que serão abordados e a metodologia de ensino.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Visão geral do currículo.</li>
+                    <li>Metodologia de aulas teóricas e cenários práticos.</li>
+                    <li>Cronograma sugerido.</li>
+                    <li>Recursos adicionais e bibliografia.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">Informações Importantes</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">Bradicardias Sintomáticas - Revisão Teórica</span>
+                    </a>
+                </div>
+            `,
+            'bradicardias-revisao': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Bradicardias Sintomáticas - Revisão Teórica</h1>
+                <div class="flex items-center text-green-600 mb-6">
+                    <i class="ph ph-check-circle text-xl mr-2"></i>
+                </div>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/17Tcl0aPiyQVox5iUZ35G_E7XjdXxnf5L/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Nesta seção, exploraremos em detalhes a abordagem inicial para pacientes com bradicardia sintomática, um tópico crucial no manejo de emergências cardiovasculares. A compreensão dos algoritmos e a aplicação prática são essenciais para garantir a melhor evolução para o paciente.
+                </p>
+                <p class="text-gray-700 leading-relaxed mt-4">
+                    Lembre-se de revisar os sinais e sintomas que indicam bradicardia significativa e a importância de uma avaliação rápida e precisa para determinar a necessidade de intervenções urgentes.
+                </p>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">Apresentação do Curso</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">1 - Bradicardias sintomáticas: cenário prático</span>
+                    </a>
+                </div>
+            `,
+            'taquicardias-revisao': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">2 - Taquicardias: revisão teórica</h1>
+                <div class="flex items-center text-green-600 mb-6">
+                    <i class="ph ph-check-circle text-xl mr-2"></i>
+                </div>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1sJRiuStY2qGsWIJK1R9pzLXZBKNMOpMo/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Nesta secção, aprenderá sobre o manejo de taquicardias, incluindo a avaliação de estabilidade e os algoritmos de tratamento.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Diferenciação entre Taquicardia Ventricular (TV) e Taquicardia Supraventricular (TSV).</li>
+                    <li>Critérios de estabilidade e instabilidade.</li>
+                    <li>Abordagens farmacológicas e elétricas.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">Bradicardias Sintomáticas: cenário prático</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">2 - Taquicardias: cenário prático (Geral)</span>
+                    </a>
+                </div>
+            `,
+            'parada-cardiorespiratoria': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">3 - Parada Cardiorrespiratória (PCR): revisão teórica</h1>
+                <div class="flex items-center text-green-600 mb-6">
+                    <i class="ph ph-check-circle text-xl mr-2"></i>
+                </div>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1BUZBm_Cd6wr0NLLuu6uKm9AYV_PgUujp/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Este módulo aborda os algoritmos de PCR, a importância das compressões de alta qualidade e a sequência de intervenções.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Reconhecimento da PCR.</li>
+                    <li>Suporte Básico de Vida (BLS) e Suporte Avançado de Vida (ACLS).</li>
+                    <li>Rítmos chocáveis e não chocáveis.</li>
+                    <li>Gestão de via aérea e ventilação.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">Taquicardias - Cenário Prático (TV Estável)</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">PCR - Cenário Prático (Assistolia)</span>
+                    </a>
+                </div>
+            `,
+            'cuidados-pos-pcr': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Cuidados Pós-PCR - Revisão Teórica</h1>
+                <div class="flex items-center text-green-600 mb-6">
+                    <i class="ph ph-check-circle text-xl mr-2"></i>
+                </div>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1MErYRN7XS-dNfZCDE0DOemGCJa0eM8-3/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Focar nos cuidados pós-parada é essencial para otimizar os resultados neurológicos e a sobrevivência do paciente.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Gestão da via aérea e ventilação pós-PCR.</li>
+                    <li>Controle hemodinâmico e otimização da perfusão cerebral.</li>
+                    <li>Controle direcionado da temperatura.</li>
+                    <li>Avaliação neurológica e prognóstico.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">3 - PCR: cenário prático (Fibrilação Ventricular)</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">Cuidados Pós-PCR - Cenário Prático</span>
+                    </a>
+                </div>
+            `,
+            'megacode-revisao': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Megacode - Revisão Teórica</h1>
+                <div class="flex items-center text-green-600 mb-6">
+                    <i class="ph ph-check-circle text-xl mr-2"></i>
+                </div>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1o5KXkZD9CQw7sUpj4lC9iE5LDqtNUpNY/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Nesta seção, revisaremos os algoritmos e protocolos para o Megacode, simulando situações de parada cardiorrespiratória e outras emergências. O objetivo é aprimorar a tomada de decisão rápida e eficaz.
+                </p>
+                <p class="text-gray-700 leading-relaxed mt-4">
+                    É fundamental dominar cada passo do algoritmo, desde o reconhecimento inicial até a pós-reanimação, para garantir a melhor abordagem e prognóstico para o paciente.
+                </p>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">Cuidados Pós-PCR</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">5 - Megacode: cenário prático</span>
+                    </a>
+                </div>
+            `,
+            'info-importantes': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">1 - Informações Importantes</h1>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1pqt0I9TTOL_t3vYg21vm5U0WCPdHah8e/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Bem-vindo ao Curso EAD Preparatório para o ACLS. Aqui você encontrará todas as informações essenciais para o seu aprendizado.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Introdução aos objetivos do curso.</li>
+                    <li>Requisitos mínimos para participação.</li>
+                    <li>Como navegar pela plataforma.</li>
+                    <li>Suporte técnico e acadêmico.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors opacity-50 cursor-not-allowed">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500"></span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">Introdução ao Curso</span>
+                    </a>
+                </div>
+            `,
+            'intro-curso': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">2 - Introdução ao Curso</h1>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/1QYxHiAXgFt1id025wXPRK6PsYFoDh4Uq/view?usp=drive_link')}
+                </div>
+                <p class="text-gray-700 leading-relaxed">
+                    Este módulo apresenta a estrutura completa do curso, os tópicos que serão abordados e a metodologia de ensino.
+                </p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mt-4">
+                    <li>Visão geral do currículo.</li>
+                    <li>Metodologia de aulas teóricas e cenários práticos.</li>
+                    <li>Cronograma sugerido.</li>
+                    <li>Recursos adicionais e bibliografia.</li>
+                </ul>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                    <a href="#" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">&leftarrow; Anterior</span>
+                        <span class="text-xs text-gray-500">Informações Importantes</span>
+                    </a>
+                    <a href="#" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                        <span class="text-sm">Próximo &rightarrow;</span>
+                        <span class="text-xs text-gray-500">Bradicardias Sintomáticas - Revisão Teórica</span>
+                    </a>
+                </div>
+            `,
+            'leitura-complementar': `
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Leitura Complementar</h1>
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-8 max-w-5xl mx-auto">
+                    ${getDriveEmbedHtml('https://drive.google.com/file/d/19kW1NA9LtjP_jNzuE9-iA4e4cnJF_MRj/view?usp=drive_link')}
+                </div>
+                <p style="text-align: justify;" class="text-gray-700 leading-relaxed">
+                    Este documento resume os principais tópicos e mudanças nas Diretrizes de 2020 da American Heart Association (AHA) para ressuscitação
+                    cardiopulmonar (RCP) e atendimento cardiovascular de emergência (ACE). As diretrizes de 2020 são uma revisão abrangente das diretrizes da
+                    AHA para os tópicos de ciência da educação em ressuscitação pediátrica, neonatal e para adultos e sistemas de tratamento. Essas diretrizes
+                    foram desenvolvidas para que profissionais de ressuscitação e instrutores da AHA possam se concentrar na ciência e nas recomendações
+                    das diretrizes de ressuscitação que são ou controversas, ou naquelas que resultarão em mudanças no treinamento e na prática de ressuscitação, e para fornecer justificativas para as recomendações. (AHA, p.3, 2020).
+
+
+                </p>
+            `
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elementos do DOM
+            const dynamicContentArea = document.getElementById('dynamic-content-area');
+            const expandableModules = document.querySelectorAll('.expandable-module');
+            const sidebarItems = document.querySelectorAll('.sidebar-item[data-content-type="teorica"]');
+            const subItems = document.querySelectorAll('.sub-item[data-content-type]');
+
+            let currentScenarioStepIndex = 0;
+            let correctAnswersCount = 0;
+            let currentQuestions = [];
+            let answersSubmittedForCurrentQuestions = true;
+            let activeScenarioId = null;
+
+            // Mapeia IDs de passos para seus índices no array (para navegação)
+            const stepIdToIndexMap = {};
+            for (const scenarioId in allModuleScenarios) {
+                allModuleScenarios[scenarioId].forEach((step, index) => {
+                    if (step.id) {
+                        stepIdToIndexMap[step.id] = index;
+                    }
+                });
+            }
+
+            // Função para renderizar o conteúdo da área principal
+            function renderContent(contentId, contentType) {
+                // Remove a classe 'active' de todos os itens e sub-itens da barra lateral e remove o numbered-circle.active
+                document.querySelectorAll('.sidebar-item').forEach(item => {
+                    item.classList.remove('active');
+                    const numCircle = item.querySelector('.numbered-circle');
+                    if (numCircle) numCircle.classList.remove('active');
+                });
+                document.querySelectorAll('.sub-item').forEach(item => item.classList.remove('active'));
+                document.querySelectorAll('.sub-item i').forEach(icon => {
+                    icon.classList.remove('dot-green');
+                    icon.classList.add('text-gray-400');
+                });
+
+
+                // Adiciona a classe 'active' ao item clicado e seu numbered-circle
+                const clickedItem = document.querySelector(`[data-content-id="${contentId}"]`);
+                if (clickedItem) {
+                    clickedItem.classList.add('active');
+                    const numCircle = clickedItem.querySelector('.numbered-circle');
+                    if (numCircle) numCircle.classList.add('active');
+                    const dotIcon = clickedItem.querySelector('.ph-circle-fill');
+                    if (dotIcon) {
+                        dotIcon.classList.remove('text-gray-400');
+                        dotIcon.classList.add('dot-green');
+                    }
+                }
+
+                if (contentType === 'teorica') {
+                    dynamicContentArea.innerHTML = theoreticalContent[contentId];
+                } else if (contentType === 'cenario') {
+                    activeScenarioId = contentId; // Define o cenário ativo
+                    currentScenarioStepIndex = 0; // Reinicia o cenário
+                    correctAnswersCount = 0;
+                    answersSubmittedForCurrentQuestions = true; // Permite avançar para o primeiro vídeo
+                    renderScenarioStep(); // Inicia o carrossel do cenário
+                }
+            }
+
+            // Função para renderizar o passo do cenário (agora mais genérica)
+            function renderScenarioStep() {
+                const scenarioSteps = allModuleScenarios[activeScenarioId];
+                const step = scenarioSteps[currentScenarioStepIndex];
+
+                let contentHtml = ``; // Conteúdo a ser injetado
+
+                if (step.type === 'video') {
+                    contentHtml = step.contentHtml;
+                    answersSubmittedForCurrentQuestions = true;
+                } else if (step.type === 'questions') {
+                    answersSubmittedForCurrentQuestions = false;
+                    currentQuestions = step.questions;
+
+                    // Use a primeira pergunta do array de perguntas
+                    const currentQuestion = currentQuestions[0];
+
+                    let questionsHtml = `
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">${step.title}</h1>
+                        <div class="question-card">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-6">${currentQuestion.text}</h2>
+                            <div id="question-options-dynamic" class="space-y-3">
+                    `;
+                    currentQuestion.options.forEach((option, optionIndex) => { // Assuming only one question for branching as per image
+                        questionsHtml += `
+                                <label for="q0-option${optionIndex}" class="question-option">
+                                    <input type="radio" name="question-0" id="q0-option${optionIndex}" value="${option.text}" class="mr-3">
+                                    <span>${option.text}</span>
+                                    <i class="ph ph-arrow-right arrow-icon"></i>
+                                </label>
+                            `;
+                    });
+                    questionsHtml += `
+                            </div>
+                            <button id="submit-answer-button" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                                Responder
+                            </button>
+                        </div>
+                    `;
+                    contentHtml = questionsHtml;
+
+                } else if (step.type === 'score') {
+                    showFinalScore();
+                    updateScenarioNavButtons(); // Atualiza botões para a tela de score
+                    return; // Não injeta mais nada após mostrar o score
+                }
+
+                // Inject content and navigation buttons
+                dynamicContentArea.innerHTML = contentHtml + `
+                    <div id="scenario-nav-buttons" class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200">
+                        <button id="prev-scenario-step" class="flex flex-col items-start text-blue-600 hover:text-blue-800 transition-colors opacity-50 cursor-not-allowed">
+                            <span class="text-sm">&leftarrow; Anterior</span>
+                            <span class="text-xs text-gray-500" id="prev-step-text"></span>
+                        </button>
+                        <button id="next-scenario-step" class="flex flex-col items-end text-blue-600 hover:text-blue-800 transition-colors">
+                            <span class="text-sm">Próximo &rightarrow;</span>
+                            <span class="text-xs text-gray-500" id="next-step-text"></span>
+                        </button>
+                    </div>
+                `;
+
+                // Re-atribui event listeners se o botão "Responder" foi criado
+                if (step.type === 'questions') {
+                    document.getElementById('submit-answer-button').addEventListener('click', handleSubmitAnswer);
+                }
+
+                // Re-atribui event listeners aos botões de navegação do cenário (eles são recriados a cada render)
+                document.getElementById('prev-scenario-step').addEventListener('click', handlePrevScenarioStep);
+                document.getElementById('next-scenario-step').addEventListener('click', handleNextScenarioStep);
+
+                updateScenarioNavButtons();
+            }
+
+            // Handler para o botão de responder
+            function handleSubmitAnswer() {
+                const scenarioSteps = allModuleScenarios[activeScenarioId];
+                const currentStep = scenarioSteps[currentScenarioStepIndex];
+
+                if (currentStep.type === 'questions') {
+                    const question = currentStep.questions[0]; // Assuming only one question for branching
+                    const selectedOptionElement = document.querySelector(`input[name="question-0"]:checked`);
+
+                    if (!selectedOptionElement) {
+                        console.log("Por favor, selecione uma opção antes de continuar.");
+                        // Aqui poderia ser um modal ou um feedback visual mais amigável
+                        return; // Impede o avanço se nenhuma opção for selecionada
+                    }
+
+                    const selectedOptionText = selectedOptionElement.value;
+                    const selectedOptionData = question.options.find(opt => opt.text === selectedOptionText);
+
+                    if (selectedOptionData) {
+                        if (selectedOptionData.isCorrect) {
+                            correctAnswersCount++;
+                        }
+                        // Avança para o passo definido no nextStepId da opção selecionada
+                        currentScenarioStepIndex = stepIdToIndexMap[selectedOptionData.nextStepId];
+                    }
+
+                    answersSubmittedForCurrentQuestions = true; // Permite avançar
+                    renderScenarioStep(); // Renderiza o próximo passo imediatamente
+                }
+            }
+
+
+            // Função para exibir a pontuação final
+            function showFinalScore() {
+                dynamicContentArea.innerHTML = `
+                    <h1 class="text-2xl font-bold text-gray-800 mb-4">Cenário Prático Concluído!</h1>
+                    <div id="scenario-final-score" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg shadow-md max-w-xl mx-auto" role="alert">
+                        <p class="font-bold">Cenário Prático Concluído!</p>
+                        <p>Você acertou <span id="score-display" class="font-bold">${correctAnswersCount}</span> perguntas.</p>
+                        <p class="text-sm mt-2">Parabéns por completar o cenário!</p>
+                    </div>
+                `;
+            }
+
+            // Função para atualizar o estado dos botões de navegação do cenário
+            function updateScenarioNavButtons() {
+                const scenarioSteps = allModuleScenarios[activeScenarioId];
+                if (!scenarioSteps) return;
+
+                const prevScenarioStepButton = document.getElementById('prev-scenario-step');
+                const nextScenarioStepButton = document.getElementById('next-scenario-step');
+                const prevStepText = document.getElementById('prev-step-text');
+                const nextStepText = document.getElementById('next-step-text');
+
+                // Botão Anterior
+                // Permite voltar se não for o primeiro passo
+                if (currentScenarioStepIndex > 0) {
+                    prevScenarioStepButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    prevScenarioStepButton.disabled = false;
+                    prevStepText.textContent = scenarioSteps[currentScenarioStepIndex - 1].title || "Passo Anterior";
+                } else {
+                    prevScenarioStepButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    prevScenarioStepButton.disabled = true;
+                    prevStepText.textContent = "";
+                }
+
+                // Botão Próximo
+                const currentStep = scenarioSteps[currentScenarioStepIndex];
+                const isCurrentStepQuestions = currentStep.type === 'questions';
+
+                // Se o passo atual é de perguntas e não foi respondido, desabilita "Próximo"
+                if (isCurrentStepQuestions && !answersSubmittedForCurrentQuestions) {
+                    nextScenarioStepButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    nextScenarioStepButton.disabled = true;
+                    nextStepText.textContent = "";
+                }
+                // Se é o último passo (score)
+                else if (currentScenarioStepIndex === scenarioSteps.length - 1) {
+                    nextScenarioStepButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    nextScenarioStepButton.disabled = true;
+                    nextStepText.textContent = "Fim do Cenário";
+                }
+                // Caso contrário, habilita "Próximo"
+                else {
+                    nextScenarioStepButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    nextScenarioStepButton.disabled = false;
+                    // Tenta encontrar o título do próximo passo para exibir
+                    const nextStep = scenarioSteps[currentScenarioStepIndex + 1];
+                    nextStepText.textContent = nextStep ? nextStep.title : "Próximo Passo";
+                }
+            }
+
+
+            // Handlers para os botões de navegação do cenário (agora funções separadas)
+            function handlePrevScenarioStep() {
+                const scenarioSteps = allModuleScenarios[activeScenarioId];
+                if (currentScenarioStepIndex > 0) {
+                    // Para voltar de um caminho ramificado, precisamos da lógica de stack ou de mapeamento inverso
+                    // Por simplicidade para esta iteração, vamos permitir apenas voltar linearmente.
+                    // Em um sistema mais complexo, você registraria o "caminho" percorrido.
+                    currentScenarioStepIndex--;
+                    renderScenarioStep();
+                }
+            }
+
+            function handleNextScenarioStep() {
+                const scenarioSteps = allModuleScenarios[activeScenarioId];
+                const currentStep = scenarioSteps[currentScenarioStepIndex];
+                const isCurrentStepQuestions = currentStep.type === 'questions';
+
+                // Só avança se as respostas foram submetidas (para perguntas) ou se não é um passo de perguntas
+                const canProceed = !isCurrentStepQuestions || (isCurrentStepQuestions && answersSubmittedForCurrentQuestions);
+
+                if (canProceed) {
+                    if (currentScenarioStepIndex < scenarioSteps.length - 1) {
+                        currentScenarioStepIndex++;
+                        renderScenarioStep();
+                    } else {
+                        // Se for o último passo e não for score, vai para score.
+                        if (currentStep.type !== 'score') {
+                             showFinalScore();
+                        }
+                    }
+                }
+            }
+
+            // Adiciona event listeners para todos os itens da barra lateral (teóricos e de cenário)
+            [...sidebarItems, ...subItems].forEach(item => {
+                item.addEventListener('click', () => {
+                    const contentId = item.dataset.contentId;
+                    const contentType = item.dataset.contentType;
+                    renderContent(contentId, contentType);
+                });
+            });
+
+            // Event listeners para módulos expansíveis
+            expandableModules.forEach(moduleItem => {
+                moduleItem.addEventListener('click', () => {
+                    const targetId = moduleItem.dataset.target;
+                    const subitemsContainer = document.getElementById(targetId);
+                    const caretIcon = moduleItem.querySelector('.module-caret-icon');
+
+                    if (subitemsContainer) {
+                        subitemsContainer.classList.toggle('open');
+                        if (subitemsContainer.classList.contains('open')) {
+                            caretIcon.classList.remove('ph-caret-right');
+                            caretIcon.classList.add('ph-caret-down');
+                        } else {
+                            caretIcon.classList.remove('ph-caret-down');
+                            caretIcon.classList.add('ph-caret-right');
+                        }
+                    }
+                });
+            });
+
+            // Inicializa a página com o conteúdo da revisão teórica de Bradicardias
+            renderContent('bradicardias-revisao', 'teorica');
+        });
+    </script>
+</body>
+</html>

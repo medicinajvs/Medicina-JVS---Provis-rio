@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curso de Endocrinologia</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca de ícones Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* bg-gray-800 */
+            overflow: hidden; /* Evita a rolagem do body principal */
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        /* Scrollbar customizada para a playlist */
+        #playlist-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #playlist-container::-webkit-scrollbar-track {
+            background: #111827; /* bg-gray-900 */
+        }
+        #playlist-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        #playlist-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="main-view" class="flex flex-col lg:flex-row h-screen">
+        <!-- Coluna Principal (Player de Vídeo ou Placeholder) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col bg-gray-800">
+            <header class="flex items-center justify-between mb-4">
+                <h2 id="current-view-title" class="text-2xl font-bold text-white">Endocrinologia</h2>
+            </header>
+            <div id="player-container" class="flex-1 flex flex-col items-center justify-center">
+                 <!-- Placeholder inicial -->
+                <div id="initial-placeholder" class="text-center text-gray-500">
+                    <i data-lucide="play-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h3 class="text-2xl font-semibold">Selecione uma aula na playlist</h3>
+                    <p>O conteúdo será exibido aqui.</p>
+                </div>
+                <!-- Iframe para o vídeo -->
+                <div id="lesson-view" class="hidden w-full h-full flex flex-col">
+                    <h1 id="lesson-view-title" class="text-xl lg:text-2xl font-bold mb-4 text-center"></h1>
+                    <div class="relative w-full max-w-5xl mx-auto aspect-video bg-black rounded-lg shadow-2xl">
+                        <iframe id="lesson-view-iframe" class="w-full h-full rounded-lg" src="" allow="autoplay; fullscreen" frameborder="0"></iframe>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Coluna da Direita (Playlist) -->
+        <aside id="playlist-container" class="w-full lg:w-96 bg-gray-900 p-4 flex-shrink-0 flex flex-col overflow-y-auto">
+            <div id="course-playlist-content" class="space-y-4">
+                <!-- O conteúdo da playlist será gerado aqui pelo JavaScript -->
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        const courseData = [
+            {
+                moduleTitle: "Diabetes",
+                lessons: [
+                    { 
+                        title: "Diagnóstico", 
+                        resources: [
+                            { type: 'video', title: "Diagnóstico de Diabetes Mellitus", src: "https://drive.google.com/file/d/1FSVsC2UnomfaLZ3gI6P_rfvSf20sHirW/view?usp=sharing" },
+                            { type: 'video', title: "Pré Diabetes Mellitus", src: "https://drive.google.com/file/d/1jw-9iQTYtSu0UfxgCAzyGmsFMMwHpbB-/view?usp=sharing" },
+                            { type: 'video', title: "Alvos de Tratamento", src: "https://drive.google.com/file/d/1eDZfL0jOs21FK3XJ7RrJNgUxvTSe5Nod/view?usp=sharing" },
+                            { type: 'video', title: "Uso da Monitorização Contínua de Glicose - Parte 1", src: "https://drive.google.com/file/d/1pKi86OKWuIrO29gfEMHkR80IKUwJk1-h/view?usp=sharing" },
+                            { type: 'video', title: "Uso da Monitorização Contínua de Glicose - Parte 2", src: "https://drive.google.com/file/d/1MIT1FQg17kN_ALnPVGagZsCJZqB8jMsK/view?usp=sharing" },
+                            { type: 'quiz', title: "Simulado (10 Questões, 24 min)" }
+                        ]
+                    },
+                    {
+                        title: "Medicações Tradicionais",
+                        resources: [
+                            { type: 'video', title: "Metformina Ainda é a Primeira Opção?", src: "https://drive.google.com/file/d/1-bZVy5L5uKF7ZUedidajH3k1EdqWMKP2/view?usp=sharing" },
+                            { type: 'video', title: "Sulfonilureias: Ainda Posso Usar? Como Escolher?", src: "https://drive.google.com/file/d/1LxkAOa6Qsnf9Xt3amVkZ40OYWLEI_pR7/view?usp=sharing" },
+                            { type: 'video', title: "Pioglitazona: Vale a Pena Insistir Nessa Classe?", src: "https://drive.google.com/file/d/1dY4uSVTv1mMgdaoyWRk0TB4Qr4TJ3Ld0/view?usp=sharing" },
+                            { type: 'video', title: "Inibidores DPP-IV", src: "https://drive.google.com/file/d/1bjcM5JPBhVLkHGBR8sGq9hHlf39twz04/view?usp=sharing" },
+                            { type: 'quiz', title: "Simulado (10 Questões, 24 min)" }
+                        ]
+                    },
+                    {
+                        title: "Medicações Novas",
+                        resources: [
+                            { type: 'video', title: "Inibidores de iSGLT2 - Gliflozinas", src: "https://drive.google.com/file/d/1x8XUpk7OXZkeia1J0-GKs2ufo7bjL5C3/view?usp=sharing" },
+                            { type: 'video', title: "Inibidores de iSGLT2 - Estudos em Insuficiência Cardíaca", src: "https://drive.google.com/file/d/1-YvOOU-sIXWMK1KNv4JseNAvg7rAFWQJ/view?usp=sharing" },
+                            { type: 'video', title: "iSGLT2 e Desfechos Renais", src: "https://drive.google.com/file/d/1X_xOZtq7OMqKGErhF4JhIjKif_jeFluc/view?usp=sharing" },
+                            { type: 'video', title: "Precauções iSGLT2", src: "https://drive.google.com/file/d/1FgsR-vusuRA5c2uWejvTufoCPEJdGmMf/view?usp=sharing" },
+                            { type: 'video', title: "Agonistas Incretínicos - Principais Evidências", src: "https://drive.google.com/file/d/19AlNNXZwWhVlyow8kUG9yxcEn8SwCZLF/view?usp=sharing" },
+                            { type: 'video', title: "Agonistas Incretínicos - Aspectos Práticos", src: "https://drive.google.com/file/d/1ISwdfVnl7pQz3YHM2I_Sw0WS-YVau-rr/view?usp=sharing" },
+                            { type: 'quiz', title: "Simulado (10 Questões, 24 min)" }
+                        ]
+                    },
+                    {
+                        title: "Diretrizes de Tratamento",
+                        resources: [
+                            { type: 'video', title: "Algoritmos de Tratamento do Diabetes Mellitus 2", src: "https://drive.google.com/file/d/1n2bBw4CxSh4JzddC6ZQP75gwytS8rupj/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Insulinoterapia",
+                        resources: [
+                            { type: 'video', title: "Insulinoterapia no Diabetes Mellitus 2 - Como Começar?", src: "https://drive.google.com/file/d/1CAT9xu-lyOHP-MywxE-wwPOQNN56-r1J/view?usp=sharing" },
+                            { type: 'video', title: "Progressão da Insulinoterapia no Diabetes Mellitus 2", src: "https://drive.google.com/file/d/1IRmG399r-ADbmhPSNT1Xzr4Mo6U13rBj/view?usp=sharing" },
+                            { type: 'video', title: "Insulinoterapia no Diabetes Mellitus 2 - Aspectos Práticos", src: "https://drive.google.com/file/d/1d7OKxls_GRhKrgNIQOoIG-HCwve7gSrc/view?usp=sharing" },
+                            { type: 'quiz', title: "Simulado (10 Questões, 24 min)" }
+                        ]
+                    },
+                    {
+                        title: "Diabetes Mellitus Tipo 01",
+                        resources: [
+                            { type: 'video', title: "Insulinoterapia no DM1", src: "https://drive.google.com/file/d/1698Is9qMy1leRA54qObXbnYQiNbABMrM/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Fatores de Risco",
+                        resources: [
+                            { type: 'video', title: "Controle dos Fatores de Risco Cardiovascular no Diabetes Mellitus 2", src: "https://drive.google.com/file/d/12nEI_qvkw6YOrwuTbxGXhbX7_PUGd67d/view?usp=sharing" },
+                            { type: 'quiz', title: "Simulado (10 Questões, 24 min)" }
+                        ]
+                    },
+                    {
+                        title: "Hiperglicemia Hospitalar",
+                        resources: [
+                            { type: 'video', title: "Abordagem da Hiperglicemia em Pacientes Hospitalizados", src: "https://drive.google.com/file/d/1it6uPIxF0NMq8a1dtSXOOtQrL0vNZ65b/view?usp=sharing" },
+                            { type: 'video', title: "Manejo Peri-operatório do Paciente com Diabetes Mellitus 2", src: "https://drive.google.com/file/d/1H2xygnKMnkdgQemu3F_l-IMRkzTV7tiF/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Complicações",
+                        resources: [
+                            { type: 'video', title: "Retinopatia Diabética", src: "https://drive.google.com/file/d/1evowvmmTycLUlHi9liXvenrx6FUy-51R/view?usp=sharing" },
+                            { type: 'video', title: "Doença Renal do Diabetes", src: "https://drive.google.com/file/d/1UlFyRxM-eMdBcCWXfgFRkmOAg3QRSgZo/view?usp=sharing" },
+                            { type: 'video', title: "Neuropatia Diabética", src: "https://drive.google.com/file/d/1NHRz20JoqMQqA_4pNeoEBOsgfP3oUvpv/view?usp=sharing" },
+                            { type: 'video', title: "Complicações Agudas Hiperglicêmicas", src: "https://drive.google.com/file/d/1To6yz65BccT1L2Byg6gVSX8DE7-VFAUH/view?usp=sharing" },
+                            { type: 'quiz', title: "Simulado (10 Questões, 24 min)" }
+                        ]
+                    },
+                    {
+                        title: "Casos Clínicos",
+                        resources: [
+                            { type: 'video', title: "Caso Clínico 01", src: "https://drive.google.com/file/d/1UGP5Tmml7L_5IzB2HBH-CnvfrLfBKyBG/view?usp=sharing" },
+                            { type: 'video', title: "Caso Clínico 02", src: "https://drive.google.com/file/d/1_g9h3SXNHEwXvqaQt5m5pQWvUK1mY4Qc/view?usp=sharing" },
+                            { type: 'video', title: "Caso Clínico 03", src: "https://drive.google.com/file/d/131PzD7RUe87CG5bRzly3M37NuCG3-NNA/view?usp=sharing" },
+                            { type: 'video', title: "Caso Clínico 04", src: "https://drive.google.com/file/d/1_hI6b-WCdZnfsfIE7PV9HS873SYrAsRd/view?usp=sharing" },
+                            { type: 'video', title: "Caso Clínico 05", src: "https://drive.google.com/file/d/1FsuOdfoC1vwdmsQk4U_2XEpDaxSvH-Is/view?usp=sharing" }
+                        ]
+                    }
+                ]
+            },
+            {
+                moduleTitle: "Bônus",
+                lessons: [
+                    {
+                        title: "Semana de Atualização em Endocrinologia",
+                        resources: [
+                            { type: 'video', title: "Destaques da Nova Diretriz Sobre Diagnóstico e Tratamento do DM2", src: "https://drive.google.com/file/d/1E4tzPwGoKtplOmqh1jTfZv8hcPMs7ktf/view?usp=sharing" },
+                            { type: 'video', title: "Doenças Endócrinas na Gestação: Discutindo Casos Clínicos", src: "https://drive.google.com/file/d/1Fi4UZwuHYGgmcUQB-IplpZoidQrV_-b1/view?usp=sharing" },
+                            { type: 'video', title: "Vitamina D: O que Dizem as Novas Diretrizes?", src: "https://drive.google.com/file/d/1mcoNmFuL5Gn2j4Euy_kXGdzXmVSmVBX3/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "E-books do 'Desafio Trate seu Paciente com Diabetes como um Expert'",
+                        resources: [
+                            { type: 'ebook', title: "7 Erros que Você Comete ao Tratar seu Paciente com Diabetes", src: "https://drive.google.com/file/d/1pSlU3IdrHqEDArw_RvyGykMeUCywmTJY/view?usp=sharing" },
+                            { type: 'ebook', title: "Novos Antidiabéticos: O que Todo Médico Tem que Saber" },
+                            { type: 'ebook', title: "Como Iniciar Insulina sem Medo?" }
+                        ]
+                    }
+                ]
+            },
+            {
+                moduleTitle: "Introdução à Inteligência Artificial na Medicina",
+                lessons: [
+                    {
+                        title: "Inteligência Artificial na Medicina",
+                        resources: [
+                            { type: 'video', title: "Conceitos Fundamentais de IA", src: "https://drive.google.com/file/d/1kupnjlUkXABdVOGT0vRmOpr9EPbmS_9x/view?usp=sharing" },
+                            { type: 'video', title: "Bem-vindo ao Futuro", src: "https://drive.google.com/file/d/1uSL-iY70TEqVWYSGP9PHL8_7AX-9erjP/view?usp=sharing" },
+                            { type: 'video', title: "Visão Inicial de Como Usar IA na Medicina", src: "https://drive.google.com/file/d/1J3Dlmw7i6o1Bz_Cs4YPv9ZnDRcjA-JRk/view?usp=sharing" },
+                            { type: 'video', title: "IA e Aprendizado", src: "https://drive.google.com/file/d/1jeNiUrsw5mOg0PD59e_xfbX6Boz9ozep/view?usp=sharing" },
+                            { type: 'video', title: "Encerramento", src: "https://drive.google.com/file/d/1xziP5Cgkywz5ItGcu4hLjWJH_nNgD2i_/view?usp=sharing" }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const playlistContainer = document.getElementById('course-playlist-content');
+            const initialPlaceholder = document.getElementById('initial-placeholder');
+            const lessonView = document.getElementById('lesson-view');
+            const lessonViewTitle = document.getElementById('lesson-view-title');
+            const lessonViewIframe = document.getElementById('lesson-view-iframe');
+            let activeResourceItem = null;
+
+            const openResourceView = (resource, resourceElement) => {
+                initialPlaceholder.classList.add('hidden');
+                
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                }
+                
+                if (resourceElement) {
+                    resourceElement.classList.add('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = resourceElement;
+                }
+
+                if (resource.type === 'video' || (resource.type === 'ebook' && resource.src)) {
+                    lessonViewTitle.textContent = resource.title;
+                    lessonViewIframe.src = resource.src ? resource.src.replace(/\/view(\?usp=sharing)?$/, '/preview') : 'about:blank';
+                    lessonView.classList.remove('hidden');
+                } else {
+                    lessonView.classList.add('hidden');
+                    initialPlaceholder.classList.remove('hidden');
+                    initialPlaceholder.querySelector('h3').textContent = "Recurso selecionado";
+                    const resourceType = resource.type === 'ebook' ? 'E-book' : 'Recurso';
+                    initialPlaceholder.querySelector('p').textContent = `${resourceType} "${resource.title}" estará disponível em breve.`;
+                }
+            };
+            
+            // Função para limpar e formatar títulos
+            const formatTitle = (title) => {
+                if (!title) return '';
+                return title.replace(/^\s*\d*[\.\-]?\s*/, '');
+            };
+
+            playlistContainer.innerHTML = courseData.map((module, moduleIdx) => `
+                <div>
+                    <h3 class="font-bold text-lg px-2 pt-4 pb-2 text-pink-400">${formatTitle(module.moduleTitle)}</h3>
+                    <div class="space-y-2">
+                        ${module.lessons.map((lesson, lessonIdx) => `
+                            <div class="lesson-group bg-gray-800 rounded-lg">
+                                <button class="accordion-header w-full flex justify-between items-center p-3 text-left font-semibold text-gray-300 hover:bg-gray-700/50 transition-colors">
+                                    <span class="truncate">${formatTitle(lesson.title)}</span>
+                                    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform flex-shrink-0 ml-2"></i>
+                                </button>
+                                <div class="accordion-content" style="max-height: 0px;">
+                                    <div class="p-2 space-y-1 border-t border-gray-700">
+                                        ${lesson.resources.map((resource, resourceIdx) => {
+                                            let icon;
+                                            switch(resource.type) {
+                                                case 'quiz':
+                                                    icon = 'help-circle';
+                                                    break;
+                                                case 'ebook':
+                                                    icon = 'book';
+                                                    break;
+                                                default:
+                                                    icon = 'play-circle';
+                                            }
+                                            return `
+                                            <div class="resource-item flex justify-between items-center p-3 rounded-md text-sm hover:bg-pink-600/20 cursor-pointer transition-colors" 
+                                                 data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}" data-resource-idx="${resourceIdx}">
+                                                <div class="flex items-center overflow-hidden">
+                                                    <i data-lucide="${icon}" class="w-5 h-5 mr-3 text-gray-400 flex-shrink-0"></i>
+                                                    <p class="truncate">${resource.title}</p>
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const { moduleIdx, lessonIdx, resourceIdx } = item.dataset;
+                    const resource = courseData[moduleIdx].lessons[lessonIdx].resources[resourceIdx];
+                    openResourceView(resource, item);
+                });
+            });
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i[data-lucide]');
+                    const isExpanded = content.style.maxHeight !== '0px';
+
+                    document.querySelectorAll('.accordion-content').forEach(otherContent => {
+                        if (otherContent !== content) {
+                            otherContent.style.maxHeight = '0px';
+                            otherContent.previousElementSibling.querySelector('i[data-lucide]').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

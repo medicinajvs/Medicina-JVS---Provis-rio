@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Cursos Médicos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Fundo escuro */
+            color: #e6edf3; /* Cor do texto clara */
+        }
+        /* Barra de rolagem personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1e24;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5c677a;
+        }
+        /* Oculto por padrão, mostrado via JS */
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        /* Estilo para que os cards na home pareçam clicáveis */
+        .home-card {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Barra Lateral (Sidebar) -->
+    <aside class="w-16 bg-gradient-to-b from-blue-700 to-purple-700 flex flex-col items-center py-4 rounded-tr-lg rounded-br-lg shadow-lg">
+        <div class="mb-8">
+            <!-- Ícone do Menu Hambúrguer -->
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </div>
+        <nav class="flex flex-col space-y-8">
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Início"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Favoritos"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg></a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Perfil"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Configurações"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.526.32 1.01.5 1.5.5zm.928 6.643a3.5 3.5 0 10-3.5 3.5 3.5 3.5 0 003.5-3.5z"></path></svg></a>
+        </nav>
+    </aside>
+
+    <!-- Área de Conteúdo Principal -->
+    <div class="flex-1 flex flex-col">
+        <!-- Barra de Cabeçalho Superior -->
+        <header class="bg-[#161b22] px-6 py-4 flex items-center justify-between shadow-md rounded-bl-lg rounded-br-lg">
+            <div class="flex items-center space-x-4">
+                <span class="text-white text-lg font-semibold flex items-center">
+                    <span class="text-blue-500 mr-2">S</span> SIMM Academy
+                </span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative"><input type="text" placeholder="Pesquisar" class="bg-[#21262d] text-gray-300 pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 md:w-80"><svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+                <div class="flex items-center space-x-2">
+                    <div class="relative"><svg class="w-6 h-6 text-gray-400 hover:text-white cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg><span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-gray-900"></span></div>
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Corpo do Conteúdo Principal -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            <!-- Abas de Navegação -->
+            <nav class="mb-6 flex space-x-2 md:space-x-4 text-xs sm:text-sm md:text-base overflow-x-auto pb-2">
+                <a href="#" class="tab-link px-3 py-2 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200 whitespace-nowrap" data-tab="inicio">Início</a>
+                <a href="#" class="tab-link px-3 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="passaporte-simm">Passaporte SIMM</a>
+                <a href="#" class="tab-link px-3 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="emergencia-palma">Emergência na Mão</a>
+                <a href="#" class="tab-link px-3 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="emergencia-neuro">Neuro</a>
+                <a href="#" class="tab-link px-3 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="ps-dia">PS: Dia-a-Dia</a>
+                <a href="#" class="tab-link px-3 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="ps-dermato">PS: Dermato</a>
+                <a href="#" class="tab-link px-3 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="ps-orto">PS: Ortopedia</a>
+            </nav>
+
+            <!-- Container das Seções de Conteúdo -->
+            <div id="content-container">
+                <!-- Seção Início -->
+                <div id="inicio" class="content-section active">
+                    <section class="mb-8">
+                        <h2 class="text-xl font-semibold mb-4">Meus Cursos</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
+                            <!-- Cards dos Cursos Principais com imagens locais -->
+                            <div class="home-card group" data-tab-target="passaporte-simm"><div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden"><img src="Imagens/SIMM/capa.png" alt="Passaporte SIMM Academy" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Capa+do+Curso';"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div></div><h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Passaporte SIMM Academy</h3></div>
+                            <div class="home-card group" data-tab-target="emergencia-palma"><div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden"><img src="Imagens/EPM/capa.png" alt="Emergência na Palma da Mão" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Capa+do+Curso';"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div></div><h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Emergência na Palma da Mão</h3></div>
+                            <div class="home-card group" data-tab-target="emergencia-neuro"><div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden"><img src="Imagens/NEURO/capa.png" alt="Emergências Neurológicas" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Capa+do+Curso';"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div></div><h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Emergências Neurológicas</h3></div>
+                            <div class="home-card group" data-tab-target="ps-dia"><div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden"><img src="Imagens/PSDIA/capa.png" alt="Pronto-Socorro - Dominando o Dia-a-Dia" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Capa+do+Curso';"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div></div><h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Pronto-Socorro: Dia-a-Dia</h3></div>
+                            <div class="home-card group" data-tab-target="ps-dermato"><div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden"><img src="Imagens/PSDERM/capa.png" alt="Pronto-Socorro - Dominando a Dermato" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Capa+do+Curso';"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div></div><h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Pronto-Socorro: Dermato</h3></div>
+                            <div class="home-card group" data-tab-target="ps-orto"><div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden"><img src="Imagens/PSORTO/capa.png" alt="Pronto-Socorro - Dominando a Ortopedia" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Capa+do+Curso';"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div></div><h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Pronto-Socorro: Ortopedia</h3></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Seções dos Cursos (geradas dinamicamente) -->
+                <div id="passaporte-simm" class="content-section"><section><h2 class="text-xl font-semibold mb-4">Passaporte SIMM Academy</h2><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="passaporte-simm-grid"></div></section></div>
+                <div id="emergencia-palma" class="content-section"><section><h2 class="text-xl font-semibold mb-4">Emergência na Palma da Mão</h2><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="emergencia-palma-grid"></div></section></div>
+                <div id="emergencia-neuro" class="content-section"><section><h2 class="text-xl font-semibold mb-4">Emergências Neurológicas</h2><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="emergencia-neuro-grid"></div></section></div>
+                <div id="ps-dia" class="content-section"><section><h2 class="text-xl font-semibold mb-4">Pronto-Socorro - Dominando o Dia-a-Dia</h2><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="ps-dia-grid"></div></section></div>
+                <div id="ps-dermato" class="content-section"><section><h2 class="text-xl font-semibold mb-4">Pronto-Socorro - Dominando a Dermato</h2><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="ps-dermato-grid"></div></section></div>
+                <div id="ps-orto" class="content-section"><section><h2 class="text-xl font-semibold mb-4">Pronto-Socorro - Dominando a Ortopedia</h2><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="ps-orto-grid"></div></section></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabLinks = document.querySelectorAll('.tab-link');
+            const contentSections = document.querySelectorAll('.content-section');
+            const homeCards = document.querySelectorAll('.home-card');
+
+            // --- Dados para os Módulos (Exemplos) ---
+            const createModulesData = (count, coursePrefix) => Array.from({ length: count }, (_, i) => ({
+                title: `Módulo ${i + 1}`,
+                imageUrl: `Imagens/${coursePrefix}/modulo${i + 1}.jpeg`,
+                pageUrl: `${coursePrefix}/modulo${i + 1}.html`
+            }));
+            
+            const courses = {
+                'passaporte-simm': { data: createModulesData(21, 'SIMM'), gridId: 'passaporte-simm-grid', color: 'bg-yellow-500', badge: 'PASSAPORTE' },
+                'emergencia-palma': { data: createModulesData(14, 'EPM'), gridId: 'emergencia-palma-grid', color: 'bg-teal-500', badge: 'EMERGÊNCIA' },
+                'emergencia-neuro': { data: createModulesData(6, 'NEURO'), gridId: 'emergencia-neuro-grid', color: 'bg-indigo-500', badge: 'NEURO' },
+                'ps-dia': { data: createModulesData(14, 'PSDIA'), gridId: 'ps-dia-grid', color: 'bg-sky-500', badge: 'PS DIA-A-DIA' },
+                'ps-dermato': { data: createModulesData(6, 'PSDERM'), gridId: 'ps-dermato-grid', color: 'bg-pink-500', badge: 'PS DERMATO' },
+                'ps-orto': { data: createModulesData(1, 'PSORTO'), gridId: 'ps-orto-grid', color: 'bg-orange-500', badge: 'PS ORTO' },
+            };
+
+            // --- Geração de Cards ---
+            const generateCourseModuleCard = (moduleData, themeColorClass, badgeText) => {
+                const { title, imageUrl, pageUrl } = moduleData;
+                const cardClasses = "block cursor-pointer relative w-full aspect-[3/4] rounded-lg shadow-xl flex flex-col overflow-hidden group";
+                const badgeHtml = `<div class="absolute top-3 left-3 ${themeColorClass} text-white text-xs font-semibold px-2 py-1 rounded-sm flex items-center bg-opacity-80 z-20"><span>${badgeText}</span></div>`;
+                const backgroundAndOverlayHtml = `
+                    <img src="${imageUrl}" alt="${title}" class="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/1080x1440/21262d/ffffff?text=Módulo';">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 z-10"></div>`;
+                return `<a href="${pageUrl}" class="${cardClasses}">${backgroundAndOverlayHtml}${badgeHtml}</a>`;
+            };
+
+            // --- Lógica de Abas ---
+            const showTab = (tabId) => {
+                if (!tabId) return;
+
+                tabLinks.forEach(link => {
+                    const isTarget = link.dataset.tab === tabId;
+                    link.classList.toggle('bg-blue-600', isTarget);
+                    link.classList.toggle('text-white', isTarget);
+                    link.classList.toggle('font-medium', isTarget);
+                    link.classList.toggle('text-gray-400', !isTarget);
+                    link.classList.toggle('hover:bg-gray-800', !isTarget);
+                });
+
+                contentSections.forEach(section => {
+                    section.classList.toggle('active', section.id === tabId);
+                });
+
+                if (courses[tabId]) {
+                    const course = courses[tabId];
+                    const grid = document.getElementById(course.gridId);
+                    if (grid && grid.innerHTML === '') {
+                        grid.innerHTML = course.data.map(moduleData => 
+                            generateCourseModuleCard(moduleData, course.color, course.badge)
+                        ).join('');
+                    }
+                }
+            };
+
+            tabLinks.forEach(link => {
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const tabId = link.dataset.tab;
+                    showTab(tabId);
+                });
+            });
+
+            homeCards.forEach(card => {
+                card.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const tabId = card.dataset.tabTarget;
+                    showTab(tabId);
+                });
+            });
+
+            showTab('inicio'); 
+        });
+    </script>
+</body>
+</html>

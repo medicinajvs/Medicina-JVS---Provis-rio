@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estratégia MED - Obstetrícia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos gerais e específicos */
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .menu-item-header { border: 1px solid #e2e8f0; padding: 0.75rem 1rem; border-radius: 0.375rem; background-color: white; cursor: pointer; transition: background-color 0.2s ease-in-out; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; text-align: left; width: 100%; }
+        .menu-item-header:hover { background-color: #f8fafc; }
+        .menu-item-content { padding: 0.5rem 1rem 1rem 1rem; background-color: white; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; margin-bottom: 0.75rem; }
+        .sub-accordion-header { padding: 0.75rem 0.5rem; border-radius: 0.375rem; margin-top: 0.5rem; background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; text-align: left; transition: background-color 0.2s ease-in-out; }
+        .sub-accordion-header:hover { background-color: #f1f5f9; }
+        /* Estilo para cabeçalho desabilitado */
+        .sub-accordion-header:disabled { cursor: default; opacity: 0.6; background-color: #f8fafc; }
+        .sub-accordion-header:disabled:hover { background-color: #f8fafc; } /* Remove hover de desabilitado */
+
+        .sub-accordion-content { padding-left: 1rem; margin-top: 0.25rem; }
+        .sub-item-details { padding: 0.75rem 0.5rem 0.75rem 1rem; border-radius: 0.375rem; margin-top: 0.25rem; background-color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s ease-in-out; }
+        /* Cursor pointer apenas para itens clicáveis (vídeo ou PDF/download) */
+        .sub-item-details[data-drive-video-url],
+        .sub-item-details[data-download-url] { cursor: pointer; }
+        .sub-item-details[data-drive-video-url]:hover,
+        .sub-item-details[data-download-url]:hover { background-color: #cbd5e1; }
+        /* Estilo para item ativo */
+        .sub-item-details.is-active { background-color: #bfdbfe; }
+        .sub-item-details.is-active .item-icon { color: #3b82f6; } /* Ícone ativo só para vídeo */
+        .item-details-content { display: flex; align-items: center; flex-grow: 1; margin-right: 0.5rem; overflow: hidden; }
+        /* Ajuste para quando o ícone está presente */
+        .item-details-content .item-icon + .overflow-hidden { margin-left: 0.75rem; } /* Adiciona margem se o ícone existir antes */
+
+        .download-link { display: inline-flex; align-items: center; color: #6b7280; transition: color 0.2s ease-in-out; }
+        .download-link:hover { color: #1f2937; }
+        .status-toggle { cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem; border-radius: 0.25rem; transition: background-color 0.2s ease-in-out; }
+        .status-toggle:hover { background-color: #e5e7eb; }
+        .status-toggle .icon-completed { display: none; }
+        .status-toggle .icon-not-completed { display: inline-block; }
+        .status-toggle.is-completed .icon-completed { display: inline-block; }
+        .status-toggle.is-completed .icon-not-completed { display: none; }
+        .video-container-yt { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #ccc; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); margin-bottom: 1rem; }
+        .video-container-yt iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        .menu-container { flex-shrink: 0; max-height: calc(100vh - 150px); overflow-y: auto; }
+        .menu-container::-webkit-scrollbar { width: 6px; }
+        .menu-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb:hover { background: #aaaaaa; }
+        .hidden { display: none; }
+        .rotate-180 { transform: rotate(180deg); }
+        .transition-transform { transition: transform 0.2s ease-in-out; }
+
+        /* Estilos para o botão de like */
+        .like-button .heart-outline { display: inline-block; }
+        .like-button .heart-filled { display: none; }
+        .like-button.is-liked .heart-outline { display: none; }
+        .like-button.is-liked .heart-filled { display: inline-block; color: #ef4444; /* red-500 */ }
+        /* Animação simples de "pulso" ao curtir */
+        .like-button.is-liked .heart-filled {
+            animation: pulse 0.3s ease-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white shadow-md py-3 px-4 md:px-8 sticky top-0 z-10">
+        <div class="container mx-auto max-w-full flex justify-between items-center">
+            <div class="flex items-center gap-4 flex-wrap">
+                <a href="estrategiamed.html" class="flex items-center text-sm text-gray-600 hover:text-gray-900"> <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Voltar
+                </a>
+                <h1 class="text-lg font-semibold text-gray-700">Obstetrícia</h1>
+                <div class="relative inline-block text-left">
+                    <button type="button" class="inline-flex justify-center items-center w-full rounded-md border border-gray-300 shadow-sm px-3 py-1 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                        2025
+                        <svg class="-mr-1 ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="like-button" class="like-button text-gray-500 hover:text-red-500 transition-colors duration-200">
+                    <svg class="heart-outline w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <svg class="heart-filled w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                </button>
+                </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto max-w-full p-4 md:p-8">
+        <div class="flex flex-row flex-wrap gap-6 md:gap-8">
+            <div class="w-full md:flex-1 min-w-[300px]">
+                 <div class="video-container-yt">
+                     <iframe
+                        id="content-viewer" src="" title="Visualizador de Conteúdo"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                 <p id="content-description" class="mt-4 text-gray-600 text-sm md:text-base">
+                    Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar.
+                 </p>
+            </div>
+
+            <div class="w-full md:w-[350px] menu-container mt-6 md:mt-0 pr-2">
+
+                <template id="subitem-details-template">
+                     <div class="sub-item-details">
+                         <div class="item-details-content">
+                             <div class="overflow-hidden"> <div class="item-title text-sm font-medium text-gray-800 truncate">Placeholder Title</div>
+                                 <div class="item-subtitle text-xs text-gray-500">Estratégia Educacional</div>
+                             </div>
+                         </div>
+                         <a href="#" class="download-link flex-shrink-0" title="Baixar">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                         </a>
+                    </div>
+                </template>
+
+                <div id="menu-items-list">
+                    </div>
+
+            </div> </div> </main>
+
+    <script>
+        // --- Dados e Configurações ---
+        // MODIFICADO: Links dos módulos 21-25 atualizados
+        const menuItemsData = [
+            {
+                title: "TPP - Prematuridade e Trabalho de Parto Prematuro",
+                description: "Descrição TPP - Prematuridade e Trabalho de Parto Prematuro.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1uD1HcGuw7MgeYuXSqExGDFGFVj-Wwbm8/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1gQC_TT4_n5aBDpUEyIMCUnHce-i4WX-v/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1OmF_y6Gkl5OCRwF871evQ-JQky5t1ejW/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital TPP - Prematuridade e Trabalho de Parto Prematuro", downloadUrl: "https://drive.google.com/file/d/1gKb6QvL30Sk5p1dMC3GmYilPD8LekdLD/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo TPP - Prematuridade e Trabalho de Parto Prematuro", downloadUrl: "https://drive.google.com/file/d/1KU58CVhAl6lohCJWwOSBUvLtNtmEKOJT/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - TPP - Prematuridade e Trabalho de Parto Prematuro", downloadUrl: "https://drive.google.com/file/d/1eHpy2lttRe7Yu17mCJTVIDJbnmxVKNsa/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - TPP - Prematuridade e Trabalho de Parto Prematuro", downloadUrl: "https://drive.google.com/file/d/1-21-HRW5x-RX-fSg9q1FwPgGy3so73Au/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - TPP - Prematuridade e Trabalho de Parto Prematuro", downloadUrl: "https://drive.google.com/file/d/1YLYluc6J8aU-LIzokv7m9V6Ua01ZfG59/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Rotura Prematura de Membranas (RPM)",
+                description: "Descrição Rotura Prematura de Membranas (RPM).",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1cvQIXgyyV1eMXdEHNomy35a12pIk960i/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1mhkGlbn6RlhlFwcWmTsu2gtgG-jx8War/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1OzsR4reEylblKWJ7A7tJ1MopxZdF3iDO/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1mCkwr_DT2uKPabyCwOXyVglQly0Z2cYc/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Rotura Prematura de Membranas (RPM)", downloadUrl: "https://drive.google.com/file/d/1TZRJTlcLXZ99fjQ2I822BvAV3tEXL9bL/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Rotura Prematura de Membranas (RPM)", downloadUrl: "https://drive.google.com/file/d/1v0R5Y_B2i9vFb0jLFOZpPktkA3rOawU-/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Rotura Prematura de Membranas", downloadUrl: "https://drive.google.com/file/d/1KQveXWVckjPFZ7iDafS0L_LBO-Y6_wXF/preview?usp=sharing" },
+                        { title: "Slide 2 - Rotura Prematura de Membranas", downloadUrl: "https://drive.google.com/file/d/1o-9Eo4Lngbr48vvdPfV-AW9jHvBEu4vS/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Rotura Prematura de Membranas (RPM)", downloadUrl: "https://drive.google.com/file/d/1udIGoh0egSocV4361ZPL7f3lLnK3rLYO/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Rotura Prematura de Membranas (RPM)", downloadUrl: "https://drive.google.com/file/d/1gRDUpztvj-vra_MmmaZlgE_SNIM6x56K/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "HPP - Hemorragia Pós-Parto",
+                description: "Descrição HPP - Hemorragia Pós-Parto.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1FIkC-vwO4P8zCncOU9jnkaWULJQWaf1e/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/15vqhEwgxUfWSiRnzD275g2t3EO5thzvb/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1tzBKVPzokebHwx2Q5ppif_wwluW-FLat/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - HPP - Hemorragia Pós-Parto", downloadUrl: "https://drive.google.com/file/d/1oVU1tSaD7XcAeafbMmg1auXk2gcgcR_J/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - HPP - Hemorragia Pós-Parto", downloadUrl: "https://drive.google.com/file/d/1vlgqB2ePoUjc3AzDeV89vQqnsNVNWFja/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - HPP - Hemorragia Pós-Parto", downloadUrl: "https://drive.google.com/file/d/1E7sUKJk2hA6nIzmKeIxQ4gbFm2dEBec2/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - HPP - Hemorragia Pós-Parto", downloadUrl: "https://drive.google.com/file/d/1zXmrcsJUadtvJDavV-FLhFltb4wSgBmJ/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - HPP - Hemorragia Pós-Parto", downloadUrl: "https://drive.google.com/file/d/1WbgN2BcrbuUFAIR8Bu2HKyGzLYzkQ0Mn/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Gestação Múltipla",
+                description: "Descrição Gestação Múltipla.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1duSoh1pWdNTh5OHoB7zRm3C9Xl0Zvn5D/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1uDorBTHV2W1-8IaW-7BnIFsxIJZTgRFB/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Gestação Múltipla", downloadUrl: "https://drive.google.com/file/d/1A-sNdeA7i0YVQ7tlT4j8_oREfy6xjt-y/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Gestação Múltipla", downloadUrl: "https://drive.google.com/file/d/1M6hTVlKmm3cJ2__bBbHY_babzBYjE_1I/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Gestação Múltipla", downloadUrl: "https://drive.google.com/file/d/14AIfSFz_drzi-0xcLXOi_iwpQqvyoH8N/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Gestação Múltipla", downloadUrl: "https://drive.google.com/file/d/1X-sYJ1FOH8kT63ZwZ64MdbMQC6hlGECM/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Gestação Múltipla", downloadUrl: "https://drive.google.com/file/d/1mofhZUeIT9-KK-6tPRRhbL16XRF0yJed/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Partograma e Distocias",
+                description: "Descrição Partograma e Distocias.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1J1njuLGjc0N7zkfCvk1ibUTKa8djXbG6/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Partograma e Distocias", downloadUrl: "https://drive.google.com/file/d/1WgXUHkYC19K7IYKN8WvjHZCqn8riQb4B/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Partograma e Distocias", downloadUrl: "https://drive.google.com/file/d/1Vx-a1jlZj5TlUlILDxHi4fX2J76IqYkv/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Partograma e Distocias", downloadUrl: "https://drive.google.com/file/d/17s-2VdeAOuVlp75KTvwgDJm3ekWNQr5S/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Partograma e Distocias", downloadUrl: "https://drive.google.com/file/d/1hbCCL6OE4vt7l27l1hn8AApnp5jrPCQF/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Partograma e Distocias", downloadUrl: "https://drive.google.com/file/d/12L2SmlFDW5Ro5FdXjfq_kdPf2sCxVZwa/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Bacia Obstétrica, Pelvimetria e Estática Fetal",
+                description: "Descrição Bacia Obstétrica, Pelvimetria e Estática Fetal.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1Omqeunk03hN2oNM9H9bX2B5zdhZ7OxAF/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1JiQlLgCE5WePsfb8mgY_-DgiQ5KbvQTC/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1rwCXQbac1eEJ-sA_cItOMQQJbyX9s6mH/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1Fcq_DqiWOyTnSFipz-OAE0qc2gdIF7sK/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1qinWCh7Wb59C9vbvWT4ubopA9zTYOLV4/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1iNnPHA_S-ziKKN5ExfbUoGFDHn8VuG5J/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Bacia Obstétrica, Pelvimetria e Estática Fetal", downloadUrl: "https://drive.google.com/file/d/19gDx0rNMWPoWykWQhGakhrcgqJ8RlFHb/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Bacia Obstétrica, Pelvimetria e Estática Fetal", downloadUrl: "https://drive.google.com/file/d/1m6jlQ9qBV3ilkciB6tAOYVUcb7aNmDTF/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Bacia Obstétrica, Pelvimetria e Estática Fetal", downloadUrl: "https://drive.google.com/file/d/1Gzkev0Uq4ynkV2-r0M-YIulBIUU85vU5/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Bacia Obstétrica, Pelvimetria e Estática Fetal", downloadUrl: "https://drive.google.com/file/d/1laRMuSoYqtW0dR_5QXPh1WF0HtkNhqoW/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Bacia Obstétrica, Pelvimetria e Estática Fetal", downloadUrl: "https://drive.google.com/file/d/1IU54O0duseTiaQcc8HmsVFulMVT40bYn/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Infecção Puerperal",
+                description: "Descrição Infecção Puerperal.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1nxilwFdTe3YdLB_oJ7yWyYq5jNBTDGp_/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1C8ZENcjpbO-iFoBCyqrTSP1cTgFXYl1M/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Infecção Puerperal", downloadUrl: "https://drive.google.com/file/d/1jeYWn0ktkxXT7M4F8-sS8WfPZKlNY_tC/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Infecção Puerperal", downloadUrl: "https://drive.google.com/file/d/12hdMaJ7vgxfZMj8olLW0irWJMKzbUtbC/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Infecção Puerperal", downloadUrl: "https://drive.google.com/file/d/1Exeb2-BxI7nNqyTQvURB1dCouoI7wwp5/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Infecção Puerperal", downloadUrl: "https://drive.google.com/file/d/1NHEZXeQGuJj01RJKgnnJCqafYbfOcshQ/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Infecção Puerperal", downloadUrl: "https://drive.google.com/file/d/1wm1OVQmmQFnpiR5LBHL8Jj4ZW14C8T8u/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Sífilis na Gestação e Sífilis Congênitas",
+                description: "Descrição Sífilis na Gestação e Sífilis Congênitas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/14Uu1Tba2bUKiHb7ep-GB51mTWPXfEm6b/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1x8RUgFv1QQFMzTtrDfn9c1T-wD27cmwm/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1AxOaAeJa_y6darXLw9M9-l3y6DAAM93R/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1a336vAn23HWVFqMTbAiIKJqxGsp9rWwz/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1hkVu2Jh-gBO3S1cz5VRBTDLYqKV47X6x/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1hjVEMWpMjKDOQ7WOJiTmo8-x-pKUYEwx/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Sífilis na Gestação e Sífilis Congênita", downloadUrl: "https://drive.google.com/file/d/12m4VEOOtd3P3WrIx-2qiocZnvprq6DoY/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Sífilis na Gestação e Sífilis Congênita", downloadUrl: "https://drive.google.com/file/d/1tnIqrYurL7Br2pXXcKEBexSLgCANSNJm/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Sífilis na Gestação", downloadUrl: "https://drive.google.com/file/d/1PvemiEnbhR_VCxNLSNJZi7-S6lhz-BdL/preview?usp=sharing" },
+                        { title: "Slide 2 - Sífilis na Gestação", downloadUrl: "https://drive.google.com/file/d/16Iv070x6_xRrVAHKKdyXx1Kvc6WIYtCF/preview?usp=sharing" },
+                        { title: "Slide 3 - Sífilis na Gestação", downloadUrl: "https://drive.google.com/file/d/1e_aj1Ct5YHiWUMIS_6DfONp-nFxOoc5n/preview?usp=sharing" },
+                        { title: "Slide 4 - Sífilis na Gestação", downloadUrl: "https://drive.google.com/file/d/1rVWkVdZNdYDM62inpRjrNBrQpSeNai77/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Sífilis na Gestação e Sífilis Congênita", downloadUrl: "https://drive.google.com/file/d/1Qdq8G2L8ngoRYurqTLblfTWZi65KZPZ4/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Sífilis na Gestação e Sífilis Congênita", downloadUrl: "https://drive.google.com/file/d/1bG3LYBq1-m4oOIQJk5tW7Y4sOqUs6Jqf/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Infecções Congênitas na Gestação",
+                description: "Descrição Infecções Congênitas na Gestação.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1KdKD9_xWzoye1YGuCiV7J7TF_D01-eDZ/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1r0UNACB3OuRdNPjvonVL5MNn7zScnSlp/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1pjGz0tBcXnWKO4X9E7Zn4_MjCVE_MI6P/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1NoGRIVd7S4hczO4ridCmMQ2yqxn3mG3P/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1zKlTHy_dF6XyFR1DS2dZrxpu-KcOEaAU/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Infecções Congênitas na Gestação", downloadUrl: "https://drive.google.com/file/d/1kbX5A9wpVa7TZnfyZP_JSg7MHCN70g3R/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Infecções Congênitas na Gestação", downloadUrl: "https://drive.google.com/file/d/1A9H8svifzWkShwAAcpiLPSXOaPAiOJFb/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Infecções Congênitas", downloadUrl: "https://drive.google.com/file/d/1DD3TO_CBcV2tqFJJKV1BKjlAYpHZtCre/preview?usp=sharing" },
+                        { title: "Slide 2 - Infecções Congênitas", downloadUrl: "https://drive.google.com/file/d/1q0ZvjiCTSHgKC9ABUH49Aj8f42mjg2m3/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental 1 - Infecções Congênitas na Gestação", downloadUrl: "https://drive.google.com/file/d/1LopO7TuRjB2SnFLzM9yXKLvcpeBo7ae5/preview?usp=sharing" },
+                        { title: "Mapa Mental 2 - Infecções Congênitas na Gestação", downloadUrl: "https://drive.google.com/file/d/1GwJcIU0bZf4c2drKOLxeZdQ8P1pNemZT/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Infecções Congênitas na Gestação", downloadUrl: "https://drive.google.com/file/d/1R8HtN8Dy_B-HnWxfq7V2a2qsO4YxDw5c/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Aloimunização Materna e Doença Hemolítica Perinatal",
+                description: "Descrição Aloimunização Materna e Doença Hemolítica Perinatal.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1Am6k984CEMsnyp-uhinVleXWZ5dDu-rQ/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Aloimunização Materna e Doença Hemolítica Perinatal", downloadUrl: "https://drive.google.com/file/d/1YHStMo0Hdh30ZSnPVkUyyWhevMnzuy_s/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Aloimunização Materna e Doença Hemolítica Perinatal", downloadUrl: "https://drive.google.com/file/d/1yo2zpsW7T-hfG1PMFvlkP2Z6UCdOFE9H/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Aloimunização Materna e Doença Hemolítica Perinatal", downloadUrl: "https://drive.google.com/file/d/1tpb4QVqTHIduhjTRqMAf7PaC3cniCrvq/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Aloimunização Materna e Doença Hemolítica Perinatal", downloadUrl: "https://drive.google.com/file/d/1jd8M8EXw1FHgbE9mX3tXqhy3KBjtgYEj/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Aloimunização Materna e Doença Hemolítica Perinatal", downloadUrl: "https://drive.google.com/file/d/1D23ZRpCrJKfN2rtxG30vLCn7JyL_QFLs/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Alteração do Volume de Liquido Amniótico",
+                description: "Descrição Alteração do Volume de Liquido Amniótico.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1LIqckf-6p8cbzry_bSWbrw36rqXuy26w/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Alteração do Volume do Líquido Amniótico", downloadUrl: "https://drive.google.com/file/d/1jFCStZj3mt-MAPD8P8FukoFPKA21CVw4/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Alteração do Volume do Líquido Amniótico", downloadUrl: "https://drive.google.com/file/d/1tbsPpQsanJPInT2RD7XoRBno92io8voZ/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Alteração do volume do líquido amniótico", downloadUrl: "https://drive.google.com/file/d/1Ih4T5Gb6y_66uNmJyfRm-N4V6ETqUf1l/preview?usp=sharing" },
+                        { title: "Slide 2 - Alteração do volume do líquido amniótico", downloadUrl: "https://drive.google.com/file/d/1Ecou6isWHitBxFlVYFGaE8q-oHS80E79/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Alteração do Volume do Líquido Amniótico", downloadUrl: "https://drive.google.com/file/d/1FPcWi9JS4MOlIytYRA8O6FWTqbUtGHQX/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Alteração do Volume do Líquido Amniótico", downloadUrl: "https://drive.google.com/file/d/1XI_YDxCeY9DNJdnB3jxW3Kb_D-LG8l5I/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Modificações Fisiológicas da Gestação",
+                description: "Descrição Modificações Fisiológicas da Gestação.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1tyj1yaad_wF0pC13SRwRGMvDTRc36iwd/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/13a5TWjiXIgCRG2HtaUHakYAQ8-SCR5fi/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/16r9kikO6qzqEZoxbE-5R6d94hj_R3PZH/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/12qyziHu7SRYLSySFUlUQT1jnd2fvNwOw/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1LeTbcu06ExMn5GbfPCEFlR-HFDhNQOCv/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Modificações Fisiológicas da Gestação", downloadUrl: "https://drive.google.com/file/d/1VjLi0pShdyVS0oYqX_2vErpa6YV4vh8P/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Modificações Fisiológicas da Gestação", downloadUrl: "https://drive.google.com/file/d/13tzZLRtFiM7bMjVPudDnUfQ7j5tZCJx4/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Modificações Fisiológicas da Gestação", downloadUrl: "https://drive.google.com/file/d/1HrlT0Kej53SbPlVPq3gMvFasy1bwfXJ2/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Modificações Fisiológicas da Gestação", downloadUrl: "https://drive.google.com/file/d/1buveYN_mxg3xA5MZQrEkcu7ABmmmkdhg/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Modificações Fisiológicas da Gestação", downloadUrl: "https://drive.google.com/file/d/1OEbVO7qH19BCEA9jk4glafH7hqLzyHnc/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Abortamento de Repetição",
+                description: "Descrição Abortamento de Repetição.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1euT7BpXOK1uCUibL1JCJhcLQYUouUnf2/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1BZXVOEGQlSSJdCyYOEhU3VxzrImvvuva/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital 1 - Abortamento de Repetição", downloadUrl: "https://drive.google.com/file/d/1LxYDG1VDJ2G7sCdrPAGS6g9W-cgaCZdq/preview?usp=sharing" },
+                        { title: "Livro Digital 2 - Abortamento de Repetição", downloadUrl: "https://drive.google.com/file/d/1FCeobWoFT3bPLXoYWwy3UUfsgarQ-6jB/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Abortamento de Repetição", downloadUrl: "https://drive.google.com/file/d/15ntODB3aY-9FpAZifdlmQXdOny9WAySI/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Abortamento de Repetição", downloadUrl: "https://drive.google.com/file/d/1ZByPFrhHZotae884TLoTUKNw_h3n56-a/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Abortamento de Repetição", downloadUrl: "https://drive.google.com/file/d/1dl7pKpsYOr79q4IMiShoiMAjate7mm2t/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Síndromes Hipertensivas da Gestação",
+                description: "Descrição Síndromes Hipertensivas da Gestação.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1pLntHSiM6wK8uOQhUR-U6V5uMa6kiOkB/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1zz2XAbodPiZO3ZFqLj1y-YVXsUIviGA_/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1zhQ9rZZ9OJFrtoWmAngl7mpbzU23YK92/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1gBPmT4QDGsBXQfvIEsg1l4ENt4ZZTRiu/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Síndromes Hipertensivas da Gestação", downloadUrl: "https://drive.google.com/file/d/1DjaKZCdRxLbPiWHFDtIJs4CV6q_gJ5R5/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Síndromes Hipertensivas da Gestação", downloadUrl: "https://drive.google.com/file/d/1KsO12MnhThK2QsCp1_49bPND8uUQ6CMO/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Síndromes Hipertensivas", downloadUrl: "https://drive.google.com/file/d/1HvccS8COtP7GpBRKxRZRnVfxhMfGpyXA/preview?usp=sharing" },
+                        { title: "Slide 2 - Síndromes Hipertensivas", downloadUrl: "https://drive.google.com/file/d/19ea6UMevanneMxC3-8H6GRIJ74Wx9ptI/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Síndromes Hipertensivas da Gestação", downloadUrl: "https://drive.google.com/file/d/1rq69nkGCsvTP1zM_lZchMZ7F2LoqQtNU/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Síndromes Hipertensivas da Gestação", downloadUrl: "https://drive.google.com/file/d/1LUFEnCl3B-F3DD7_z8vVHxnLKdbdNiQZ/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Vitalidade Fetal",
+                description: "Descrição Vitalidade Fetal.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1BkBWPAS5htdQIV0Y3K9PAJMgy0tRbcxL/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1win8hxaBUXisxXdCFQ54IPZxKQI6YY34/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1wpvEWbi74ihVmAKJpc93rsCfrBHWG_ka/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1S0RwmnoZU7UXy9Rd4zbhuFQ1U6ZPsV_Y/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1B_Kz9GLzRH0zceQpXSi8sXS6KZLQsWEc/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1XFiJTsihpIGt7lpHFDKJAf-ViF_Eo7Km/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 7", driveVideoUrl: "https://drive.google.com/file/d/1nVhHT-VzvkOrWzSbuaSasjsYPhY8pIGe/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Vitalidade Fetal", downloadUrl: "https://drive.google.com/file/d/1HTO8QwJAYH2NpgT2pv7u5jQkaoaYYGgO/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Vitalidade Fetal", downloadUrl: "https://drive.google.com/file/d/1Nx-HEHc34MOHo4V6XyR_1AmoEvZEhAkh/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Vitalidade Fetal", downloadUrl: "https://drive.google.com/file/d/1CBTDIXuhhYXTd-1gNMkmXP2EKyWuwoMu/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Vitalidade Fetal", downloadUrl: "https://drive.google.com/file/d/12ROX_q92YNyf85D-h88LQlYKkNU1kyu-/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Vitalidade Fetal", downloadUrl: "https://drive.google.com/file/d/1oCKlXUbsgcwghUOZVbYF9Y4PvDvJZzXs/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Assistência ao Parto",
+                description: "Descrição Assistência ao Parto.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1rHIsucnXJ27TwTIB1bVOZYF07SxfDtaY/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1rRIMinflCBqy8xDStreSesK-vdKjo1qG/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1nWg6_nwsaJr7IfPG_RIC9yPwXeTFqXgd/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1HBaPAn9zGK3Z5xcqF5ubyBqZkLZnAgUN/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/13j51tUciT4oHRr21DDgvRCkMAxov45UC/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1FThzzkdUARhUZ2UnTvzFPyV4IHi3_rfy/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 7", driveVideoUrl: "https://drive.google.com/file/d/1anH4nMPpunLCb3ez2M2UY9R15J5t_emy/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 8", driveVideoUrl: "https://drive.google.com/file/d/1SmH_jvIQ1MdcamrEZBrqyjKu0M-0kmU0/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 9", driveVideoUrl: "https://drive.google.com/file/d/1pM6vSzGHXtOHuv8FQ65b4IOWFtiMT_0P/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 10", driveVideoUrl: "https://drive.google.com/file/d/1WlWH9FlFtOnZXstwh-1vWcDiBwzd4rPp/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Assistência ao Parto", downloadUrl: "https://drive.google.com/file/d/1O7Qc_rpRwAyWhcNDnTcafz3duegdeKH7/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Assistência ao Parto", downloadUrl: "https://drive.google.com/file/d/15gyjiETb1lZuuNzWCoJ2PaRTYsPmNuWE/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Assistência ao Parto", downloadUrl: "https://drive.google.com/file/d/1gemsmHsEZALu_d9roT_5gmcllnij16qg/preview?usp=sharing" },
+                        { title: "Slide 2 - Assistência ao Parto", downloadUrl: "https://drive.google.com/file/d/1YDA3PzMpdrdnIxr74j6BgmklancCwCFj/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Assistência ao Parto", downloadUrl: "https://drive.google.com/file/d/1VUB5hbuuRQwfeVRMrOnOYSHmb4hmxvK0/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Assistência ao Parto", downloadUrl: "https://drive.google.com/file/d/1CyjXD-MuK1xJNrwHqCMCUKyNIryO6AsW/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Parto Vaginal Operatório",
+                description: "Descrição Parto Vaginal Operatório.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1Xt8jPSkceqpKUbBn4RFwAsWe098KjL1I/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1JObNofxyAcKH4WlLf0DlbEJEUymvX_k6/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1WVjC-HT6OFp4ue5ERzDfAgqEEiQTiZmx/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Parto Vaginal Operatório", downloadUrl: "https://drive.google.com/file/d/1ziU0NJ4V_yWUdnEMc1zz0EPbNOa94af7/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Parto Vaginal Operatório", downloadUrl: "https://drive.google.com/file/d/1zj4NLu3FhL0N8jo-g7bdPcVwoFqkOLoo/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Parto Vaginal Operatório", downloadUrl: "https://drive.google.com/file/d/10rwpX4wrVtsQi8Ys4Bqc2G8ks2kbIktq/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Parto Vaginal Operatório", downloadUrl: "https://drive.google.com/file/d/1RakxNt26vVqEnMFwlzcGw-QikbOfsDH1/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': []
+                }
+            },
+            {
+                title: "Mecanismo de Parto e Fases Clínicas do Parto",
+                description: "Descrição Mecanismo de Parto e Fases Clínicas do Parto.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1CLq-re_y3BX_d1L1chWcUU-zBIXWR_OR/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1IhZHgy14VKy_JLapSl7ApUXE0X-ec_dy/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Mecanismo de Parto e Fases Clínicas do Parto", downloadUrl: "https://drive.google.com/file/d/1WQr151yUOJNack9vn0bq6crBE9Vr8m6J/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Mecanismo de Parto e Fases Clínicas do Parto", downloadUrl: "https://drive.google.com/file/d/1TXm7lNgM3dQ1wrTwaTWSWKFlHGdxFwVW/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Mecanismo de Parto e Fases Clínicas do Parto", downloadUrl: "https://drive.google.com/file/d/1cTkTvemZvBVFH1Iy7fwZvzP37LAak51w/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Mecanismo de Parto e Fases Clínicas do Parto", downloadUrl: "https://drive.google.com/file/d/1nm1eAUgpYK7OnVr4vMuQw5cK590oyuNq/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Indução do Parto e Pós-Datismo",
+                description: "Descrição Indução do Parto e Pós-Datismo.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1ZR1BljbG30coLr94EwEiW3NvJZ1gHcZl/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1SE_rOFJ3cELvA52nmxmWsSv03MLdsGI0/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1FF2bVD59yXJWo_optP1OUWd2le3yfR6v/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Indução do Parto e Pós-Datismo", downloadUrl: "https://drive.google.com/file/d/1sVucX7KmKd3wlGI6kSePz3dScleEd-c4/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Indução do Parto e Pós-Datismo", downloadUrl: "https://drive.google.com/file/d/1767npgVQKV7BJPXQfxZva5_XRt_lD3qZ/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Indução do Parto e Pós-Datismo", downloadUrl: "https://drive.google.com/file/d/1BGsm_4PkFTilx4ameYr-OAJg0dMmx1-P/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Indução do Parto e Pós-Datismo", downloadUrl: "https://drive.google.com/file/d/1WSEceUQKjtIASnjC2hFGcjTFz9xwkL7p/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Indução do Parto e Pós-Datismo", downloadUrl: "https://drive.google.com/file/d/1qpb3Cb-WO2F4T3uoDaJTvNUcv3ZnS9HE/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Restrição de Crescimento Fetal e Óbito Fetal",
+                description: "Descrição Restrição de Crescimento Fetal e Óbito Fetal.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1wwvQc53VnpxG91_F91VfvAOGef5lkGPR/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1AEZDBc-4VqXbsYLqt65RB3QDT4ITKfaR/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1JUCRdJa-mc27tw8-bQZo6-tPWFo9UdRc/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1_MIv81aJ2JYYqHBWBNLcWNLNybYhvXdf/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Restrição de Crescimento Fetal e Óbito Fetal", downloadUrl: "https://drive.google.com/file/d/1Wt-FNDBpBTNiPIe4jQlD5UuqlKOQcLWR/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Restrição de Crescimento Fetal e Óbito Fetal", downloadUrl: "https://drive.google.com/file/d/1K0METMfF9Dr8acDajdl7qyjsaDZc17b1/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Restrição de Crescimento Fetal e Óbito Fetal", downloadUrl: "https://drive.google.com/file/d/1nAamm_KLsdpPqknmtpX31huX4COLqNkc/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Restrição de Crescimento Fetal e Óbito Fetal", downloadUrl: "https://drive.google.com/file/d/1oyIk-y8sssGXSFnAQlzYa3qp2iC4rHL7/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Restrição de Crescimento Fetal e Óbito Fetal", downloadUrl: "https://drive.google.com/file/d/1-dUJXfsohQVDwJ-lJa4IqRl6ZcAYeoy2/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Pré-Natal",
+                description: "Descrição Pré-Natal.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1a9xA5dwpqVcItyBZIufUO7wexJiC329u/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1E2e7b7SPZnwBdA4TSzNz4GcXks5CDbAn/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/13-w5yqk63BkU3BI42ZjBQrbTet4c4KB8/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Pré-Natal", downloadUrl: "https://drive.google.com/file/d/19SqlkAdksKkJGv65Ia9zO6SpWf_oUe3B/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Pré-Natal", downloadUrl: "https://drive.google.com/file/d/1EKzTW-esCTtbLJ1ZUoDy0HYi7ItKuMpj/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Pré-Natal", downloadUrl: "https://drive.google.com/file/d/1UtElNkVEL_al5PRWDimEnCNKFbPRA5GI/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Pré-Natal", downloadUrl: "https://drive.google.com/file/d/1jFnmoYqRvRT7KKE7IB8J3xgoPuZc3gKN/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Pré-Natal", downloadUrl: "https://drive.google.com/file/d/1oFssI5RU_HUzDt28-JvDl9NMf_Kx-DqS/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Ultrassom em Obstetrícia",
+                description: "Descrição Ultrassom em Obstetrícia.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1zqu9w720W2FQqv3cmGJy1juPPcnDgGKW/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1Vwg7VTCFqIW03Pj0UWYzkO2IqiW_o0Wv/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1qIjiMR0k_WdpxbKPMDZT6psujMoQNokA/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1UxS3RnfB50YJX5RBYVeJBABK2-N67I6j/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/13fuXK6L_ZFCshXHFjZChQKQ_PncqSF0r/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Ultrassom em Obstetrícia", downloadUrl: "https://drive.google.com/file/d/1_MGnthkAgezOCjUI5hhSjhmD_KaLKDTA/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Ultrassom em Obstetrícia", downloadUrl: "https://drive.google.com/file/d/1MwNfg6ia8sLSZpylf3LaDEccrMlD7A5y/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Ultrassom em Obstetrícia", downloadUrl: "https://drive.google.com/file/d/1m_0onv2CDloJWt_X8aWhCGL7_vQgjxm6/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Ultrassom em Obstetrícia", downloadUrl: "https://drive.google.com/file/d/1AbxXAR9VY904GXwY5Ak4z-UuOj6_o7ml/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Ultrassom em Obstetrícia", downloadUrl: "https://drive.google.com/file/d/1jDDZgNfsEqTKBNLmm-Dqc9b-ccnizPwq/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Diabetes Mellitus na Gestação",
+                description: "Descrição Diabetes Mellitus na Gestação.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1jS2vJ7gq03T8sqCnjmE5vrXXt8CfhD12/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1QgWLW8NtAEisVAoZiFAHmJQCa1omwI0O/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Diabetes Mellitus na Gestação", downloadUrl: "https://drive.google.com/file/d/1pW5a9MPfvEazoQg6oQ6mbr8HzPI89spQ/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Diabetes Mellitus na Gestação", downloadUrl: "https://drive.google.com/file/d/1_rxuKAnmUAQEdL2DYRCNvKYt-aXcjfkI/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Diabetes Mellitus", downloadUrl: "https://drive.google.com/file/d/1kMVy_enoWBjT2eJEqKUCH2N3YcCDt5f5/preview?usp=sharing" },
+                        { title: "Slide 2 - Diabetes Mellitus", downloadUrl: "https://drive.google.com/file/d/1Oq-ADpC1XVtQyIWOaNL8Q9MN-HKS8qxB/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Diabetes Mellitus na Gestação", downloadUrl: "https://drive.google.com/file/d/1uvZnPtV_4wYPxUV_zQ7uEoYeCvMXI3gh/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Diabetes Mellitus na Gestação", downloadUrl: "https://drive.google.com/file/d/13WIHnWNrxgehrSUtlNmYzVVKkNMFy_lb/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Sangramento da Primeira Metade",
+                description: "Descrição Sangramento da Primeira Metade.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1xLVP8_I9LO_5vXaWwE1goQD8gLHrPAXy/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1KOZfQ6F_4Upd1fhPjokVQLqEyIV7KJGC/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1le61lekO_yDp3jek4C2_8t0qQ5-6mx-m/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/14wERi0XwyCpuU4GFwEttpfuSi7Xge9B4/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Sangramento da Primeira Metade", downloadUrl: "https://drive.google.com/file/d/13T9WB7YRrozsNE9oF5KoHAc8Uuv5Shnz/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Sangramento da Primeira Metade", downloadUrl: "https://drive.google.com/file/d/1Oo5BxQds4mH9ZmgMiqN8IZHcYRa1j0I-/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide 1 - Sangramento da Primeira Metade", downloadUrl: "https://drive.google.com/file/d/1yK-CpEA_a78a2-Uq2VjgS8iGgLCdSnN0/preview?usp=sharing" },
+                        { title: "Slide 2 - Sangramento da Primeira Metade", downloadUrl: "https://drive.google.com/file/d/1tR_xr-aR4IK6qZu0EaApKRe3j06eCJGN/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Sangramento da Primeira Metade", downloadUrl: "https://drive.google.com/file/d/1JBnZWHQWPYKc2QJx7DXtGJxJxEqsyTyz/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Sangramento da Primeira Metade", downloadUrl: "https://drive.google.com/file/d/1ORSmwVCeMX8RAPU6h5-F_seUSEl_JqP_/preview?usp=sharing" }
+                    ]
+                }
+            },
+            {
+                title: "Sangramento da Segunda Metade",
+                description: "Descrição Sangramento da Segunda Metade.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1RTRPvQIsWlsLT-ep9nV5La5Urr9g9CAD/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1H9EeQCsMexZ_MeCuIS0A-UMUq-yu8iIh/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1tCdGHZPs0HF6uPExEuvJLGcXNk3DrHyy/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1aMU_Km1lODO1-gRCLhJPqssVgcJ7hXII/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1KWcZWJ9gJa5IbcpfxQXjnweoBYYqfop8/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1qk6r7kG1AWy8sQcSbWuvW5T71st_DJU4/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 7", driveVideoUrl: "https://drive.google.com/file/d/1eMSfF4g6NG4iNjUl02FSBe-NebD0AURh/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 8", driveVideoUrl: "https://drive.google.com/file/d/1kT392JObmFy7mYpAJqyEzl-nUL1VOoEf/preview?usp=drive_link", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 9", driveVideoUrl: "https://drive.google.com/file/d/1W06LinA8RLqG4wrdsnq430QUztdEGMaC/preview?usp=drive_link", downloadUrl: "#" }
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital - Sagramento da Segunda Metade", downloadUrl: "https://drive.google.com/file/d/1Vz3LgV9uJImSLHl3IXJUU6DXuEZKdL9K/preview?usp=sharing" }
+                    ],
+                    'Resumos': [
+                        { title: "Resumo - Sagramento da Segunda Metade", downloadUrl: "https://drive.google.com/file/d/16vpEnlbfld01KD_yD64LHctM56CAWA5j/preview?usp=sharing" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Sagramento da Segunda Metade", downloadUrl: "https://drive.google.com/file/d/1fyj6j6XaHNkI3KVxwMskkx2G6H3S-kHv/preview?usp=sharing" }
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Sagramento da Segunda Metade", downloadUrl: "https://drive.google.com/file/d/17APsnTKtyvu0VUPKwkkK1rreiPZBkHXU/preview?usp=sharing" }
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Sagramento da Segunda Metade", downloadUrl: "https://drive.google.com/file/d/17KTRpuXpNCPk0sXZxfTY1bJgrgYFbBt_/preview?usp=sharing" }
+                    ]
+                }
+            }
+        ];
+
+        // Configuração dos ícones
+        const subItemIcons = {
+            'Videoaulas': 'M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z', // Play
+            'Livros digitais': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', // Livro
+            'Resumos': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', // Documento
+            'Slides': 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', // Apresentação
+            'Mapas mentais': 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M12 12a3 3 0 100-6 3 3 0 000 6z' // Mapa
+        };
+        const subItemOrder = ['Videoaulas', 'Livros digitais', 'Resumos', 'Slides', 'Mapas mentais'];
+
+        // Referências aos elementos do DOM
+        const menuListContainer = document.getElementById('menu-items-list');
+        const detailsTemplate = document.getElementById('subitem-details-template');
+        const contentViewer = document.getElementById('content-viewer');
+        const contentDescription = document.getElementById('content-description');
+        const likeButton = document.getElementById('like-button');
+
+        // --- Funções Auxiliares ---
+        function romanize(num) {
+             if (isNaN(num) || num < 1) return num;
+             const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+             let roman = '', i;
+             for ( i in lookup ) { while ( num >= lookup[i] ) { roman += i; num -= lookup[i]; } }
+             return roman;
+        }
+
+        // CORRIGIDO: Função createSubItemDetail para adicionar ícones corretamente e tratar links
+        function createSubItemDetail(subItemType, detailData, mainTitle, videoIndex, totalVideos) {
+             if (!detailsTemplate || !detailData) return null;
+            const detailNode = detailsTemplate.content.cloneNode(true);
+            const detailDiv = detailNode.querySelector('.sub-item-details');
+            const itemDetailsContent = detailNode.querySelector('.item-details-content');
+            const titleEl = detailNode.querySelector('.item-title');
+            const subtitleEl = detailNode.querySelector('.item-subtitle');
+            const downloadLink = detailNode.querySelector('.download-link'); // Seleciona o link de download do template
+            const iconPathData = subItemIcons[subItemType]; // Pega o path do ícone
+
+            // Adiciona o ícone apropriado
+            if (iconPathData) {
+                 const iconContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                 // Define tamanho e margem (ícone de play é maior)
+                 const iconSizeClass = (subItemType === 'Videoaulas') ? 'w-8 h-8 mr-3' : 'w-6 h-6 mr-2';
+                 iconContainer.setAttribute('class', `item-icon ${iconSizeClass} text-gray-600 flex-shrink-0`);
+                 // Define fill/stroke e viewBox baseado no tipo
+                 if (subItemType === 'Videoaulas') {
+                     iconContainer.setAttribute('fill', 'currentColor'); // Ícone de Play preenchido
+                     iconContainer.setAttribute('viewBox', '0 0 20 20');
+                 } else {
+                     iconContainer.setAttribute('fill', 'none'); // Outros ícones contornados
+                     iconContainer.setAttribute('stroke', 'currentColor');
+                     iconContainer.setAttribute('viewBox', '0 0 24 24');
+                 }
+
+                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                 path.setAttribute('d', iconPathData);
+                 // Define atributos específicos do path
+                 if (subItemType === 'Videoaulas') {
+                     path.setAttribute('fill-rule', 'evenodd');
+                     path.setAttribute('clip-rule', 'evenodd');
+                 } else { // Atributos para ícones contornados
+                     path.setAttribute('stroke-linecap', 'round');
+                     path.setAttribute('stroke-linejoin', 'round');
+                     path.setAttribute('stroke-width', '1.5'); // Ajuste a espessura se necessário
+                 }
+                 iconContainer.appendChild(path);
+                 itemDetailsContent.insertBefore(iconContainer, itemDetailsContent.firstChild); // Insere o ícone
+            } else {
+                 // Se não houver ícone definido, garante que a margem do texto seja 0
+                 titleEl.closest('.overflow-hidden').style.marginLeft = '0';
+            }
+
+
+            // Define o título
+            if (titleEl) {
+                if (subItemType === 'Videoaulas') {
+                    if (totalVideos === 1) {
+                        titleEl.textContent = mainTitle;
+                    } else {
+                        // Usa o título específico da videoaula se houver e não for genérico
+                        titleEl.textContent = (detailData.title && !detailData.title.toLowerCase().startsWith("videoaula"))
+                                               ? detailData.title
+                                               : `${mainTitle} - Parte ${romanize(videoIndex + 1)}`;
+                    }
+                } else {
+                     titleEl.textContent = detailData.title || `${subItemType.slice(0,-1)} - ${mainTitle}`;
+                }
+            }
+
+            // Define o subtítulo (restaurado)
+            if (subtitleEl) {
+                 subtitleEl.textContent = "Estratégia Educacional";
+            }
+
+
+            // CORRIGIDO: Configura o link de download ou remove o ícone
+            if (downloadLink) {
+                // Mostra link de download para QUALQUER item que tenha um downloadUrl válido (não #)
+                if (detailData.downloadUrl && detailData.downloadUrl !== '#') {
+                    // Se for um link real (não #dl-), configura para abrir em nova aba
+                    if (!detailData.downloadUrl.startsWith('#dl-')) {
+                         downloadLink.href = detailData.downloadUrl;
+                         downloadLink.setAttribute('target', '_blank'); // Abrir em nova aba
+                         downloadLink.addEventListener('click', (e) => {
+                             e.stopPropagation(); // Evita que o clique no download carregue o item no iframe
+                         });
+                    } else {
+                         // Se for #dl-, mantém o href mas remove target e listener
+                         downloadLink.href = detailData.downloadUrl; // Mantém o href para identificação, se necessário
+                         downloadLink.removeAttribute('target');
+                    }
+                     downloadLink.title = `Baixar ${titleEl.textContent}`; // Define o title em ambos os casos
+                }
+                // Remove o ícone de download se não houver link válido
+                else {
+                    downloadLink.remove();
+                }
+            }
+
+             // CORRIGIDO: Adiciona atributos e classes para interatividade (carregar no iframe)
+             const itemDisplayTitle = titleEl.textContent; // Título que será mostrado na descrição
+             const videoUrl = detailData.driveVideoUrl;
+             const docUrl = detailData.downloadUrl; // Usar downloadUrl para documentos
+
+             // Verifica se é um vídeo clicável
+             if (subItemType === 'Videoaulas' && videoUrl && videoUrl !== '#') {
+                 detailDiv.setAttribute('data-drive-video-url', videoUrl);
+                 detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                 detailDiv.classList.add('cursor-pointer');
+             }
+             // Verifica se é um documento clicável (com link de preview, não só de download)
+             else if (subItemType !== 'Videoaulas' && docUrl && docUrl !== '#' && !docUrl.startsWith('#dl-')) {
+                 detailDiv.setAttribute('data-download-url', docUrl); // Usar data-download-url para carregar no iframe
+                 detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                 detailDiv.classList.add('cursor-pointer');
+             }
+             // Se não for nenhum dos casos acima, não é clicável no iframe
+             else {
+                 // Remove cursor-pointer apenas se não for videoaula (videoaulas são sempre clicáveis para play)
+                 if (subItemType !== 'Videoaulas') {
+                    detailDiv.classList.remove('cursor-pointer');
+                 }
+             }
+
+
+             return detailDiv; // Retorna o elemento HTML do detalhe criado
+        }
+
+
+        // --- Geração do Menu ---
+        if (menuListContainer && detailsTemplate && contentViewer && contentDescription && likeButton) {
+             contentDescription.textContent = "Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar."; // Mensagem inicial
+
+             // Limpa o menu existente antes de gerar o novo
+             menuListContainer.innerHTML = '';
+
+             // Itera sobre os dados de cada módulo para criar o menu
+             menuItemsData.forEach((itemData, mainIndex) => {
+                 const title = itemData.title; // Pega o título do módulo (já atualizado)
+                 const description = itemData.description; // Pega a descrição (atualizada ou placeholder)
+                 const subItems = itemData.subItems || {}; // Pega os subitens (atualizados para todos os módulos)
+                 // Cria um ID único para o conteúdo do acordeão principal
+                 const mainContentId = `content-${mainIndex}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30)}`;
+
+                 // Cria o container principal para o item do acordeão
+                 const accordionItem = document.createElement('div');
+                 accordionItem.className = 'accordion-item';
+                 accordionItem.setAttribute('data-completed', 'false'); // Atributo para controle de status (concluído/não)
+                 accordionItem.setAttribute('data-main-description', description); // Guarda a descrição principal
+
+                 // Cria o botão do cabeçalho do acordeão principal
+                 const headerButton = document.createElement('button');
+                 headerButton.className = 'menu-item-header w-full accordion-header';
+                 headerButton.setAttribute('aria-expanded', 'false'); // Estado inicial: fechado
+                 headerButton.setAttribute('aria-controls', mainContentId); // Associa ao conteúdo
+
+                 // Cria o conteúdo interno do cabeçalho (título, subtítulo, botão de status)
+                 const headerContent = document.createElement('div');
+                 headerContent.className = 'text-left flex-grow mr-2 overflow-hidden'; // Layout flexível e esconde overflow
+                 headerContent.innerHTML = `
+                     <h3 class="text-sm font-medium text-gray-800 truncate">${title}</h3> <div class="text-xs text-gray-500 mt-1 flex justify-between items-center flex-wrap gap-2">
+                          <span>Estratégia Educacional</span> <button type="button" class="status-toggle flex-shrink-0"> <span>Concluído</span>
+                              <svg class="icon-not-completed w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="1.5"></rect></svg>
+                              <svg class="icon-completed w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                          </button>
+                      </div>`;
+
+                 // Cria o ícone de chevron (seta para baixo)
+                 const chevronIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                 chevronIcon.setAttribute('class', 'w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon');
+                 chevronIcon.setAttribute('fill', 'none');
+                 chevronIcon.setAttribute('stroke', 'currentColor');
+                 chevronIcon.setAttribute('viewBox', '0 0 24 24');
+                 chevronIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
+
+                 // Adiciona o conteúdo e o ícone ao botão do cabeçalho
+                 headerButton.appendChild(headerContent);
+                 headerButton.appendChild(chevronIcon);
+
+                 // Cria a div que conterá os subitens (inicialmente escondida)
+                 const contentDiv = document.createElement('div');
+                 contentDiv.id = mainContentId;
+                 contentDiv.className = 'menu-item-content hidden'; // Classe 'hidden' para esconder
+
+                 // Gera os subitens (acordeões aninhados para cada tipo: Videoaulas, Livros, etc.)
+                 subItemOrder.forEach((subItemType, subIndex) => {
+                     const subItemArray = subItems[subItemType] || []; // Garante que seja um array
+                     const count = subItemArray.length; // Conta quantos itens existem
+                     // Cria um ID único para o conteúdo do acordeão aninhado
+                     const nestedContentId = `nested-content-${mainIndex}-${subIndex}`;
+
+                     // Cria o container para o subitem acordeão
+                     const subAccordionItem = document.createElement('div');
+                     subAccordionItem.className = `sub-accordion-item ${subIndex > 0 ? 'mt-2' : ''}`; // Adiciona margem superior se não for o primeiro
+
+                     // Cria o botão do cabeçalho do subitem acordeão
+                     const subHeaderButton = document.createElement('button');
+                     subHeaderButton.className = 'sub-accordion-header w-full';
+                     subHeaderButton.setAttribute('aria-expanded', 'false');
+                     subHeaderButton.setAttribute('aria-controls', nestedContentId);
+                     if (count === 0) {
+                         subHeaderButton.disabled = true; // Desabilita se não houver itens
+                     }
+                     // Conteúdo do cabeçalho do subitem (Nome do tipo e contagem)
+                     subHeaderButton.innerHTML = `
+                         <span class="text-sm font-medium text-gray-700">${subItemType} (${count})</span>
+                         <svg class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon-nested ${count === 0 ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                     `;
+
+                     // Cria a div que conterá os detalhes (vídeos, links de download)
+                     const subContentDiv = document.createElement('div');
+                     subContentDiv.id = nestedContentId;
+                     subContentDiv.className = 'sub-accordion-content hidden'; // Inicialmente escondida
+
+                     // Se houver detalhes, cria e adiciona cada um
+                     if (count > 0) {
+                         const totalVideos = (subItemType === 'Videoaulas') ? count : 0; // Para numerar corretamente as partes dos vídeos
+                         subItemArray.forEach((detailData, detailIndex) => {
+                             // Chama a função auxiliar para criar o elemento HTML do detalhe
+                             const detailElement = createSubItemDetail(subItemType, detailData, title, detailIndex, totalVideos);
+                             if (detailElement) {
+                                 subContentDiv.appendChild(detailElement); // Adiciona ao container de conteúdo do subitem
+                             }
+                         });
+                     }
+
+                     // Adiciona o cabeçalho e o conteúdo ao container do subitem acordeão
+                     subAccordionItem.appendChild(subHeaderButton);
+                     subAccordionItem.appendChild(subContentDiv);
+                     // Adiciona o subitem acordeão completo ao conteúdo do acordeão principal
+                     contentDiv.appendChild(subAccordionItem);
+                 });
+
+                 // Adiciona o cabeçalho e o conteúdo ao item principal do acordeão
+                 accordionItem.appendChild(headerButton);
+                 accordionItem.appendChild(contentDiv);
+                 // Adiciona o item principal completo à lista do menu
+                 menuListContainer.appendChild(accordionItem);
+             });
+
+             // --- Lógica dos Acordeões (Principal e Aninhado) ---
+             // RESTAURADO: Listeners individuais para permitir múltiplos abertos
+             const accordionHeaders = document.querySelectorAll('.accordion-header');
+             accordionHeaders.forEach(header => {
+                 header.addEventListener('click', (event) => {
+                     if (event.target.closest('.status-toggle')) return;
+                     const content = header.nextElementSibling; // Pega o div de conteúdo irmão
+                     if (!content || !content.classList.contains('menu-item-content')) return;
+                     const expanded = header.getAttribute('aria-expanded') === 'true';
+                     const chevronIcon = header.querySelector('.chevron-icon');
+                     header.setAttribute('aria-expanded', !expanded);
+                     content.classList.toggle('hidden');
+                     if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                 });
+             });
+
+
+             const subAccordionHeaders = document.querySelectorAll('.sub-accordion-header');
+             subAccordionHeaders.forEach(subHeader => {
+                 if (!subHeader.disabled) {
+                     subHeader.addEventListener('click', (event) => {
+                         event.stopPropagation();
+                         const content = subHeader.nextElementSibling;
+                         if (!content || !content.classList.contains('sub-accordion-content')) return;
+                         const expanded = subHeader.getAttribute('aria-expanded') === 'true';
+                         const chevronIcon = subHeader.querySelector('.chevron-icon-nested');
+                         subHeader.setAttribute('aria-expanded', !expanded);
+                         content.classList.toggle('hidden');
+                         if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                     });
+                 }
+             });
+
+             // --- Lógica para Marcar/Desmarcar como Concluído ---
+             // RESTAURADO: Listener individual para cada botão
+             const statusToggles = document.querySelectorAll('.status-toggle');
+             statusToggles.forEach(toggle => {
+                 toggle.addEventListener('click', (event) => {
+                     event.stopPropagation(); // Impede que o clique acione o acordeão pai
+                     const accordionItem = toggle.closest('.accordion-item');
+                     if (!accordionItem) return;
+                     const isCompleted = accordionItem.getAttribute('data-completed') === 'true';
+                     accordionItem.setAttribute('data-completed', !isCompleted);
+                     toggle.classList.toggle('is-completed', !isCompleted);
+                     console.log(`Item ${accordionItem.querySelector('h3').innerText} marcado como ${!isCompleted ? 'concluído' : 'não concluído'}`);
+                 });
+             });
+
+             // --- Lógica para Carregar Conteúdo (Vídeo ou PDF) ---
+             // RESTAURADO: Listener no container pai
+             menuListContainer.addEventListener('click', (event) => {
+                 const detailItem = event.target.closest('.sub-item-details');
+
+                 // Ignora cliques no link/ícone de download
+                 if (event.target.closest('.download-link')) {
+                     return;
+                 }
+
+                 if (detailItem && contentViewer && contentDescription) {
+                     const driveVideoUrl = detailItem.getAttribute('data-drive-video-url');
+                     const downloadUrl = detailItem.getAttribute('data-download-url');
+                     const itemTitle = detailItem.getAttribute('data-item-title') || 'Conteúdo selecionado';
+                     const parentAccordionItem = detailItem.closest('.accordion-item');
+                     const mainTitle = parentAccordionItem?.querySelector('.menu-item-header h3')?.textContent || 'Módulo'; // Pega o título do módulo
+
+                     // Verifica se o item é clicável
+                     if (driveVideoUrl || downloadUrl) {
+                         document.querySelectorAll('.sub-item-details.is-active').forEach(activeItem => {
+                             activeItem.classList.remove('is-active');
+                         });
+                         detailItem.classList.add('is-active');
+
+                         if (driveVideoUrl) {
+                             contentViewer.src = driveVideoUrl;
+                             // Atualiza a descrição
+                             contentDescription.textContent = `Aula sobre ${mainTitle} - Assistindo: ${itemTitle}`;
+                             console.log(`Carregando vídeo do Drive: ${driveVideoUrl}`);
+                         } else if (downloadUrl) {
+                             contentViewer.src = downloadUrl;
+                              // Atualiza a descrição
+                             contentDescription.textContent = `Aula sobre ${mainTitle} - Visualizando: ${itemTitle}`;
+                             console.log(`Carregando documento: ${downloadUrl}`);
+                         }
+                     }
+                 }
+             });
+
+
+             // --- Lógica para o botão de Like ---
+             // RESTAURADO: Listener individual
+             if(likeButton) {
+                 likeButton.addEventListener('click', () => {
+                     likeButton.classList.toggle('is-liked');
+                     const isLiked = likeButton.classList.contains('is-liked');
+                     console.log(`Item ${isLiked ? 'curtido' : 'descurtido'}`);
+                 });
+             }
+
+             // --- Carregar o Primeiro Conteúdo Clicável ao Iniciar ---
+             const firstClickableDetail = document.querySelector('#menu-items-list .sub-item-details[data-drive-video-url]:not([data-drive-video-url="#"]), #menu-items-list .sub-item-details[data-download-url]:not([data-download-url="#"])');
+             if (firstClickableDetail) {
+                 setTimeout(() => {
+                     const parentHeader = firstClickableDetail.closest('.accordion-item')?.querySelector('.accordion-header');
+                     if (parentHeader) {
+                         const content = parentHeader.nextElementSibling;
+                         const chevronIcon = parentHeader.querySelector('.chevron-icon');
+                         if (content && content.classList.contains('hidden')) {
+                             parentHeader.setAttribute('aria-expanded', 'true');
+                             content.classList.remove('hidden');
+                             if(chevronIcon) chevronIcon.classList.add('rotate-180');
+                         }
+                         const parentSubAccordionContent = firstClickableDetail.closest('.sub-accordion-content');
+                         if (parentSubAccordionContent && parentSubAccordionContent.classList.contains('hidden')) {
+                             const parentSubHeader = parentSubAccordionContent.previousElementSibling;
+                             if(parentSubHeader && !parentSubHeader.disabled && typeof parentSubHeader.click === 'function') {
+                                 parentSubHeader.click();
+                             }
+                         }
+                         firstClickableDetail.click();
+                     }
+                 }, 100);
+             } else {
+                 contentViewer.src = '';
+                 contentDescription.textContent = 'Nenhum conteúdo selecionado ou disponível para visualização.';
+             }
+
+
+        } else {
+            console.error("Elementos essenciais não encontrados.");
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estratégia MED - Reumatologia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos gerais e específicos */
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+
+        .accordion-item {
+            margin-bottom: 0.0625rem; /* Espaçamento de 1px (se 1rem = 16px) entre os módulos */
+        }
+        .accordion-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .menu-item-header {
+            border: 1px solid #e2e8f0; /* Cinza Tailwind 300 */
+            padding: 0.75rem 1rem; /* p-3 e px-4 */
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, border-radius 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+            width: 100%;
+        }
+        .menu-item-header:hover { background-color: #f8fafc; } /* Cinza Tailwind 50 */
+
+        .menu-item-header[aria-expanded="true"] {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            border-bottom-color: transparent;
+        }
+
+        .menu-item-content {
+            padding: 0.5rem 1rem 1rem 1rem; /* py-2 px-4 pb-4 */
+            background-color: white;
+            border-left: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-bottom-left-radius: 0.375rem; /* rounded-b-md */
+            border-bottom-right-radius: 0.375rem; /* rounded-b-md */
+        }
+
+        .sub-accordion-header { padding: 0.75rem 0.5rem; border-radius: 0.375rem; margin-top: 0.5rem; background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; text-align: left; transition: background-color 0.2s ease-in-out; }
+        .sub-accordion-header:hover { background-color: #f1f5f9; }
+        .sub-accordion-header:disabled { cursor: default; opacity: 0.6; background-color: #f8fafc; }
+        .sub-accordion-header:disabled:hover { background-color: #f8fafc; }
+
+        .sub-accordion-content { padding-left: 1rem; margin-top: 0.25rem; }
+        .sub-item-details { padding: 0.75rem 0.5rem 0.75rem 1rem; border-radius: 0.375rem; margin-top: 0.25rem; background-color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s ease-in-out; }
+        .sub-item-details[data-drive-video-url],
+        .sub-item-details[data-download-url] { cursor: pointer; }
+        .sub-item-details[data-drive-video-url]:hover,
+        .sub-item-details[data-download-url]:hover { background-color: #cbd5e1; }
+        .sub-item-details.is-active { background-color: #bfdbfe; }
+        .sub-item-details.is-active .item-icon { color: #3b82f6; }
+        .item-details-content { display: flex; align-items: center; flex-grow: 1; margin-right: 0.5rem; overflow: hidden; }
+        .item-details-content .item-icon + .overflow-hidden { margin-left: 0.75rem; }
+
+        .download-link { display: inline-flex; align-items: center; color: #6b7280; transition: color 0.2s ease-in-out; }
+        .download-link:hover { color: #1f2937; }
+        .status-toggle { cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem; border-radius: 0.25rem; transition: background-color 0.2s ease-in-out; }
+        .status-toggle:hover { background-color: #e5e7eb; }
+        .status-toggle .icon-completed { display: none; }
+        .status-toggle .icon-not-completed { display: inline-block; }
+        .status-toggle.is-completed .icon-completed { display: inline-block; }
+        .status-toggle.is-completed .icon-not-completed { display: none; }
+        .video-container-yt { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #ccc; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); margin-bottom: 1rem; }
+        .video-container-yt iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        .menu-container { flex-shrink: 0; max-height: calc(100vh - 150px); overflow-y: auto; }
+        .menu-container::-webkit-scrollbar { width: 6px; }
+        .menu-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+        .menu-container::-webkit-scrollbar-thumb:hover { background: #aaaaaa; }
+        .hidden { display: none; }
+        .rotate-180 { transform: rotate(180deg); }
+        .transition-transform { transition: transform 0.2s ease-in-out; }
+
+        .like-button .heart-outline { display: inline-block; }
+        .like-button .heart-filled { display: none; }
+        .like-button.is-liked .heart-outline { display: none; }
+        .like-button.is-liked .heart-filled { display: inline-block; color: #ef4444; }
+        .like-button.is-liked .heart-filled { animation: pulse 0.3s ease-out; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white shadow-md py-3 px-4 md:px-8 sticky top-0 z-10">
+        <div class="container mx-auto max-w-full flex justify-between items-center">
+            <div class="flex items-center gap-4 flex-wrap">
+                <a href="estrategiamed.html" class="flex items-center text-sm text-gray-600 hover:text-gray-900"> <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Voltar
+                </a>
+                <h1 class="text-lg font-semibold text-gray-700">Reumatologia</h1> <div class="relative inline-block text-left">
+                    <button type="button" class="inline-flex justify-center items-center w-full rounded-md border border-gray-300 shadow-sm px-3 py-1 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                        2025
+                        <svg class="-mr-1 ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="like-button" class="like-button text-gray-500 hover:text-red-500 transition-colors duration-200">
+                    <svg class="heart-outline w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <svg class="heart-filled w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                </button>
+                </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto max-w-full p-4 md:p-8">
+        <div class="flex flex-row flex-wrap gap-6 md:gap-8">
+            <div class="w-full md:flex-1 min-w-[300px]">
+                <div class="video-container-yt">
+                    <iframe
+                        id="content-viewer" src="" title="Visualizador de Conteúdo"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                <p id="content-description" class="mt-4 text-gray-600 text-sm md:text-base">
+                    Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar.
+                </p>
+            </div>
+
+            <div class="w-full md:w-[350px] menu-container mt-6 md:mt-0 pr-2">
+
+                <template id="subitem-details-template">
+                    <div class="sub-item-details">
+                        <div class="item-details-content">
+                            <div class="overflow-hidden"> <div class="item-title text-sm font-medium text-gray-800 truncate">Placeholder Title</div>
+                                <div class="item-subtitle text-xs text-gray-500">Estratégia Educacional</div>
+                            </div>
+                        </div>
+                        <a href="#" class="download-link flex-shrink-0" title="Baixar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </a>
+                    </div>
+                </template>
+
+                <div id="menu-items-list">
+                    </div>
+
+            </div> </div> </main>
+
+    <script>
+        // --- Dados e Configurações ---
+        const menuItemsData = [
+            { // Módulo 1
+                title: "Introdução à Reumatologia",
+                description: "Descrição Introdução à Reumatologia.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1_OyXyHxSWlnP83kAFlQH0jKQNFPZr2C9/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1SBGNppJ1ooE9dY1Hvti1SCRyuTn8-cE4/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/16CJaeVVNqy5VXW1hhWHYXkvHVNVg_N55/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1T56_i4esscFq8-7l_SwQaGQLP_W9zkl8/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Introducao a Reumatologia", downloadUrl: "https://drive.google.com/file/d/1hJeNk9NrxiSL4AUCk1qE5I3O0R-KODfw/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Introducao a Reumatologia", downloadUrl: "https://drive.google.com/file/d/1IOScfJkcyh5YmFCAUJrgxLR_Cz3Y-In4/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Introducao a Reumatologia", downloadUrl: "https://drive.google.com/file/d/1ECcolL1UEDRvHn-FzlZI7OvtsYCGEAQ6/view?usp=sharing" },
+                        { title: "Slide Resumo - Introducao a Reumatologia", downloadUrl: "https://drive.google.com/file/d/1NLorLJuTdlAxszwa4pVc17Om0JRMemZX/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Introducao a Reumatologia", downloadUrl: "https://drive.google.com/file/d/1eFjE7XtrQGOmdIcIP8dx2nqHGR7EWm45/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Introducao a Reumatologia", downloadUrl: "https://drive.google.com/file/d/1e_HyH1oJPHdhBXnSYI1wloNCQUz5Iu8Q/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 2
+                title: "Doenças Autoimunes do Tecido Conjuntivo",
+                description: "Descrição Doenças Autoimunes do Tecido Conjuntivo.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1SY_sP8XH4hsq9jDs4GYNNjhfdLt3Td32/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1mOlZaMMB0jJ7TrbrYzJqO4M_1-RmJYqD/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/10dhVVy7A0daBDMlksRrruxGlG4FNy2dB/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1wVWdEsJvNInnGDjY4MxgMiwFtKV6JRat/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1eyC_mvDlnB-ak-63_TELEBP-jbGu33d0/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1tzQa6Uj95tK0s9Qp4q9oFlGib7JlgPAf/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Doencas Autoimunes do Tecido Conjuntivo", downloadUrl: "https://drive.google.com/file/d/1ciyD8yjlNvUKRnpPT9R-TjrojbTCtyC4/view?usp=sharing" },
+                        { title: "LD - Lupus Eritematoso Sistemico e Sindrome Antifosfolipide", downloadUrl: "https://drive.google.com/file/d/1oMM30GcSR0ulns_prxkMTIoZMXRHzKSr/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Doencas Autoimunes do Tecido Conjuntivo", downloadUrl: "https://drive.google.com/file/d/1OdUPmQu4sQOuOBU1p5s5RjwCv75mnRyJ/view?usp=sharing" },
+                        { title: "RE - Lupus Eritematoso Sistemico e Sindrome Antifosfolipide", downloadUrl: "https://drive.google.com/file/d/1joJPuvs_4IUp8am59QJK-ddyVbJXIM04/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Lupus Eritematoso Sistemico e Sindrome Antifosfolipide", downloadUrl: "https://drive.google.com/file/d/1OPJVf_XoJ1GkHTi8j0eQtZ-v4kLh2dCw/view?usp=sharing" },
+                        { title: "Slide Aula - Doencas Autoimunes do Tecido Conjuntivo", downloadUrl: "https://drive.google.com/file/d/1pJcFOcq5ErGRzU6aXhYnWBJ4uxj_h2hZ/view?usp=sharing" },
+                        { title: "Slide Resumo - Doencas Autoimunes do Tecido Conjuntivo", downloadUrl: "https://drive.google.com/file/d/1wK1cRtIyqMoGkl5kJLM5B2VAqhNtyDMi/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Lupus Eritematoso Sistemico e Sindrome Antifosfolipide", downloadUrl: "https://drive.google.com/file/d/1P7djqWt8UK9PC8IuFtNw_QLlR4UdcUcM/view?usp=sharing" },
+                        { title: "Mapa Mental - Doencas Autoimunes do Tecido Conjuntivo", downloadUrl: "https://drive.google.com/file/d/1ueIHfIHZDX6eBDcbHnDUctTjzse5JEZk/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Lupus Eritematoso Sistemico e Sindrome Antifosfolipide", downloadUrl: "https://drive.google.com/file/d/1-ALZqfUMjdxxTXq3WZZyjdBErsSihOTt/view?usp=sharing" },
+                        { title: "Flashcard - Doencas Autoimunes do Tecido Conjuntivo", downloadUrl: "https://drive.google.com/file/d/1MAtz7N_yzbTjs5smBPvYWjBbYpk-E16T/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 3
+                title: "Doenças Inflamatórias do Tecido Conjuntivo II",
+                description: "Descrição Doenças Inflamatórias do Tecido Conjuntivo II.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1XZWneg9ra2JoNGxsG6TrgWfQKT3IuyGt/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1UQ2WzWnBNF5tE6eEcl1cERJaDTzUzOCR/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/169Tyu-ATbIf0x-TIcuK4bV55PMv60Y5r/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1sf2AmajPSQBLjRfOhp9n7dTVBzq2ul1u/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 5", driveVideoUrl: "https://drive.google.com/file/d/1Knlv1gJcYKGn3C3WBga7WitMHrSMIUzE/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 6", driveVideoUrl: "https://drive.google.com/file/d/1NiDSWcHBuEAfyKakZg7TwUNRfkb9qmop/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "Livro Digital Placeholder 1", downloadUrl: "https://drive.google.com/file/d/1pDFuxpskO7LA7ezJB5Q07HjKrx5PdtUi/preview" },
+                        { title: "Livro Digital Placeholder 2", downloadUrl: "https://drive.google.com/file/d/1r2v-F5Lxkuym4JJxdG_oI8U1yeT6gWAL/preview" },
+                    ],
+                    'Resumos': [
+                        { title: "Resumo Placeholder 1", downloadUrl: "https://drive.google.com/file/d/1qpVcEpgs-DB4bsY1nnVjB0jLFi5nDwKt/preview" }
+                    ],
+                    'Slides': [
+                        { title: "Slide Placeholder 1", downloadUrl: "https://drive.google.com/file/d/1n439N8B4D0WQl3vf5znkM_GWr8u2RdJF/preview" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental Placeholder 1", downloadUrl: "https://drive.google.com/file/d/10Cmpc6fB6nltEjEE8WBAn2XPEerjPoF2/preview" }
+                    ]
+                }
+            },
+            { // Módulo 4
+                title: "Artrite Reumatoide (Apêndice Medicações na Reumatologia)",
+                description: "Descrição Artrite Reumatoide e Medicações.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/145UpqtJhGLnkD8WW52x_JGjFqrYxMcI5/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1-hYy302BduTjEFq6SWZkzqlY3iptdBoa/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Artrite Reumatoide (Apendice - Medicacoes na Reumatologia)", downloadUrl: "https://drive.google.com/file/d/1tmn4jX6c0wf0kRdYs1LefZLsh7q9dA5A/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Artrite Reumatoide (Apendice - Medicacoes na Reumatologia)", downloadUrl: "https://drive.google.com/file/d/1gP3k9yZgX7FRZ88gT8-QZp2wzuo9ypas/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Artrite Reumatoide (Apendice - Medicacoes na Reumatologia)", downloadUrl: "https://drive.google.com/file/d/1OzOzLPy2nVuFCKWgJdg-FO9DKwykYq1N/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Artrite Reumatoide (Apendice - Medicacoes na Reumatologia)", downloadUrl: "https://drive.google.com/file/d/1pgTNgeREDGs3x-OfWQnFZbEP75F6jW79/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Artrite Reumatoide (Apendice - Medicacoes na Reumatologia)", downloadUrl: "https://drive.google.com/file/d/1YVAEtQydK1QScrqT27bU5G29C4mcR8Mv/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 5
+                title: "Espondiloartrites",
+                description: "Descrição Espondiloartrites.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1kr8uNONygp1BdYdgwTVICHNtuxoFKPLy/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1zNbMIedPEJYXxC_KwarYZzfASjShJ_tl/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1u5gwtkIqC976DABBSWdvgY1SMCZDjsDH/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/16OGnPIU6GW6G2JS1f1_dy8Ihm3iT7-8K/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Espondiloartrites", downloadUrl: "https://drive.google.com/file/d/1w4JSBA2JerUibA13Xl8TMRY0GGWwvNBp/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Espondiloartrites", downloadUrl: "https://drive.google.com/file/d/1VVhvR7MJO71rZd9WfUPiXnjmPE6SEPQt/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Espondiloartrites", downloadUrl: "https://drive.google.com/file/d/1tzuxyOA_2KRaiQt_nkPmXL3mzkmA97nY/view?usp=sharing" },
+                        { title: "Slide Resumo - Espondiloartrites", downloadUrl: "https://drive.google.com/file/d/1ixYxajfoIe1M0Dz8n0mxhNTaMzSu8EUf/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Espondiloartrites", downloadUrl: "https://drive.google.com/file/d/1BIWbMCcnhNkIreKX-OxP1dW53vqTnH9S/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Espondiloartrites", downloadUrl: "https://drive.google.com/file/d/1T8v-O80aFX6OZH1YhUbIgzp9j2eY8E05/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 6
+                title: "Vasculites",
+                description: "Descrição Vasculites.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1vyM8wPtqarx6Q-1BOqiFr8LDD1PqYIQZ/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1DXuXNtbq_fCUt5TgXhN-AQYfDVYL3eyy/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1yoIBeM7KrTtl4DOGGDXivJslC1Rkhj-C/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1a52UqgoIsqRsSeepAzCSwqY8iJ5Dtepu/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Vasculites", downloadUrl: "https://drive.google.com/file/d/11Wr6WxW_tF-1ValHvlxujrFMjY63OgBf/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Vasculites", downloadUrl: "https://drive.google.com/file/d/122T7O5fQxOSCKwO5dOCis8ez9f7jJdLW/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Vasculites", downloadUrl: "https://drive.google.com/file/d/11zIIc5mRhdO3lW3FyQwa4mho-fkJ-x4r/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Vasculites", downloadUrl: "https://drive.google.com/file/d/1yHYctKDnTp4VCuir3Zf-iG_rcGi_9sOA/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Vasculites", downloadUrl: "https://drive.google.com/file/d/1MdAHRZclMy09R9q3wO7FltSgALz-NG1G/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 7
+                title: "Artrites Microcristalinas",
+                description: "Descrição Artrites Microcristalinas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1cOmYrb98m5ySLRv9LUiUktvvYDbD0Y_c/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1CF_-OTuykXhyywqrnk6Zj7pnOvD7lBNd/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Artrites Microcristalinas", downloadUrl: "https://drive.google.com/file/d/1FFQvAgjX9vYUeuy87hVyXsc-cWUyy6cU/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Artrites Microcristalinas", downloadUrl: "https://drive.google.com/file/d/1-chjOms63T05Fn88kAazGC_pGhWm_4NN/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Artrites Microcristalinas", downloadUrl: "https://drive.google.com/file/d/1Jc6AsIWdDBTSVzpW_Ea1mgPDQbC3EUbh/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Artrites Microcristalinas", downloadUrl: "https://drive.google.com/file/d/1yc6EtWieJRqZGjy9_3J_l6CPj_eeYDPr/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Artrites Microcristalinas", downloadUrl: "https://drive.google.com/file/d/1gJOwcqnT3FelG-P4j8GgYdpVP_ZEAzsM/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 8
+                title: "Síndromes Dolorosas Crônicas",
+                description: "Descrição Síndromes Dolorosas Crônicas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1_lfK23ITgBjlCXi5H-r-Y_9zEnUXAeCG/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1EPzIlj9POco0ieywv6Rc-1cPAl37hyA_/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1ViXwX_kKoMtNb950ZgDjfW_6x_KGPvXb/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1-MW_xw3FKvoxla7xXwH56wyd5i1LAq4E/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Sindromes Dolorosas Cronicas", downloadUrl: "https://drive.google.com/file/d/1AsEFYbHkB-3u2b9VUDQ751f55lgwWrOF/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Sindromes Dolorosas Cronicas", downloadUrl: "https://drive.google.com/file/d/1B4gqI1Bgd_aKBZcfH364IZLg9vM_Dc7Z/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Sindromes Dolorosas Cronicas", downloadUrl: "https://drive.google.com/file/d/1NAzSU5ipglr12Weh_Jhsnis3B273j24n/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Sindromes Dolorosas Cronicas", downloadUrl: "https://drive.google.com/file/d/1y3Ob6nYs7-nEB-6yek509I4wTSCiVXW0/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Sindromes Dolorosas Cronicas", downloadUrl: "https://drive.google.com/file/d/1Pu0qKYpXUzOU9Qmien2W6obX0CVoMDCM/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 9
+                title: "Doenças do Osso e da Cartilagem",
+                description: "Descrição Doenças do Osso e da Cartilagem.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1MddGZqIBCh5JHfX82q6tfwIBjFOLmPrp/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1_5zOv9iWAH9tPWlT56tL0t0W3fNvbioz/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1j7g1VE0-rxiJxdhyXs3bjZKwaPr77qzT/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Doencas do Osso e da Cartilagem", downloadUrl: "https://drive.google.com/file/d/1TO_4gJIxPYwi8UERXnfpx5IyK60u1YWZ/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Doencas do Osso e da Cartilagem", downloadUrl: "https://drive.google.com/file/d/1X539CW6cMm020JZAX_nB7UqzRA1ORPJc/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Doencas do Osso e da Cartilagem", downloadUrl: "https://drive.google.com/file/d/1M014c_Mg4ksIsc2nQT4W9oAnxjmYKczz/view?usp=sharing" },
+                        { title: "Slide Resumo - Doencas do Osso e da Cartilagem", downloadUrl: "https://drive.google.com/file/d/1zsWERi6A5zARmyDJhsHy9_KCoQftbkF9/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Doencas do Osso e da Cartilagem", downloadUrl: "https://drive.google.com/file/d/1P8r5JJ0l4neCpQm40VAJVbrPllls-tgY/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Doencas do Osso e da Cartilagem", downloadUrl: "https://drive.google.com/file/d/1NPQYtTlfiUNOkBxWLeKxl_74cOCzSKrr/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 10
+                title: "Artropatias Infecciosas",
+                description: "Descrição Artropatias Infecciosas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1gpDn5oZfPlbQ2JeXZM7VAVk7pDRjXWlP/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1NvgO_QM3TRf1HBkqHmE0wS3cWPABe5aF/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Artropatias Infecciosas", downloadUrl: "https://drive.google.com/file/d/1j2TVAnS5E5BxpiytIuTnM4i0sQOq6ddy/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Artropatias Infecciosas", downloadUrl: "https://drive.google.com/file/d/1hNFvD_Psq4OJYnzVB8q1BpMbqMr15xnu/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Artropatias Infecciosas", downloadUrl: "https://drive.google.com/file/d/1bn3Mk9CxhuEBpb24MAICiZhwQaT6akx-/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental - Artropatias Infecciosas", downloadUrl: "https://drive.google.com/file/d/1vjn9CE_i3oEua6m8-eO5fzs2t6bI4jls/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Artropatias Infecciosas", downloadUrl: "https://drive.google.com/file/d/1caWGotAmcJbNvyNDSTgNnwsa2FQnCjay/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 11
+                title: "Miscelânea",
+                description: "Descrição Miscelânea em Reumatologia.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1ZFsQICtswZHFd8CI8g7MkGK0MjsG-3uY/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/13n6bHIf_XhTNIlpz0ZI8LkE_1EgXLGfy/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1vY_16dKCN1QWQQaAmt-BkPWF5QKQbeAn/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 4", driveVideoUrl: "https://drive.google.com/file/d/1kXF2WCnF1vLjCCQLafoM93KzNqPznYwX/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Miscelanea", downloadUrl: "https://drive.google.com/file/d/19DcdZRpTOvfkrFYhnivuDwC1OULiVvSc/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Miscelanea", downloadUrl: "https://drive.google.com/file/d/1zCJuy--CBDRa7CugOrlaiza95EB5sv6u/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Miscelanea", downloadUrl: "https://drive.google.com/file/d/1S9o_fDExHKJpZVO6zqHs31qY974lH69a/view?usp=sharing" },
+                        { title: "Slide Resumo - Miscelanea", downloadUrl: "https://drive.google.com/file/d/1ep8B99z9ym05CFFZ-ft9VOoWtkkssj2v/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [], // No new map materials for Miscelânea
+                    'Flashcards': [
+                        { title: "Flashcard - Miscelanea", downloadUrl: "https://drive.google.com/file/d/1pd_wwOySfZj2y49HPwdldNrn-VapU2zi/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 12
+                title: "Reumatologia Pediátrica",
+                description: "Descrição Reumatologia Pediátrica.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1ktZ2zhUFbDcofVe9G32C5eqnenmDQ0ho/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1IuKowZ_NNY22j91j4y9Hry6pNC667ZVw/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 3", driveVideoUrl: "https://drive.google.com/file/d/1jwNzduJNeUB6B0w0vpdteQWeN9ua7kkZ/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Reumatologia Pediatrica", downloadUrl: "https://drive.google.com/file/d/1ZeZSqF2SWgL7UffIeuhhBCNrAhAbjWBf/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Reumatologia Pediatrica_1", downloadUrl: "https://drive.google.com/file/d/1Kc0aTlg0lmifXuKjA21OX8_yf79rfg0n/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Reumatologia Pediatrica_1", downloadUrl: "https://drive.google.com/file/d/1tDEhnmtzPqScf0KP8Ve0vCXbDkbJio-x/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [
+                        { title: "Mapa Mental 1 - Reumatologia Pediatrica (LES)_1", downloadUrl: "https://drive.google.com/file/d/1-SvZ0tvVpv_ZaMVZX3y6uwr_Y0XNk4oz/view?usp=sharing" },
+                        { title: "Mapa Mental 2 - Reumatologia Pediatrica (AIJ)_1", downloadUrl: "https://drive.google.com/file/d/1BH0oTfrT02_fEh2ar-7qIcGhYyGAfcjE/view?usp=sharing" },
+                    ],
+                    'Flashcards': [
+                        { title: "Flashcard - Reumatologia Pediatrica", downloadUrl: "https://drive.google.com/file/d/1n2FzxghyNgpSLfnCGT7U7CtMoY-XDBKi/view?usp=sharing" },
+                    ]
+                }
+            },
+            { // Módulo 13
+                title: "Manifestações Reumatológicas e Doenças Sistêmicas",
+                description: "Descrição Manifestações Reumatológicas e Doenças Sistêmicas.",
+                subItems: {
+                    'Videoaulas': [
+                        { title: "Videoaula Placeholder 1", driveVideoUrl: "https://drive.google.com/file/d/1BetJQHZe1uIxl7RHqr8twPG6e21hR1cS/preview", downloadUrl: "#" },
+                        { title: "Videoaula Placeholder 2", driveVideoUrl: "https://drive.google.com/file/d/1jbVN8rohJJDm_fepEQByTc1msJRXXqYH/preview", downloadUrl: "#" },
+                    ],
+                    'Livros digitais': [
+                        { title: "LD - Manifestacoes Reumatologicas e Doencas Sistemicas_1", downloadUrl: "https://drive.google.com/file/d/1lN6_hHiJor8zbVGoCptEUHxzPuPdxmpb/view?usp=sharing" },
+                    ],
+                    'Resumos': [
+                        { title: "RE - Manifestacoes Reumatologicas e Doencas Sistemicas_1", downloadUrl: "https://drive.google.com/file/d/1hpv6d2nj2aMUb7pT6ffKhrJXjKwhktDJ/view?usp=sharing" },
+                    ],
+                    'Slides': [
+                        { title: "Slide Aula - Manifestacoes Reumatologicas e Doencas Sistemicas_1", downloadUrl: "https://drive.google.com/file/d/1g4W83P9KXI82E6QuWSEVBmElYcQHPtO8/view?usp=sharing" },
+                    ],
+                    'Mapas mentais': [], // No new map materials for Manifestações Reumatológicas
+                    'Flashcards': [
+                        { title: "Flashcard - Manifestacoes Reumatologicas e Doencas Sistemicas_1", downloadUrl: "https://drive.google.com/file/d/1aw1gTGstNQtyp2tS3ctP5bJtKbLF4GGn/view?usp=sharing" },
+                    ]
+                }
+            }
+        ];
+
+        // Configuração dos ícones
+        const subItemIcons = {
+            'Videoaulas': 'M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z', // Play
+            'Livros digitais': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', // Livro
+            'Resumos': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', // Documento
+            'Slides': 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', // Apresentação
+            'Mapas mentais': 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M12 12a3 3 0 100-6 3 3 0 000 6z' // Mapa
+        };
+        const subItemOrder = ['Videoaulas', 'Livros digitais', 'Resumos', 'Slides', 'Mapas mentais'];
+
+        // Referências aos elementos do DOM
+        const menuListContainer = document.getElementById('menu-items-list');
+        const detailsTemplate = document.getElementById('subitem-details-template');
+        const contentViewer = document.getElementById('content-viewer');
+        const contentDescription = document.getElementById('content-description');
+        const likeButton = document.getElementById('like-button');
+
+        // --- Funções Auxiliares ---
+        function romanize(num) {
+            if (isNaN(num) || num < 1) return num;
+            const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+            let roman = '', i;
+            for ( i in lookup ) { while ( num >= lookup[i] ) { roman += i; num -= lookup[i]; } }
+            return roman;
+        }
+
+        function createSubItemDetail(subItemType, detailData, mainTitle, videoIndex, totalVideos) {
+            if (!detailsTemplate || !detailData) return null;
+            const detailNode = detailsTemplate.content.cloneNode(true);
+            const detailDiv = detailNode.querySelector('.sub-item-details');
+            const itemDetailsContent = detailNode.querySelector('.item-details-content');
+            const titleEl = detailNode.querySelector('.item-title');
+            const subtitleEl = detailNode.querySelector('.item-subtitle');
+            const downloadLink = detailNode.querySelector('.download-link');
+            const iconPathData = subItemIcons[subItemType];
+
+            if (iconPathData) {
+                const iconContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                const isVideo = subItemType === 'Videoaulas';
+                const iconSizeClass = isVideo ? 'w-8 h-8 mr-3' : 'w-6 h-6 mr-2'; 
+                iconContainer.setAttribute('class', `item-icon ${iconSizeClass} text-gray-600 flex-shrink-0`);
+                iconContainer.setAttribute('fill', isVideo ? 'currentColor' : 'none');
+                iconContainer.setAttribute('stroke', isVideo ? 'none' : 'currentColor');
+                iconContainer.setAttribute('viewBox', isVideo ? '0 0 20 20' : '0 0 24 24');
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', iconPathData);
+                if (isVideo) {
+                    path.setAttribute('fill-rule', 'evenodd');
+                    path.setAttribute('clip-rule', 'evenodd');
+                } else {
+                    path.setAttribute('stroke-linecap', 'round');
+                    path.setAttribute('stroke-linejoin', 'round');
+                    path.setAttribute('stroke-width', '1.5');
+                }
+                iconContainer.appendChild(path);
+                itemDetailsContent.insertBefore(iconContainer, itemDetailsContent.firstChild);
+            } else {
+                 titleEl.closest('.overflow-hidden').style.marginLeft = '0'; 
+            }
+
+            if (titleEl) {
+                
+                if (subItemType === 'Videoaulas') {
+                    
+                    if (totalVideos === 1 && (!detailData.title || detailData.title.toLowerCase().startsWith("videoaula") || detailData.title.toLowerCase().startsWith("videoaula placeholder"))) {
+                        titleEl.textContent = mainTitle;
+                    } else { 
+                        titleEl.textContent = (detailData.title && !detailData.title.toLowerCase().startsWith("videoaula") && !detailData.title.toLowerCase().startsWith("videoaula placeholder"))
+                            ? detailData.title
+                            : `${mainTitle} - Parte ${romanize(videoIndex + 1)}`;
+                    }
+                } else { 
+                    titleEl.textContent = detailData.title && !detailData.title.toLowerCase().includes("placeholder")
+                        ? detailData.title
+                        : `${subItemType.slice(0,-1)} - ${mainTitle}`; 
+                }
+            }
+
+
+            if (subtitleEl) {
+                subtitleEl.textContent = "Estratégia Educacional"; 
+            }
+
+            if (downloadLink) {
+                if (detailData.downloadUrl && detailData.downloadUrl !== '#') {
+                    
+                    let previewUrl = detailData.downloadUrl;
+                    if (previewUrl.includes("drive.google.com") && previewUrl.includes("/view?usp=sharing")) {
+                        previewUrl = previewUrl.replace("/view?usp=sharing", "/preview");
+                    } else if (previewUrl.includes("drive.google.com") && previewUrl.includes("/view?usp=drive_link")) {
+                         previewUrl = previewUrl.replace("/view?usp=drive_link", "/preview");
+                    }
+
+
+                    if (!previewUrl.startsWith('#dl-')) { 
+                        downloadLink.href = previewUrl; 
+                        downloadLink.setAttribute('target', '_blank'); 
+                        downloadLink.addEventListener('click', (e) => {
+                            e.stopPropagation(); 
+                        });
+                    } else {
+                        
+                        downloadLink.href = previewUrl;
+                        downloadLink.removeAttribute('target');
+                    }
+                    downloadLink.title = `Baixar ${titleEl.textContent}`;
+                }
+                else {
+                    downloadLink.remove(); 
+                }
+            }
+
+            const itemDisplayTitle = titleEl.textContent; 
+            
+            let videoUrl = detailData.driveVideoUrl;
+            if (videoUrl && videoUrl.includes("drive.google.com") && videoUrl.includes("/view?usp=sharing")) {
+                videoUrl = videoUrl.replace("/view?usp=sharing", "/preview");
+            } else if (videoUrl && videoUrl.includes("drive.google.com") && videoUrl.includes("/view?usp=drive_link")) {
+                 videoUrl = videoUrl.replace("/view?usp=drive_link", "/preview");
+            }
+
+            let docUrl = detailData.downloadUrl;
+             if (docUrl && docUrl.includes("drive.google.com") && docUrl.includes("/view?usp=sharing")) {
+                docUrl = docUrl.replace("/view?usp=sharing", "/preview");
+            } else if (docUrl && docUrl.includes("drive.google.com") && docUrl.includes("/view?usp=drive_link")) {
+                 docUrl = docUrl.replace("/view?usp=drive_link", "/preview");
+            }
+
+
+            
+            if (subItemType === 'Videoaulas' && videoUrl && videoUrl !== '#') {
+                detailDiv.setAttribute('data-drive-video-url', videoUrl);
+                detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                detailDiv.classList.add('cursor-pointer');
+            }
+            
+            else if (subItemType !== 'Videoaulas' && docUrl && docUrl !== '#' && !docUrl.startsWith('#dl-')) {
+                detailDiv.setAttribute('data-download-url', docUrl);
+                detailDiv.setAttribute('data-item-title', itemDisplayTitle);
+                detailDiv.classList.add('cursor-pointer');
+            }
+            else {
+                 
+                if (subItemType !== 'Videoaulas') { 
+                    detailDiv.classList.remove('cursor-pointer');
+                }
+            }
+
+            return detailDiv;
+        }
+
+
+        // --- Geração do Menu ---
+        if (menuListContainer && detailsTemplate && contentViewer && contentDescription && likeButton) {
+            contentDescription.textContent = "Selecione um tópico e clique em uma vídeo aula ou documento no menu ao lado para carregar.";
+            menuListContainer.innerHTML = ''; 
+
+            menuItemsData.forEach((itemData, mainIndex) => {
+                const title = itemData.title;
+                const description = itemData.description;
+                const subItems = itemData.subItems || {}; 
+                const mainContentId = `content-${mainIndex}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30)}`; 
+
+                const accordionItem = document.createElement('div');
+                accordionItem.className = 'accordion-item';
+                accordionItem.setAttribute('data-completed', 'false'); 
+                accordionItem.setAttribute('data-main-description', description); 
+
+                const headerButton = document.createElement('button');
+                headerButton.className = 'menu-item-header w-full accordion-header';
+                headerButton.setAttribute('aria-expanded', 'false');
+                headerButton.setAttribute('aria-controls', mainContentId);
+
+                const headerContent = document.createElement('div');
+                headerContent.className = 'text-left flex-grow mr-2 overflow-hidden'; 
+                headerContent.innerHTML = `
+                    <h3 class="text-sm font-medium text-gray-800 truncate">${title}</h3>
+                    <div class="text-xs text-gray-500 mt-1 flex justify-between items-center flex-wrap gap-2">
+                        <span>Estratégia Educacional</span>
+                        <button type="button" class="status-toggle flex-shrink-0" title="Marcar como concluído"> <span class="mr-1">Concluído</span> <svg class="icon-not-completed w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="1.5"></rect></svg>
+                            <svg class="icon-completed w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>`;
+
+                const chevronIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                chevronIcon.setAttribute('class', 'w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon');
+                chevronIcon.setAttribute('fill', 'none');
+                chevronIcon.setAttribute('stroke', 'currentColor');
+                chevronIcon.setAttribute('viewBox', '0 0 24 24');
+                chevronIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>`;
+
+                headerButton.appendChild(headerContent);
+                headerButton.appendChild(chevronIcon);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.id = mainContentId;
+                contentDiv.className = 'menu-item-content hidden'; 
+
+                
+                subItemOrder.forEach((subItemType, subIndex) => {
+                    const subItemArray = subItems[subItemType] || []; 
+                    const count = subItemArray.length;
+                    const nestedContentId = `nested-content-${mainIndex}-${subIndex}`; 
+
+                    const subAccordionItem = document.createElement('div');
+                    subAccordionItem.className = `sub-accordion-item ${subIndex > 0 ? 'mt-2' : ''}`; 
+
+                    const subHeaderButton = document.createElement('button');
+                    subHeaderButton.className = 'sub-accordion-header w-full';
+                    subHeaderButton.setAttribute('aria-expanded', 'false');
+                    subHeaderButton.setAttribute('aria-controls', nestedContentId);
+                    if (count === 0) {
+                        subHeaderButton.disabled = true; 
+                    }
+                    subHeaderButton.innerHTML = `
+                        <span class="text-sm font-medium text-gray-700">${subItemType} (${count})</span>
+                        <svg class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform chevron-icon-nested ${count === 0 ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    `;
+
+                    const subContentDiv = document.createElement('div');
+                    subContentDiv.id = nestedContentId;
+                    subContentDiv.className = 'sub-accordion-content hidden'; 
+
+                    if (count > 0) {
+                        const totalVideos = (subItemType === 'Videoaulas') ? count : 0; 
+                        subItemArray.forEach((detailData, detailIndex) => {
+                            const detailElement = createSubItemDetail(subItemType, detailData, title, detailIndex, totalVideos);
+                            if (detailElement) {
+                                subContentDiv.appendChild(detailElement);
+                            }
+                        });
+                    }
+
+                    subAccordionItem.appendChild(subHeaderButton);
+                    subAccordionItem.appendChild(subContentDiv);
+                    contentDiv.appendChild(subAccordionItem); 
+                });
+
+                accordionItem.appendChild(headerButton);
+                accordionItem.appendChild(contentDiv);
+                menuListContainer.appendChild(accordionItem); 
+            });
+
+            // --- Lógica dos Acordeões ---
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', (event) => {
+                    
+                    if (event.target.closest('.status-toggle')) return;
+
+                    const content = header.nextElementSibling;
+                    if (!content || !content.classList.contains('menu-item-content')) return; 
+
+                    const isExpanded = header.getAttribute('aria-expanded') === 'true';
+                    const chevronIcon = header.querySelector('.chevron-icon');
+
+                    header.setAttribute('aria-expanded', String(!isExpanded));
+                    content.classList.toggle('hidden');
+                    if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                });
+            });
+
+            const subAccordionHeaders = document.querySelectorAll('.sub-accordion-header');
+            subAccordionHeaders.forEach(subHeader => {
+                if (!subHeader.disabled) { 
+                    subHeader.addEventListener('click', (event) => {
+                        event.stopPropagation(); 
+                        const content = subHeader.nextElementSibling;
+                        if (!content || !content.classList.contains('sub-accordion-content')) return;
+
+                        const isExpanded = subHeader.getAttribute('aria-expanded') === 'true';
+                        const chevronIcon = subHeader.querySelector('.chevron-icon-nested');
+
+                        subHeader.setAttribute('aria-expanded', String(!isExpanded));
+                        content.classList.toggle('hidden');
+                        if (chevronIcon) chevronIcon.classList.toggle('rotate-180');
+                    });
+                }
+            });
+
+            // --- Lógica para Marcar/Desmarcar como Concluído ---
+            const statusToggles = document.querySelectorAll('.status-toggle');
+            statusToggles.forEach(toggle => {
+                toggle.addEventListener('click', (event) => {
+                    event.stopPropagation(); 
+                    const accordionItem = toggle.closest('.accordion-item');
+                    if (!accordionItem) return;
+
+                    const isCompleted = accordionItem.getAttribute('data-completed') === 'true';
+                    const newCompletedState = !isCompleted;
+
+                    accordionItem.setAttribute('data-completed', String(newCompletedState));
+                    toggle.classList.toggle('is-completed', newCompletedState);
+                    toggle.title = newCompletedState ? 'Marcar como não concluído' : 'Marcar como concluído';
+                    console.log(`Item "${accordionItem.querySelector('h3').innerText}" marcado como ${newCompletedState ? 'concluído' : 'não concluído'}`);
+                });
+            });
+
+            // --- Lógica para Carregar Conteúdo ---
+            menuListContainer.addEventListener('click', (event) => {
+                const detailItem = event.target.closest('.sub-item-details');
+                
+                if (event.target.closest('.download-link')) { return; }
+
+                if (detailItem && contentViewer && contentDescription) {
+                    let driveVideoUrl = detailItem.getAttribute('data-drive-video-url');
+                    let downloadUrl = detailItem.getAttribute('data-download-url'); 
+                    const itemTitle = detailItem.getAttribute('data-item-title') || 'Conteúdo selecionado';
+                    const parentAccordionItem = detailItem.closest('.accordion-item');
+                    const mainTitle = parentAccordionItem?.querySelector('.menu-item-header h3')?.textContent || 'Módulo';
+
+                    
+
+                    if (driveVideoUrl || downloadUrl) { 
+                        
+                        document.querySelectorAll('.sub-item-details.is-active').forEach(activeItem => {
+                            activeItem.classList.remove('is-active');
+                        });
+                        
+                        detailItem.classList.add('is-active');
+
+                        let contentType = '';
+                        if (driveVideoUrl && driveVideoUrl !== '#') {
+                            contentViewer.src = driveVideoUrl;
+                            contentType = 'Assistindo';
+                            console.log(`Carregando vídeo do Drive: ${driveVideoUrl}`);
+                        }
+                        else if (downloadUrl && downloadUrl !== '#') { 
+                            contentViewer.src = downloadUrl; 
+                            contentType = 'Visualizando';
+                            console.log(`Carregando documento: ${downloadUrl}`);
+                        }
+                        contentDescription.textContent = `Aula sobre ${mainTitle} - ${contentType}: ${itemTitle}`;
+                    }
+                }
+            });
+
+            // --- Lógica para o botão de Like ---
+            if(likeButton) {
+                likeButton.addEventListener('click', () => {
+                    likeButton.classList.toggle('is-liked');
+                    const isLiked = likeButton.classList.contains('is-liked');
+                    console.log(`Item ${isLiked ? 'curtido' : 'descurtido'}`);
+                });
+            }
+
+            // --- Carregar o Primeiro Conteúdo Clicável ao Iniciar ---
+            
+            const firstClickableDetail = document.querySelector('#menu-items-list .sub-item-details[data-drive-video-url]:not([data-drive-video-url="#"]), #menu-items-list .sub-item-details[data-download-url]:not([data-download-url="#"]):not([data-download-url^="#dl-"])');
+            if (firstClickableDetail) {
+                 
+                setTimeout(() => {
+                    
+                    const parentAccordionItem = firstClickableDetail.closest('.accordion-item');
+                    const parentHeader = parentAccordionItem?.querySelector('.accordion-header');
+                    if (parentHeader && parentHeader.getAttribute('aria-expanded') === 'false') {
+                        if(typeof parentHeader.click === 'function') parentHeader.click(); 
+                    }
+
+                    
+                    const parentSubAccordionContent = firstClickableDetail.closest('.sub-accordion-content');
+                    if (parentSubAccordionContent && parentSubAccordionContent.classList.contains('hidden')) {
+                        const parentSubHeader = parentSubAccordionContent.previousElementSibling; 
+                        if(parentSubHeader && !parentSubHeader.disabled && typeof parentSubHeader.click === 'function') {
+                             parentSubHeader.click(); 
+                        }
+                    }
+
+                    
+                   if(typeof firstClickableDetail.click === 'function'){
+                        firstClickableDetail.click();
+                   }
+                }, 100); 
+            } else {
+                
+                contentViewer.src = '';
+                contentDescription.textContent = 'Nenhum conteúdo selecionado ou disponível para visualização.';
+                console.log("Nenhum item inicial clicável encontrado para carregar.");
+            }
+
+        } else {
+            console.error("Erro: Elementos essenciais do DOM não foram encontrados. Verifique os IDs: menu-items-list, subitem-details-template, content-viewer, content-description, like-button.");
+        }
+    </script>
+
+</body>
+</html>

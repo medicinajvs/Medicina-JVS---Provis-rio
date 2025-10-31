@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">MEDReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_hepatologia', title: 'HEPATOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Cirrose Hepática: Parte I - Fisiopatologia e Estadiamento', link: 'https://drive.google.com/file/d/14-O4idInG3zmZye0ZkcOUY9K2D5ypcdd/view?usp=sharing' }, materials: [{ title: 'E-Book - Cirrose: Fisiopatologia e Estadiamento', link: 'https://drive.google.com/file/d/1T0TrsI3kRJdhonwBByZXsF02KJASs-eb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Cirrose Hepática: Parte II - Etiologias', link: 'https://drive.google.com/file/d/1OI-iPN0ovqbN5loKr36X8b-7Ucpq2m1Q/view?usp=sharing' }, materials: [{ title: 'E-Book - Cirrose: Etiologias', link: 'https://drive.google.com/file/d/10PQneu1Pj7Iv7VTmSTlhtxQk9s8lgZ7M/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Cirrose Hepática: Parte III - Encefalopatia e HDA Varicosa', link: 'https://drive.google.com/file/d/1oQCnpmmBbpWW5fIiAlc48udyTu50tNFz/view?usp=sharing' }, materials: [{ title: 'E-Book - Cirrose: Encefalopatia e HDA Varicosa', link: 'https://drive.google.com/file/d/17EVZD20Ans4eEWPTQmV5_j_6tZhNKVQ5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Cirrose Hepática: Parte IV - Ascite e PBE', link: 'https://drive.google.com/file/d/1sSbswk8WZdm1x62_OTk5PZL4zmfGLl4I/view?usp=sharing' }, materials: [{ title: 'E-Book - Complicações da Cirrose: Parte II (Ascite e PBE)', link: 'https://drive.google.com/file/d/1ba6_u9YAP1PQGKITy6MomZLynOWoE36n/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Cirrose Hepática: Parte V - Síndrome Hepatorrenal', link: 'https://drive.google.com/file/d/1n3G35o20gaUH6I9pb9YdDYmDdDUm9FwF/view?usp=sharing' }, materials: [{ title: 'E-Book - Complicações da Cirrose: Parte III (Síndrome Hepatorrenal)', link: 'https://drive.google.com/file/d/106OBldejzZX0sOcLj4sIC9jZmVXEVWnH/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Hepatites Virais: Parte I', link: 'https://drive.google.com/file/d/12lonzF8fko4caf65H2gQIzp0buOvo12O/view?usp=sharing' }, materials: [{ title: 'E-Book - Hepatites Virais: Parte I', link: 'https://drive.google.com/file/d/1TVfKOEoxwEWmJ88-CGxZOV6Qkt3rspCK/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Hepatites Virais: Parte II', link: 'https://drive.google.com/file/d/1263noO2BXoNk2Fo9xtof-t2X_DNLU7QO/view?usp=sharing' }, materials: [{ title: 'E-Book - Hepatites Virais: Parte II', link: 'https://drive.google.com/file/d/1Z3ShMQN_YGsXEqxTDNzK27_2JkUUmw0F/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Doença Hepática Gordurosa Alcoólica e Não Alcoólica', link: 'https://drive.google.com/file/d/1FQiwqbkRzR_ztOvAIO8xkBILegOTZ7L_/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença Hepática Gordurosa: Alcoólica e Não Alcoólica', link: 'https://drive.google.com/file/d/1fFRyUiv8fA4ttsKU6IxIaU6gsMKPe4EM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Tumores Hepáticos Benignos', link: 'https://drive.google.com/file/d/1hL77zNxJiXBhb0i7X04nOOASex5i4Re1/view?usp=sharing' }, materials: [{ title: 'E-Book - Tumores Hepáticos: Benignos', link: 'https://drive.google.com/file/d/1P9RrQ8CZWcTsOMW03ZdpztwT4SywB5sv/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Tumores Hepáticos Malignos', link: 'https://drive.google.com/file/d/1ldsfF49YpQfJGQ3QsM8kfR87pAk27QUe/view?usp=sharing' }, materials: [{ title: 'E-Book - Tumores Hepáticos: Malignos', link: 'https://drive.google.com/file/d/1zluDasluLaa5IOjngjGRxDOIb0Mftg-A/view?usp=sharing' }] },
+            ]},
+            { id: 'module_infectologia', title: 'INFECTOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Dengue: Parte I', link: 'https://drive.google.com/file/d/12cyj9_1bHHhNEV_zeihLhZJJz-tXZbbq/view?usp=sharing' }, materials: [{ title: 'E-Book - Dengue', link: 'https://drive.google.com/file/d/1zCTA95xJhNUnOPSnPgnO9lUrxLe7wiVy/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Dengue: Parte II', link: 'https://drive.google.com/file/d/1jgMpsJT9-SBoPkRPusXI_93WG5KMjsx9/view?usp=sharing' }, materials: [{ title: 'E-Book - Dengue', link: 'https://drive.google.com/file/d/1zCTA95xJhNUnOPSnPgnO9lUrxLe7wiVy/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Outras Arboviroses', link: 'https://drive.google.com/file/d/1BJAQwiV7lUty_GqrB7Kcv8P5D-CHi0Pz/view?usp=sharing' }, materials: [{ title: 'E-Book - Outras Arboviroses', link: 'https://drive.google.com/file/d/1NQ7kYPCFpHf6r7cuo0gQwSIZA_VDmTP7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - COVID-19: Parte I', link: 'https://drive.google.com/file/d/1sbE-WMJ0x1opPgNVO_c2QfJEVNLeAvko/view?usp=sharing' }, materials: [{ title: 'E-Book - Covid-19: Parte I', link: 'https://drive.google.com/file/d/1q7TnnVaNcC6ASjE7vcZ0HGD_kjuR4hgr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - COVID 19: Parte II', link: 'https://drive.google.com/file/d/180dIqBreuJAcyVlEKSwH2EtB9l5OT6-u/view?usp=sharing' }, materials: [{ title: 'E-Book - Covid-19: Parte II', link: 'https://drive.google.com/file/d/1sRQU5a3zdsYEZM95OYK9_c8pSA6YFKFC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - HIV: Parte I - As Estratégias do Vírus', link: 'https://drive.google.com/file/d/15zOP6-J0LLlcNk4oxByK0TGi_x-yS6J4/view?usp=sharing' }, materials: [{ title: 'E-Book - HIV: Parte I', link: 'https://drive.google.com/file/d/13oVQG82sytBCn0auepYNtH-jfB3WA3QT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - HIV: Parte II - Os Cúmplices Oportunistas', link: 'https://drive.google.com/file/d/1btIep2xDgv6D35poy7DANjqTXVO6065V/view?usp=sharing' }, materials: [{ title: 'E-Book - HIV: Parte II', link: 'https://drive.google.com/file/d/16FuHsG2DC4uZuH6n0xip5dHktkiusN_R/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - HIV: Parte III - Exames e Diagnóstico', link: 'https://drive.google.com/file/d/1mQH5EkTy5qFZAYIgPIGG7pXT25RKuDU-/view?usp=sharing' }, materials: [{ title: 'E-Book - HIV: Parte III', link: 'https://drive.google.com/file/d/1RD5ZxC3kdBmjVIQHRSH_RhKIRu4HJXyw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - HIV: Parte IV - TARV, PEP e PREP', link: 'https://drive.google.com/file/d/1nThE_ucFUcQQZ9_sa4B9N6mk9Ms7wNm7/view?usp=sharing' }, materials: [{ title: 'E-Book - HIV: Parte IV', link: 'https://drive.google.com/file/d/1v-rShPp5tAL40XhQU6W8slwvuaUglDI9/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Sepse', link: 'https://drive.google.com/file/d/1DmRnDzrBqieporGHVenDqLyMjS4ktOEW/view?usp=sharing' }, materials: [{ title: 'E-Book - Sepse', link: 'https://drive.google.com/file/d/1_Q_ctdZAtpA7H02eOQ29h21fwuEMg_7e/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Meningite Bacteriana', link: 'https://drive.google.com/file/d/1msxKEC73NA9UQn8rc5XqlGfOaGVbZGOj/view?usp=sharing' }, materials: [{ title: 'E-Book - Meningite Bacteriana', link: 'https://drive.google.com/file/d/1dUEkumJ0Hok6cMCpoDGVOMoDtkkxn7VD/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Outras Meningoencefalites', link: 'https://drive.google.com/file/d/1PWOAzyUQlLES-SHv7VDjv5O-_vUiC5AO/view?usp=sharing' }, materials: [{ title: 'E-Book - Outras Meningoencefalites', link: 'https://drive.google.com/file/d/1b4Cy2XeDQwpSDnFdE93pVFS5a90CAYdD/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Infecção Urinária', link: 'https://drive.google.com/file/d/1M_kJY2pLUtXgSlyebLXaweYxhFajoNCJ/view?usp=sharing' }, materials: [{ title: 'E-Book - Infecção Urinária', link: 'https://drive.google.com/file/d/15b2tvsLQJyvr_V8jd3bo7ztf0pT16Fxn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Endocardite Infecciosa: Parte I', link: 'https://drive.google.com/file/d/19ojBnGLF1g31V69xLTPozjDVMNriq2XH/view?usp=sharing' }, materials: [{ title: 'E-Book - Endocardite Infecciosa: Parte I', link: 'https://drive.google.com/file/d/15ccO44aIjpiBf-xk_944hb682ogPiFfM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Endocardite Infecciosa: Parte II', link: 'https://drive.google.com/file/d/19ASOAxNjCuZJF0u-hTDbBA_tl7F_MLtT/view?usp=sharing' }, materials: [{ title: 'E-Book - Endocardite Infecciosa: Parte II', link: 'https://drive.google.com/file/d/1BJX2BOAKcQ1eiLX-RsH6A4kX_OlDRxGr/view?usp=sharing' }] },
+            ]},
+            { id: 'module_hematologia', title: 'HEMATOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Hemostasia Primária', link: 'https://drive.google.com/file/d/1OK1NAGmJBDeMm4aJOIl50ryWzPHEgPk1/view?usp=sharing' }, materials: [{ title: 'E-Book - Hemostasia Primária', link: 'https://drive.google.com/file/d/1SYNbFOzVySdYw2lWa1N9uVMy4pNhitV_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Hemostasia Secundária e seus Distúrbios', link: 'https://drive.google.com/file/d/1pAa0J9inL-KttwJfHfG0QOlCmjGGYoqY/view?usp=sharing' }, materials: [{ title: 'E-Book - Hemostasia Secundária', link: 'https://drive.google.com/file/d/1vVFeKng_7adeIdlx_d59KdrmX7QVKHtA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Microangiopatia Trombótica', link: 'https://drive.google.com/file/d/1J-1crQDSJJOEBI5MRjK1OGrk8EUrARp8/view?usp=sharing' }, materials: [{ title: 'E-Book - Microangiopatia Trombótica', link: 'https://drive.google.com/file/d/1ETNcJ4Ioq8PaLCCo8J8wYwmWNXjRfPWi/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Anemia Ferropriva e Anemia de Doença Crônica', link: 'https://drive.google.com/file/d/1H0ZRSE58YiDRKMxrSabgE3_QQJt5auKg/view?usp=sharing' }, materials: [{ title: 'E-Book - Anemia Ferropriva e Anemia de Doença Crônica', link: 'https://drive.google.com/file/d/198cl4-HPxY_QYokc6rHSgzMG6RUucVBh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Anemia Megaloblástica', link: 'https://drive.google.com/file/d/1rtv6xHx99nx90YUMJB4InecnJcnCawDw/view?usp=sharing' }, materials: [{ title: 'E-Book - Anemia Megaloblástica', link: 'https://drive.google.com/file/d/1gYSrnPs1D0AJI9rQCedvCptj0wIs-XmX/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Anemias hemolíticas', link: 'https://drive.google.com/file/d/1bzrNDvC6nBL9zvrQ0en07w1AKZi5N9VC/view?usp=sharing' }, materials: [{ title: 'E-Book - Anemias Hemolíticas', link: 'https://drive.google.com/file/d/1q0qdOLth0ealLNBXIIjCwdadb3izNEgw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Anemia Falciforme: Parte I', link: 'https://drive.google.com/file/d/1oSeIv7CK-rmTNbwQSyyExJRcrKDkQ8Fh/view?usp=sharing' }, materials: [{ title: 'E-Book - Anemia Falciforme: Parte I', link: 'https://drive.google.com/file/d/18MgaC0XYGNU4Sx_s-mQmPsN1tSEDy4SI/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Anemia Falciforme: Parte II', link: 'https://drive.google.com/file/d/1efaW8WuWTADFMTHKThhS5vwdKiHCqEnN/view?usp=sharing' }, materials: [{ title: 'E-Book - Anemia Falciforme: Parte II', link: 'https://drive.google.com/file/d/1Dw0_prkSca7keSIFKqyILAMR7Sidz4Ok/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Leucemias', link: 'https://drive.google.com/file/d/1sY0lNHSa8Tisp8FDYgMabV-_WsUJ-rxc/view?usp=sharing' }, materials: [{ title: 'E-Book - Leucemias', link: 'https://drive.google.com/file/d/16MXf70nYyRZfJMBw0crMcbnkwmMJwqWQ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Mieloma múltiplo e Diagnósticos diferenciais', link: 'https://drive.google.com/file/d/1ZkSdt1JJ47QrqhppNf2d0QwR9kHm-XKF/view?usp=sharing' }, materials: [{ title: 'E-Book - Mieloma Múltiplo e Diagnósticos Diferenciais', link: 'https://drive.google.com/file/d/1x7UX3gWNudnMKFaD_xY20u6LGfrTjk4L/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Neutropenia Febril', link: 'https://drive.google.com/file/d/1gHMBZlytgZlMrpzowm1_hCv8vWVtXgQ4/view?usp=sharing' }, materials: [{ title: 'E-Book - Neutropenia Febril', link: 'https://drive.google.com/file/d/1rVpnowL9-zwLVUXLOhuZ_QOyCOxwFMXX/view?usp=sharing' }] },
+            ]},
+            { id: 'module_neurologia', title: 'NEUROLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - AVC Isquêmico: Parte I', link: 'https://drive.google.com/file/d/1FOg3-Vr-TwtkmnvkCuBNshuBECrONLD7/view?usp=sharing' }, materials: [{ title: 'E-Book - AVC Isquêmico: Parte I', link: 'https://drive.google.com/file/d/1doxeSgY4rmX34dmKpsXIXspV18T0VSro/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - AVC Isquêmico: Parte II', link: 'https://drive.google.com/file/d/1uK2-Ho3vS5dpMzEqwRiRz4WxxksayNkp/view?usp=sharing' }, materials: [{ title: 'E-Book - AVC Isquêmico: Parte II', link: 'https://drive.google.com/file/d/1FOOYjoRCDOZ4EHLrAW7BysFNV7JTPXxw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - AVC Hemorrágico', link: 'https://drive.google.com/file/d/16NUm09HyT_ou18smFck4vQpB_ZwXDcvy/view?usp=sharing' }, materials: [{ title: 'E-Book - AVC Hemorrágico', link: 'https://drive.google.com/file/d/1MFpv2ISgIC2qwzOQ9DhQwB3VWd8UbL-o/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Status Epiléptico', link: 'https://drive.google.com/file/d/1DNEn6-MfuWdIqj9fabXEIMgXdk-_kSFK/view?usp=sharing' }, materials: [{ title: 'E-Book - Status Epiléptico', link: 'https://drive.google.com/file/d/1DJb2nyk6Q_1z1xwTDBUtBx7uIOL29UD_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Cefaleias Primárias', link: 'https://drive.google.com/file/d/1NbZTNvS93F0nOhftxN6rLpGedUPmHfMv/view?usp=sharing' }, materials: [{ title: 'E-Book - Cefaleias Primárias', link: 'https://drive.google.com/file/d/1zgCx0ejasHsGDVxmunhmB186i0Qx9Fcc/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Cefaleias com Sinais de Alarme', link: 'https://drive.google.com/file/d/18XF5PK2rKiezOJdOIphwgw-0KBYwEmo3/view?usp=sharing' }, materials: [{ title: 'E-Book - Cefaleias com Sinais de Alarme', link: 'https://drive.google.com/file/d/1_HYrIvQIPNwdGVZjSBmQCJJAuvcaF8yf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Síndrome Demencial', link: 'https://drive.google.com/file/d/1O9JxgI-boxjrol4eFF7BSMcKFPER5bBR/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndrome Demencial', link: 'https://drive.google.com/file/d/1KNKIiNzog2koTAQeAho_-K4N6k-3_7JT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Esclerose Múltipla', link: 'https://drive.google.com/file/d/1xbqhcbNF1MeRRafKHYFbqAOgcVF2AopW/view?usp=sharing' }, materials: [{ title: 'E-Book - Esclerose Múltipla', link: 'https://drive.google.com/file/d/1pxiaddXUX1zurFJh9kKig7O8oqWZQFv1/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Doença de Parkinson e Tremor Essencial', link: 'https://drive.google.com/file/d/1Zbx2vFAi-iTFZmS-JFwx0a442J-b-iAs/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença de Parkinson', link: 'https://drive.google.com/file/d/1FJF38YpNm3E_hK7C3ZhDcmdXLbArS3tc/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Demência e Seus Tipos', link: 'https://drive.google.com/file/d/1QFr9U24n_2fYBzFOOUicGbpC6YaKZE-s/view?usp=sharing' }, materials: [{ title: 'E-Book - Demências e Seus Tipos', link: 'https://drive.google.com/file/d/14pwoZERKpFWEY43SkCvdPR4KTKpT4Rdu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Doenças Neuromusculares', link: 'https://drive.google.com/file/d/1kufmWygS808UfE3eVMlomZsLdtiNCjvn/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Neuromusculares', link: 'https://drive.google.com/file/d/17cFBEzVTpHoZKJv7rRqBj6XIlhPcSUyJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Delirium', link: 'https://drive.google.com/file/d/1xqXr-2io7JS5oIvab1WxipSFOlcgYPAK/view?usp=sharing' }, materials: [{ title: 'E-Book - Delirium', link: 'https://drive.google.com/file/d/1IwtBC4hiBONohzKSDbkFJf9CCju4PxzY/view?usp=sharing' }] },
+            ]},
+            { id: 'module_gastroenterologia', title: 'GASTROENTEROLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Divertículos, Anéis e Distúrbios Motores', link: 'https://drive.google.com/file/d/1gjNQ94l8wcohPdedN8F6wV-HS-3bAFAu/view?usp=sharing' }, materials: [{ title: 'E-Book - Disfagia: Parte I', link: 'https://drive.google.com/file/d/1JCF5lYEVCVP5ABIDkQl7SuUIMysyCVNd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Acalasia', link: 'https://drive.google.com/file/d/1--5gSeldaaLPcoDEo4fnUrz47xDw2E3j/view?usp=sharing' }, materials: [{ title: 'E-Book - Disfagia: Parte II', link: 'https://drive.google.com/file/d/1T-siT_KyxfOL3U_NVkYc-bC_hnc2b1Tz/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Doença do Refluxo Gastroesofágico', link: 'https://drive.google.com/file/d/1JP1B9nmQC5HMDDtWs54GhZZbw1inEyFi/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença do Refluxo Gastroesofágico', link: 'https://drive.google.com/file/d/10Jhac9PQ7oXaHk8e8s52OoGZNPI0Y9Kf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Complicações da Doença do Refluxo Gastroesofágico', link: 'https://drive.google.com/file/d/1uqkLXAZ4YLVISrqKaKmoga2kfkB3zte4/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença do Refluxo Gastroesofágico', link: 'https://drive.google.com/file/d/10Jhac9PQ7oXaHk8e8s52OoGZNPI0Y9Kf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Câncer de Esôfago', link: 'https://drive.google.com/file/d/1WUTkJLp9j4YnyUxfjKOOvRVPq7Rmp6sO/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Esôfago', link: 'https://drive.google.com/file/d/1exyEWd_u3R2jy-Xq2a5jkq5jwPrR0ja9/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Síndromes Disabsortivas', link: 'https://drive.google.com/file/d/1PoO7oM-ivp0h1UEVQZlehEd0Em8aoqHn/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndromes Disabsortivas', link: 'https://drive.google.com/file/d/1SKqTDhDivaD4xBvOGf-4R3Be143XXQXW/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Doença Ulcerosa Péptica', link: 'https://drive.google.com/file/d/13fWfrJyf208A2ZPe_Fc0bra7CFmao2XA/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença Ulcerosa Péptica', link: 'https://drive.google.com/file/d/1SGUDcE2K2JbheYUL412_YpYudKK_uZk9/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Hemorragia Digestiva Alta Não Varicosa', link: 'https://drive.google.com/file/d/1ZINl2dADbvh0-7ZhmelDyh-xdc4_2536/view?usp=sharing' }, materials: [{ title: 'E-Book - Hemorragia Digestiva Alta', link: 'https://drive.google.com/file/d/1de07JBAwcLv2Y6Rd2eefEOWnVaCczeB_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Câncer Gástrico', link: 'https://drive.google.com/file/d/13AF19F2n8Y_Ch6krAHhPv_8LaWf1ukeO/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer Gástrico', link: 'https://drive.google.com/file/d/1CNaHoe1xp0mztTMOllgk_ItqLcOYSVDZ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Doença Inflamatória Intestinal', link: 'https://drive.google.com/file/d/14Hvc_F47XnfEgc4LMXMpalcDkla7JrBo/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença Inflamatória Intestinal', link: 'https://drive.google.com/file/d/13zK31QDte03kIWKtc7fdrKbI354VVatr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Câncer de Pâncreas', link: 'https://drive.google.com/file/d/1zmA_upsBU5DtrzEWLsJuU5cnwuA4urnN/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Pâncreas', link: 'https://drive.google.com/file/d/1cyZu9-iV0A-9GAjbRRa9d5pnZ_ZPcP80/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Neoplasias Císticas do Pâncreas', link: 'https://drive.google.com/file/d/18Hytd8Lu-sOEX4a8r1Yqe2f6hVfwThFj/view?usp=sharing' }, materials: [{ title: 'E-Book - Neoplasias Císticas do Pâncreas', link: 'https://drive.google.com/file/d/1xLhhQhNH8-Vcl4tnLl6xAJIV0aTk09G8/view?usp=sharing' }] },
+            ]},
+            { id: 'module_endocrinologia', title: 'ENDOCRINOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Tireoide: Conceitos Básicos', link: 'https://drive.google.com/file/d/1E1krrwRS350U-3TXMjOI4JPz60emndpz/view?usp=sharing' }, materials: [{ title: 'E-Book - Tireoide: Conceitos Básicos', link: 'https://drive.google.com/file/d/1RfCvYu-9ZIjM0k5JlO8K75dknC1crOJ6/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Tireotoxicose', link: 'https://drive.google.com/file/d/1YfPyToqt-1OxMcnQGvDVryE4gs1RyEKP/view?usp=sharing' }, materials: [{ title: 'E-Book - Tireotoxicose', link: 'https://drive.google.com/file/d/1SSey3ATio5qezz9_YRdBocH9A2_3FdCu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Hipotireoidismo', link: 'https://drive.google.com/file/d/1aPqUJN9TIImWIQX9JgG3IBANDL_wlEO-/view?usp=sharing' }, materials: [{ title: 'E-Book - Hipotireoidismo', link: 'https://drive.google.com/file/d/1B3xskSRTseUxF_Ih6LrXa8wPiSbZk3eA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Nódulos de Tireoide', link: 'https://drive.google.com/file/d/14DksZykxoeA1NErDQjXdwhwaPqD-Bnin/view?usp=sharing' }, materials: [{ title: 'E-Book - Nódulos de Tireoide', link: 'https://drive.google.com/file/d/1diYxVx7aBs56SUapjzJn5qcPfHD84s1n/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Câncer de Tireoide', link: 'https://drive.google.com/file/d/1PPW32a-X2wmHhYmAdAxGZH714O-_O4G3/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Tireoide', link: 'https://drive.google.com/file/d/1nOqHY0O1ZIRMG2BSIVGVFcoL9BI13Ol7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Diabetes: Fisiopatologia e Diagnóstico', link: 'https://drive.google.com/file/d/1qDPQ9DN6ZFyAC-VhRVarJU6GtGcP0mn2/view?usp=sharing' }, materials: [{ title: 'E-Book - Diabetes: Fisiopatologia e Diagnóstico', link: 'https://drive.google.com/file/d/1RUpTMpI79Zqf4rJBt2gozSAsBlxhwdDg/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - DM - Antidiabéticos orais: Parte I', link: 'https://drive.google.com/file/d/1bKsU8OeJID1PcktSgKOAaZ7tTq0-OEol/view?usp=sharing' }, materials: [{ title: 'E-Book - DM - Antidiabéticos Orais: Parte I', link: 'https://drive.google.com/file/d/1WDO3_HHyf-gOpei28_RPwWx-mUuCt1Cu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - DM - Antidiabéticos orais: Parte II', link: 'https://drive.google.com/file/d/1KqIx_bN_h6AqUCdaWYiqjwQH-EqMfyLP/view?usp=sharing' }, materials: [{ title: 'E-Book - DM - Antidiabéticos Orais: Parte II', link: 'https://drive.google.com/file/d/1waw5w6MGOqIWfyExrh7Ut6V5ev5oEXWg/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - DM - Insulinoterapia', link: 'https://drive.google.com/file/d/1MUe9PQFlXNYONIS6vARGeGhujdvPL_ZP/view?usp=sharing' }, materials: [{ title: 'E-Book - DM - Insulinoterapia', link: 'https://drive.google.com/file/d/1uyjRoXLccAyqF6OMxwz05rAmDN0h1Zar/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Cetoacidose Diabética e Estado Hiperglicêmico Hiperosmolar', link: 'https://drive.google.com/file/d/1rP9bDnXQHacFF-EyG_hr33_F4SeFNNUh/view?usp=sharing' }, materials: [{ title: 'E-Book - Cetoacidose Diabética', link: 'https://drive.google.com/file/d/14X8_OiVpkP9ug3TWeNtan9TdC2coC7O-/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - DM - Complicações crônicas', link: 'https://drive.google.com/file/d/1AckhJ2D77or6aDhr56F8PvELt6ldx4K7/view?usp=sharing' }, materials: [{ title: 'E-Book - DM - Complicações Crônicas', link: 'https://drive.google.com/file/d/1oBh-t1DZTdrY5Xo2N0nKlMb9lg9L7p_R/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Adrenais: Conceitos Básicos', link: 'https://drive.google.com/file/d/1C5bcQll8Rtv9knAO6SsjZUsBmig5Yovn/view?usp=sharing' }, materials: [{ title: 'E-Book - Adrenais: Conceitos Básicos', link: 'https://drive.google.com/file/d/1rgMlZS3Tth-P1PIWk0ClRICGB4oEg_N-/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Síndrome de Cushing', link: 'https://drive.google.com/file/d/1oEOqWyMAN4vRHNObo6jqvTwmNRyTwVE0/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndrome de Cushing', link: 'https://drive.google.com/file/d/1QilmPQgobo2QkGCn0sBbHfdKbxCEpNZK/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Hiperaldosteronismo Primário', link: 'https://drive.google.com/file/d/10fKldmHKYvIjwOsfHX-Ei9TuQcMIBtUz/view?usp=sharing' }, materials: [{ title: 'E-Book - Hiperaldosteronismo Primário', link: 'https://drive.google.com/file/d/1oZT5lW7mSq5GBFBKKyaEGge6G2s7bJZ5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Insuficiência Adrenal', link: 'https://drive.google.com/file/d/1wueIaWSJo3-IZ48xk9BJDY9uXjvqAQKg/view?usp=sharing' }, materials: [{ title: 'E-Book - Insuficiência Adrenal', link: 'https://drive.google.com/file/d/1rOp3FoLwzzya0nRdqav5xDKMlCVz9gWx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Hiperparatireoidismo Primário', link: 'https://drive.google.com/file/d/1OFPAyMlOopBqiL_BBzlNH52aJiCydJ71/view?usp=sharing' }, materials: [{ title: 'E-Book - Hiperparatireoidismo Primário', link: 'https://drive.google.com/file/d/1eggFFXOc2r6JsyWMpV_iNPTGTE1amai9/view?usp=sharing' }] },
+            ]},
+            { id: 'module_toxicologia', title: 'TOXICOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Ofidismo', link: 'https://drive.google.com/file/d/1_YKDXTc5LQHKW9jA0KPURpIJs6b6yBvz/view?usp=sharing' }, materials: [{ title: 'E-Book - Ofidismo', link: 'https://drive.google.com/file/d/1CxqUYQfAnMTAQXUiwqubD3jeUPanjZtz/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Araneismo', link: 'https://drive.google.com/file/d/1k9DW9fdCwAWSVESHtG9bh3cnFudsnb3r/view?usp=sharing' }, materials: [{ title: 'E-Book - Araneísmo', link: 'https://drive.google.com/file/d/1PYQmRK7GjtQdX2FSv-RSh0WHsDw70HDb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Escorpionismo', link: 'https://drive.google.com/file/d/1oeVDgrXILnnHMFs2X_rzGHcD_tZrcLo3/view?usp=sharing' }, materials: [{ title: 'E-Book - Escorpionismo', link: 'https://drive.google.com/file/d/1EBewbpbY9Cvy4yTDQaLwoN8nOV-w14Lj/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Intoxicações Agudas: Parte I', link: 'https://drive.google.com/file/d/1ZmyD5y_ID8CRlQWDMXgJ6de_B0Ve6Bfe/view?usp=sharing' }, materials: [{ title: 'E-Book - Intoxicações Agudas: Parte I', link: 'https://drive.google.com/file/d/1_W5oKMt74M_7I05BgdBsH3LWA-xHbXff/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Intoxicações Agudas: Parte II', link: 'https://drive.google.com/file/d/1yShyqOfmDujCenCWWwMScIT0PXacRjhG/view?usp=sharing' }, materials: [{ title: 'E-Book - Intoxicações Agudas: Parte II', link: 'https://drive.google.com/file/d/1o2qaiJWQvjNuKzxWq0duhq89Nps0mOUM/view?usp=sharing' }] },
+            ]},
+            { id: 'module_pneumologia', title: 'PNEUMOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Tuberculose Pulmonar: Parte I', link: 'https://drive.google.com/file/d/1gR8x8K8QlifSJEBeZoBCnjfn6ywqXldG/view?usp=sharing' }, materials: [{ title: 'E-Book - Tuberculose Pulmonar: Parte I', link: 'https://drive.google.com/file/d/1c6Piwm-1qoDrNy2fWqWFSpQvcWWhRPvZ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Tuberculose Pulmonar: Parte II', link: 'https://drive.google.com/file/d/1ZjUU7qd2zWIP-DCFLSxXtcEIzAftx799/view?usp=sharing' }, materials: [{ title: 'E-Book - Tuberculose Pulmonar: Parte II', link: 'https://drive.google.com/file/d/1acuy3DT1TabdYBVSdTaq42JCX28F4_Fb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - VM: Modos ventilatórios tradicionais', link: 'https://drive.google.com/file/d/1rspYrgwSuJLD3y_BSPYCWeQiyO39XP1G/view?usp=sharing' }, materials: [{ title: 'E-Book - VM: Modos Ventilatórios Tradicionais', link: 'https://drive.google.com/file/d/1t7WyjwdMDv3Og9YV2YdXZSYjGjFZqGOm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - VM: Modos assisto-controlados e configuração do ventilador', link: 'https://drive.google.com/file/d/1OasmJMuCEPuAPU7EwNvtve_PX8W6Fqfz/view?usp=sharing' }, materials: [{ title: 'E-Book - VM: Modos Assisto-Controlados e Configuração do Ventilador', link: 'https://drive.google.com/file/d/1vnZUzO3v9UCbZcrVWR6yxuIbo2SdWBbB/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - SDRA: Parte I', link: 'https://drive.google.com/file/d/1Dh7imoJ2SJQwowNqT6lSUBPX5EH0-_Vf/view?usp=sharing' }, materials: [{ title: 'E-Book - SDRA: Parte I', link: 'https://drive.google.com/file/d/1gso5z3ope9eK7wC2JlwkLbf8kUnE3CNq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - SDRA: Parte II', link: 'https://drive.google.com/file/d/1QbkRX634jK8pr_XG4rITqT81Zn_2i3X7/view?usp=sharing' }, materials: [{ title: 'E-Book - SDRA: Parte II', link: 'https://drive.google.com/file/d/1Rsw4EzG-0PVrOhWbFnVBkj54r6oVTaoI/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Asma: Doença Crônica', link: 'https://drive.google.com/file/d/1hTbHUwBelnRh3SHGyvoglhz8-r_4k9D6/view?usp=sharing' }, materials: [{ title: 'E-Book - Asma: Doença Crônica', link: 'https://drive.google.com/file/d/1ouXeBr5Q_X51Lb9SNQ8tNY_i-WNrAK9Z/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Asma: Exacerbação Asmática', link: 'https://drive.google.com/file/d/1PR8XkE5W-Bt43-NEVN0PYgxHuAOT4QGG/view?usp=sharing' }, materials: [{ title: 'E-Book - Asma: Exacerbação Asmática', link: 'https://drive.google.com/file/d/1cSaJpIcEENVdpgolXlrqpQjcMZERcmip/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Pneumonia Adquirida na Comunidade', link: 'https://drive.google.com/file/d/1pj8kRSPdJ_eubS6X2YA4LZ5k7mSOgvvT/view?usp=sharing' }, materials: [{ title: 'E-Book - Pneumonia Adquirida na Comunidade', link: 'https://drive.google.com/file/d/1dBhmKXogXwvhmllzvyp79ofnZXauFspJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Derrame Pleural', link: 'https://drive.google.com/file/d/1oPW5diB1AP9fPxbPD0HmVHG2xswz-kHQ/view?usp=sharing' }, materials: [{ title: 'E-Book - Derrame Pleural', link: 'https://drive.google.com/file/d/17e9r-CQFMkxTGS8ARl6WYelp9CePw285/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - DPOC: Parte I - Diagnóstico', link: 'https://drive.google.com/file/d/19VdHLgTJEL2Dn54A2PP_NEvISQ16opnL/view?usp=sharing' }, materials: [{ title: 'E-Book - Diagnóstico de DPOC', link: 'https://drive.google.com/file/d/1fEDIs2kOC1CVDriPqaKOSj6azw1nfvaq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - DPOC: Parte II - Tratamento', link: 'https://drive.google.com/file/d/1ObDRwK6VpDzmobvtxB8Rz03RwuyTJvR8/view?usp=sharing' }, materials: [{ title: 'E-Book - Tratamento da DPOC', link: 'https://drive.google.com/file/d/1beGLgRRUpNjDQ_EjNc9V_-ZV9Z-UUUqw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - DPOC: Parte III - Exacerbação', link: 'https://drive.google.com/file/d/1RC-lOYOR61oK3L7lASJdPlz3Zz55zh-H/view?usp=sharing' }, materials: [{ title: 'E-Book - DPOC Exacerbado', link: 'https://drive.google.com/file/d/1-8mZEqZjBwcpemEyMz_hpqekfYjoAYSi/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Aula Bônus: Suporte Ventilatório na DPOC', link: 'https://drive.google.com/file/d/1fdfrN6zsTwOS6N20Qq7fNThXIHlcL64Z/view?usp=sharing' }, materials: [{ title: 'E-Book - Aula Bônus: Suporte Ventilatório em DPOC', link: 'https://drive.google.com/file/d/1AfdhdA1Tvt2GIKq6PU_NG4cdNY_DyWQm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Tromboembolismo venoso (TVP e TEP)', link: 'https://drive.google.com/file/d/1_sEkoOfl-1IuhawNGS66wFQyYcsZdR3Z/view?usp=sharing' }, materials: [{ title: 'E-Book - Tromboembolismo Venoso (TVP e TEP)', link: 'https://drive.google.com/file/d/1qm-Sy0lSHx5ACjaTfUjkptzWVb30vjn6/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Câncer de Pulmão', link: 'https://drive.google.com/file/d/1cbd4Puwk7sBmlzWsSyeyopD97BMZJRaQ/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer de Pulmão', link: 'https://drive.google.com/file/d/1mEeGjGRZwlQ57_Kzn3PWRvwPMOqIHMMM/view?usp=sharing' }] },
+            ]},
+            { id: 'module_nefrologia', title: 'NEFROLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Injúria Renal Aguda', link: 'https://drive.google.com/file/d/17PWUUqEw_KD-bOIvPp2Xg2EbIywvsF8u/view?usp=sharing' }, materials: [{ title: 'E-Book - Injúria Renal Aguda', link: 'https://drive.google.com/file/d/1dpmRP1qeiKAytTFDFhTbsYf7jWAwHS1k/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Doença Renal Crônica: Parte I', link: 'https://drive.google.com/file/d/1HMS2Dp8_zpJ2lo-fjTDL8VJHKG7EN9Dg/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença Renal Crônica: Parte I', link: 'https://drive.google.com/file/d/10PQtyi5ilDz9Fti7WniBR-6HX-RaLFgQ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Doença Renal Crônica: Parte II', link: 'https://drive.google.com/file/d/1u5eZSfsyobyWvTeJqIkTXCkjqnmDuzv9/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença Renal Crônica: Parte II', link: 'https://drive.google.com/file/d/1N7KoFvK7B59Rhvf-_Ne11tchIz6KnS8X/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Osmolaridade', link: 'https://drive.google.com/file/d/1aL8rblm4lRYvF0BbUHzX_KI6rJkPtytF/view?usp=sharing' }, materials: [{ title: 'E-Book - Osmolaridade', link: 'https://drive.google.com/file/d/18Ic5P7hBBaInYZWkiiooIdeGaUsDq_Zc/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Hipernatremia', link: 'https://drive.google.com/file/d/1wgarx1zNOgeTDginXWDdUbFxO1Ao7gj5/view?usp=sharing' }, materials: [{ title: 'E-Book - Hipernatremia', link: 'https://drive.google.com/file/d/1lURV3teDDZOT5tsdZLr-Y6-LEoNxBmJ3/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Hiponatremia: Fisiopatologia', link: 'https://drive.google.com/file/d/1AuOlCrVxBMzi4GJUz5kufok8n48rIXAX/view?usp=sharing' }, materials: [{ title: 'E-Book - Hiponatremia: Fisiopatologia', link: 'https://drive.google.com/file/d/1orT9Dqa6SUJap8ut-RUuxZX5mNcVvg8d/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Hiponatremia: Diagnóstico e Tratamento', link: 'https://drive.google.com/file/d/1L1j_GrllmEs7xJxaAOpLV1pU8Q8xYPBx/view?usp=sharing' }, materials: [{ title: 'E-Book - Hiponatremia: Diagnóstico e Tratamento', link: 'https://drive.google.com/file/d/1SIeSSBbV5EXgqwksElNdUQuQtjgOMRkd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Diabetes Insipidus', link: 'https://drive.google.com/file/d/1j-Yl_0EZMK5gQea1ygwNBq2HRZ6oBK4n/view?usp=sharing' }, materials: [{ title: 'E-Book - Diabetes Insipidus', link: 'https://drive.google.com/file/d/15KRFYtbjHcc93seVralZphPhmqUm8-Y_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Hipocalemia', link: 'https://drive.google.com/file/d/1hAe81XytNrAjtI7ZWhqvemFpmzIivvdX/view?usp=sharing' }, materials: [{ title: 'E-Book - Hipocalemia', link: 'https://drive.google.com/file/d/1b8jKqOCTJ_zhyF5yCV1eB6iEsksfLl5U/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Hipercalemia', link: 'https://drive.google.com/file/d/1Z-_j-dJFcajl97oV1tlo20YDO7iVoP4q/view?usp=sharing' }, materials: [{ title: 'E-Book - Hipercalemia', link: 'https://drive.google.com/file/d/1x3VWNDKSxijj-hVfynjuEbWwe5yLIu-k/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Glomerulopatias: Parte I', link: 'https://drive.google.com/file/d/19hqbas8JsBRVY8dvnH13Qflwt4F2fjJ4/view?usp=sharing' }, materials: [{ title: 'E-Book - Glomerulopatias: Parte I', link: 'https://drive.google.com/file/d/1FxDaB6JQcvGGiup2dsYAj1ysCQhF9UK6/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Glomerulopatias: Parte II', link: 'https://drive.google.com/file/d/1Y-JKwaoMwIAIHl0_OLt7zF5bEcVgKNgE/view?usp=sharing' }, materials: [{ title: 'E-Book - Glomerulopatias: Parte II', link: 'https://docs.google.com/document/d/1Zk1fLAtg-v9pQJq0pB6n2wX5oZ8kY7mH/view?usp=sharing' }] }, // Placeholder, no ebook provided for Part II
+                { type: 'group', video: { title: 'Aula 13 - Equilíbrio Ácido-Base: Gasometria Arterial - Parte I', link: 'https://drive.google.com/file/d/1jDAYmbV1-oGHYOQEcl2f1A-vX-Fp36DU/view?usp=sharing' }, materials: [{ title: 'E-Book - Equilíbrio Ácido-Base: Gasometria Arterial', link: 'https://drive.google.com/file/d/1YAFcOJOh91gGZ3N0Fu5m6QLRUn90Y18H/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Equilíbrio Ácido-Base: Gasometria Arterial - Parte II', link: 'https://drive.google.com/file/d/1J4lTWJvHb3yKLnObNx92LI19kGnHmRwd/view?usp=sharing' }, materials: [{ title: 'E-Book - Equilíbrio Ácido-Base: Gasometria Arterial', link: 'https://drive.google.com/file/d/1YAFcOJOh91gGZ3N0Fu5m6QLRUn90Y18H/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Distúrbios Ácido-Base: Ânion GAP', link: 'https://drive.google.com/file/d/18OHDPXZkyXbS84qqAliRYI2MQj2h3bZ4/view?usp=sharing' }, materials: [{ title: 'E-Book - Ânion GAP', link: 'https://drive.google.com/file/d/1sppCLZTrk7HqF42Uj74-qcrqoztXIvTH/view?usp=sharing' }] },
+            ]},
+            { id: 'module_reumatologia', title: 'REUMATOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Artrite Reumatoide: Parte I', link: 'https://drive.google.com/file/d/1YxmjePnXvk8xGuCZzML7gGGnawKwwdFn/view?usp=sharing' }, materials: [{ title: 'E-Book - Artrite Reumatoide: Parte I', link: 'https://drive.google.com/file/d/1UqCS2XUh3OenjGiKapRWDpJFqBhBBZv4/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Artrite Reumatoide: Parte II', link: 'https://drive.google.com/file/d/1GEP24D9SoyhQ12EnuZ9Ck-CsxgYRYVip/view?usp=sharing' }, materials: [{ title: 'E-Book - Artrite Reumatoide: Parte II', link: 'https://drive.google.com/file/d/17m8MGbnntZNsS5GsR4lFUhxw3lS06CX3/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Monoartrites agudas: Parte I - Artrite séptica', link: 'https://drive.google.com/file/d/1Jixhq-yRFcnWRlUaLEPVCemHkH79kIBI/view?usp=sharing' }, materials: [{ title: 'E-Book - Artrite Séptica', link: 'https://drive.google.com/file/d/1AjcDQuHbspKayCnDjQv3VA0sF7ik-x17/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Monoartrites agudas: Parte II - Artrite por cristais', link: 'https://drive.google.com/file/d/106R2D9_N6SAxpWvDTuSu1V2TjFRcEdVc/view?usp=sharing' }, materials: [{ title: 'E-Book - Monoartrites Agudas - Artrite por Cristais: Parte II', link: 'https://drive.google.com/file/d/1tK_BUbiwLA7Drv5SrWuKfrqTCjBOb1MV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Osteoartrite', link: 'https://drive.google.com/file/d/1omuHArckUXtm36UIpddeZXHlS9VdhMTm/view?usp=sharing' }, materials: [{ title: 'E-Book - Osteoartrite', link: 'https://drive.google.com/file/d/1VlOhrnnKO9wn6skKhi_jVhAtwkZaABBQ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Lúpus: Parte I', link: 'https://drive.google.com/file/d/1BwZ99oO_kKlDy8j8O0Axownoy1rtAmb4/view?usp=sharing' }, materials: [{ title: 'E-Book - Lúpus: Parte I', link: 'https://drive.google.com/file/d/12JOA-4_y-JbYmoJvcIDCMODiKBRU_vJ2/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Lúpus: Parte II', link: 'https://drive.google.com/file/d/18QE3RxPDzPLzq2BGoEoVqcQQyl9AdWE9/view?usp=sharing' }, materials: [{ title: 'E-Book - Lúpus: Parte II', link: 'https://drive.google.com/file/d/1a9qizSeJ05rEJjjaxssUmEVyznH8V4KY/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Vasculites de Grandes e Médios Vasos', link: 'https://drive.google.com/file/d/1l3BydxQQZb2MLL3gMnny6cFv1hIJJ4r8/view?usp=sharing' }, materials: [{ title: 'E-Book - Vasculites de Grandes e Médios Vasos', link: 'https://drive.google.com/file/d/1ctS9VWpbf2GDNALjmfS_2xV_L7E2xGPP/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Vasculites de Pequenos Vasos', link: 'https://drive.google.com/file/d/1QTP-l_Q_G5lv-FlFk-5Rls6UhxRBfyaM/view?usp=sharing' }, materials: [{ title: 'E-Book - Vasculites de Pequenos Vasos', link: 'https://drive.google.com/file/d/1f7IsMyFewtNojEgMeehvJfIyCz0AC7eZ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Vasculites na Infância', link: 'https://drive.google.com/file/d/1TxQ9SxHDzy9SUsbHgh1quzshDd-HEKia/view?usp=sharing' }, materials: [{ title: 'E-Book - Vasculites na Infância', link: 'https://drive.google.com/file/d/1SjSaNoOq8HDqo2f8Z9xcruBgFYWpqaWR/view?usp=sharing' }] },
+            ]},
+            { id: 'module_cardiologia', title: 'CARDIOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Eletrocardiograma: Conceitos Fundamentais - Parte I', link: 'https://drive.google.com/file/d/1xKI_mujbVqA4dz4dICrqrX61IJIGPCZF/view?usp=sharing' }, materials: [{ title: 'E-Book - Eletrocardiograma: Conceitos Fundamentais - Parte I', link: 'https://drive.google.com/file/d/1ttew5IPjmasZE03rqxr8yo4peNBOUus8/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Eletrocardiograma: Conceitos Fundamentais - Parte II', link: 'https://drive.google.com/file/d/1d7EzCNbgY9yoGq52pk8G93s5UNjQsjy4/view?usp=sharing' }, materials: [{ title: 'E-Book - Eletrocardiograma: Conceitos Fundamentais - Parte II', link: 'https://drive.google.com/file/d/1hWKEov2Iy0vLeKd3nDTIQqqse1CKJ1xM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Síndrome Coronariana Crônica', link: 'https://drive.google.com/file/d/1E89W7tUx-fJ7SEBx_rt5w1CgYb3e5N90/view?usp=sharing' }, materials: [/* No E-book provided */] },
+                { type: 'group', video: { title: 'Aula 04 - Síndrome Coronariana Aguda: Diagnóstico e Classificação', link: 'https://drive.google.com/file/d/1DbW1d7R61wxjNTsWs1mB4j5waLQE-2E5/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndrome Coronariana Aguda: Diagnóstico e Classificação', link: 'https://drive.google.com/file/d/1z3ez2LVunTX0Uj6FU5cX5lEUQegf1KyN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Síndrome Coronariana Aguda: Tratamento', link: 'https://drive.google.com/file/d/1JNuEc8cnEHHqOBw8wiBMN5DUthgP3n1Z/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndrome Coronariana Aguda: Tratamento', link: 'https://drive.google.com/file/d/1nOpfvluywAoiKIwg6-MY45aRYgzAjIEk/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Choques: Parte I', link: 'https://drive.google.com/file/d/1FW184sYzWZ3VvKe79vf_S_AgEx_nKvch/view?usp=sharing' }, materials: [{ title: 'E-Book - Choques: Parte I e II', link: 'https://drive.google.com/file/d/1OsGmBQ8pr9uIvqpkEK8fjvOYq1wOLh3Z/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Choques: Parte II', link: 'https://drive.google.com/file/d/1yQb-TglMrouCtmOSIOXVfrYdm0WkQd54/view?usp=sharing' }, materials: [{ title: 'E-Book - Choques: Parte I e II', link: 'https://drive.google.com/file/d/1OsGmBQ8pr9uIvqpkEK8fjvOYq1wOLh3Z/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Choques: Parte III', link: 'https://drive.google.com/file/d/1CnBHGzVofzMXnV5tSZxV7ID-b4p7EwmL/view?usp=sharing' }, materials: [{ title: 'E-Book - Choques: Parte III', link: 'https://drive.google.com/file/d/1EVyfSt5vqqF6ob-nL3KjWcOEdLnk6bIh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Choques: Parte IV', link: 'https://drive.google.com/file/d/1PNl2Ey4AMJyTAM1-heZuC-uD6ZHzJENy/view?usp=sharing' }, materials: [{ title: 'E-Book - Choques: Parte IV', link: 'https://drive.google.com/file/d/1kMh0pvB3SWdz_XezPblnb8-cVijmBKoU/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Valvopatias', link: 'https://drive.google.com/file/d/1f2wIPbzXTtYE2ZVCDYfnBrk9j0cK_lS-/view?usp=sharing' }, materials: [{ title: 'E-Book - Valvopatias', link: 'https://drive.google.com/file/d/1VW1ndCzUcORGklOG0XGRED1g15kWP9Ah/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - HAS: Diagnóstico', link: 'https://drive.google.com/file/d/1b3FJTqrvpBeZjZBHTItu0KNUDH29Pb5h/view?usp=sharing' }, materials: [{ title: 'E-Book - HAS: Diagnóstico', link: 'https://drive.google.com/file/d/1GAbVbyahGE2adyg3ZYER2nAPbGyxFRmT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - HAS: Tratamento', link: 'https://drive.google.com/file/d/1CjOdeSdJJYad5GaifkNUh1lEGtDKLL9R/view?usp=sharing' }, materials: [{ title: 'E-Book - HAS: Tratamento', link: 'https://drive.google.com/file/d/1ck9xUlirzUvk9s4Y740EnxMPM0sCPqV_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - HAS: Hipertensão secundária', link: 'https://drive.google.com/file/d/1xv08Lo3k0m_EnUHwNUitM1xKBwSRLe9G/view?usp=sharing' }, materials: [{ title: 'E-Book - HAS: Hipertensão Secundária', link: 'https://drive.google.com/file/d/1BUp_NsNPjkNzGR3lfR3dVRYjdR9R4KAE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - HAS: Crises hipertensivas', link: 'https://drive.google.com/file/d/1SOf5nJyLI6vpbvbOl_e-aIrY0s-k9tTv/view?usp=sharing' }, materials: [{ title: 'E-Book - HAS: Crises Hipertensivas', link: 'https://drive.google.com/file/d/1E0HkhFz436PcoFFpHM1CurykAOHRiqEx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Bradiarritmias', link: 'https://drive.google.com/file/d/1NHFGRBN7qsf1ET9GEnNCK4gw4chL7bdu/view?usp=sharing' }, materials: [{ title: 'E-Book - Bradiarritmias', link: 'https://drive.google.com/file/d/1w2Y1HMJmwbDCCbKqkSwb7TvMN0t_YNUb/view?usp=sharing' }] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') return;
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo', '');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            if (modulesData.length > 1) {
+                renderModuleContent(modulesData[0].id);
+            }
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[0].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[0].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

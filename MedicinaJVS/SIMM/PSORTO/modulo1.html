@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronto-Socorro Dominando a Ortopedia</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Azul para destaque */
+            border: 2px solid #63b3ed; /* Borda para visibilidade */
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Estilos para os menus suspensos de sub-módulos */
+        .sub-module-details {
+            background-color: #2d3748;
+            border-radius: 0.375rem; /* rounded-lg */
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+        .sub-module-summary {
+            padding: 0.75rem 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .sub-module-summary:hover {
+            background-color: #4a5568;
+        }
+        .sub-module-summary::-webkit-details-marker {
+            display: none; /* Esconde o marcador padrão */
+        }
+        .sub-module-summary .icon {
+            transition: transform 0.2s ease-in-out;
+        }
+        .sub-module-details[open] > .sub-module-summary .icon {
+            transform: rotate(90deg); /* Gira o ícone quando aberto */
+        }
+        .lessons-list-container {
+            padding: 0.5rem;
+            border-top: 1px solid #4a5568;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Pronto-Socorro - Dominando a Ortopedia</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções dos módulos principais serão preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-t-lg"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <div class="p-4 bg-gray-800">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula</h2>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas (agora com sub-módulos) -->
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <div id="lessonsContainer" class="space-y-2">
+                <!-- Aulas e sub-módulos serão injetados aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const modulesData = [
+            {
+                main_id: 'module_01', main_title: 'Módulo 01 - Pronto-Socorro Dominando a Ortopedia',
+                sub_modules: [
+                    { title: 'Aulas', items: [
+                        { link: 'https://drive.google.com/file/d/1RrJGVJVfgh3uw6A2EAAGA0gDXGi3XuML/view?usp=sharing', title: 'Aula 01 - Avaliação das Radiografias em Ortopedia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1pUXWP_Wixdw9tpOe_WM8WnSgfZuM9Hmo/view?usp=sharing', title: 'Aula 02 - Luxações no PS', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1N-7ZtqRM6fw4bR1cNM66NdJf50pBF-hH/view?usp=sharing', title: 'Aula 03 - Lesões Relacionadas ao Esporte', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1uNa0NgALtNxxph8pn_5XoR_y2M1HllPO/view?usp=sharing', title: 'Aula 04 - Abordagem do Trauma na Mão', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Kx1mPt4_b9rpgUUOt2C2mZ8eZTfaEnCM/view?usp=sharing', title: 'Aula 05 - Lombalgia Aguda no PS', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1LoSyoMv8jcJ3VhWklyIeCVWv1Z5L3cDf/view?usp=sharing', title: 'Aula 06 - Monoartrites Agudas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1QJsEuQg835E25CXw2mtCd_KmHkOKabjd/view?usp=sharing', title: 'Aula 07 - Abordagem do Politraumatizado', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1xqKc7KtMHGfrKw-4aWdFS8ImGr6Sfc0P/view?usp=sharing', title: 'Aula 08 - Trauma Raquimedular', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ce7IV9bPQ5s-O4f6N44Fc7S-DGL8FRoD/view?usp=sharing', title: 'Aula 09 - Fraturas Expostas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Tjgv0Ny_JiZ_cShx9isoWS2LWqIiq6HZ/view?usp=sharing', title: 'Aula 10 - Síndrome Compartimental', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1BY_OiAyikot-6K7XIuH7kWoD5hZgFJT2/view?usp=sharing', title: 'Aula 11 - Síndrome de Embolia Gordurosa', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1dynSxFS7d3GE5EixUH4XRKPTx5ngFa8s/view?usp=sharing', title: 'Aula 12 - Abordagem do Trauma Pediátrico', type: 'video' }
+                    ]}
+                ]
+            }
+        ];
+
+        // Processa os dados para adicionar IDs e ícones
+        function processModulesData(data) {
+            return data.map(mainModule => ({
+                ...mainModule,
+                sub_modules: mainModule.sub_modules.map(subModule => ({
+                    ...subModule,
+                    items: subModule.items.map(item => ({
+                        ...item,
+                        id: extractIdFromGoogleDriveLink(item.link) || item.link
+                    }))
+                }))
+            }));
+        }
+
+        const processedModulesData = processModulesData(modulesData);
+
+        function loadContent(itemId, itemTitle, itemLink) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && itemLink) {
+                // Adiciona /preview para links do Google Drive para tentar incorporar
+                const previewLink = itemLink.replace(/view\?usp=sharing|edit\?usp=drive_link.*|view\?usp=drive_link/, 'preview');
+                contentPlayer.src = previewLink;
+            } else {
+                contentPlayer.src = '';
+            }
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            selectedItemId = itemId;
+            const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+        }
+
+        function renderMainModuleContent(mainModuleId) {
+            const lessonsContainer = document.getElementById('lessonsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+            const contentPlayer = document.getElementById('contentPlayer');
+
+            if (!lessonsContainer || !lessonTitleElement || !contentPlayer) return;
+
+            const mainModule = processedModulesData.find(m => m.main_id === mainModuleId);
+
+            if (!mainModule) {
+                console.error(`Módulo com ID ${mainModuleId} não encontrado.`);
+                lessonsContainer.innerHTML = '<p>Módulo não encontrado.</p>';
+                return;
+            }
+
+            let sidebarHtml = '';
+            let firstItem = null;
+
+            if(mainModule.sub_modules.length === 0) {
+                 sidebarHtml = '<p class="text-gray-400">Nenhuma aula disponível para este módulo ainda.</p>';
+            } else {
+                mainModule.sub_modules.forEach((subModule, index) => {
+                    let itemsHtml = '';
+                    subModule.items.forEach(item => {
+                        if (!firstItem) {
+                            firstItem = item;
+                        }
+                        const iconClass = item.type === 'ebook' ? 'fas fa-book-open' : 'fas fa-play-circle';
+                        itemsHtml += `
+                            <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] mt-2"
+                                 onclick="loadContent('${item.id}', '${item.title}', '${item.link}')" data-id="${item.id}">
+                                <div class="item-thumbnail-placeholder">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${item.title}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    const isOpen = index === 0 ? 'open' : '';
+
+                    sidebarHtml += `
+                        <details class="sub-module-details" ${isOpen}>
+                            <summary class="sub-module-summary">
+                                <span>${subModule.title}</span>
+                                <i class="fas fa-chevron-right icon"></i>
+                            </summary>
+                            <div class="lessons-list-container">
+                                ${itemsHtml}
+                            </div>
+                        </details>
+                    `;
+                });
+            }
+
+            lessonsContainer.innerHTML = sidebarHtml;
+
+            if (firstItem) {
+                loadContent(firstItem.id, firstItem.title, firstItem.link);
+            } else {
+                contentPlayer.src = '';
+                lessonTitleElement.textContent = 'Selecione uma aula';
+                if (selectedItemId) {
+                    const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                    if (prevSelected) prevSelected.classList.remove('selected-lesson');
+                }
+                selectedItemId = null;
+            }
+        }
+
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Limpa opções existentes para o caso de reinicialização
+            moduleSelector.innerHTML = '';
+
+            processedModulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.main_id;
+                option.textContent = module.main_title;
+                moduleSelector.appendChild(option);
+            });
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderMainModuleContent(event.target.value);
+            });
+
+            if (processedModulesData.length > 0) {
+                moduleSelector.value = processedModulesData[0].main_id;
+                renderMainModuleContent(processedModulesData[0].main_id);
+            }
+        }
+
+        // Inicializa a plataforma quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

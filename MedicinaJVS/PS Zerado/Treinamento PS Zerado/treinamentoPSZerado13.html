@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Videoaulas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilização da barra de rolagem para o tema claro */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #e5e7eb; /* Cor cinza claro */
+            border-radius: 4px;
+        }
+        .sidebar-scroll:hover::-webkit-scrollbar-thumb {
+            background: #d1d5db; /* Cor cinza um pouco mais escura */
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .lesson-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .lesson-list.open {
+           max-height: 1000px; /* valor alto para garantir que todo o conteúdo seja exibido */
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+    <div class="flex flex-col lg:flex-row lg:h-screen">
+
+        <!-- Conteúdo Principal (Vídeo) -->
+        <main class="flex-1 flex flex-col bg-gray-100 lg:overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white/80 backdrop-blur-sm border-b border-gray-200 w-full z-10 flex-shrink-0">
+                <div class="container mx-auto px-4 md:px-6 lg:px-8">
+                    <div class="flex items-center justify-between h-16">
+                        <div class="flex items-center space-x-4">
+                           <div class="text-pink-500 font-bold text-lg">PS Zerado</div>
+                           <nav class="hidden md:flex items-center space-x-4">
+                               <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors text-sm">Home</a>
+                               <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors text-sm">Suporte</a>
+                               <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors text-sm">FAQ</a>
+                               <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors text-sm">Suporte WhatsApp</a>
+                           </nav>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <button class="text-gray-600 hover:text-gray-900 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </button>
+                             <button class="relative text-gray-600 hover:text-gray-900 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+                                <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                                </span>
+                            </button>
+                            <div class="w-8 h-8 bg-gray-300 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Player de Vídeo e Materiais -->
+            <div class="p-4 md:p-6 lg:p-8">
+                <div class="w-full max-w-5xl mx-auto">
+                    <!-- Player -->
+                    <div class="bg-black rounded-lg shadow-xl shadow-gray-200 overflow-hidden aspect-video mb-6">
+                        <iframe id="video-player" class="w-full h-full" src="" title="Google Drive video player" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                    </div>
+
+                    <!-- Seção de Materiais -->
+                    <div id="materials-section" class="space-y-3"></div>
+                </div>
+            </div>
+
+
+            <!-- Informações da Aula e Navegação -->
+            <div class="px-4 md:px-6 lg:px-8 pb-6">
+                <div class="max-w-5xl mx-auto">
+                    <h1 id="lesson-title" class="text-xl md:text-2xl font-bold mb-4 text-gray-900">Selecione uma aula</h1>
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <span id="module-progress" class="text-sm text-gray-500"></span>
+                        <div class="flex items-center gap-2">
+                             <button id="prev-lesson-btn" class="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                Aula Anterior
+                            </button>
+                            <button id="next-lesson-btn" class="flex items-center gap-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                                Concluir e Avançar
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <!-- Spacer to fill remaining vertical space -->
+            <div class="flex-grow"></div>
+        </main>
+
+        <!-- Sidebar de Módulos -->
+        <aside class="w-full lg:w-96 bg-gray-50 border-l border-gray-200 flex flex-col lg:h-screen">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                <h2 class="font-bold text-lg text-gray-900">Treinamento PS Zerado</h2>
+                 <button class="lg:hidden" onclick="document.querySelector('aside').classList.toggle('hidden')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto sidebar-scroll p-2">
+                <div id="module-list" class="space-y-1">
+                    <!-- Módulos serão inseridos aqui via JavaScript -->
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Função para "slugificar" strings (converter para formato de URL amigável)
+        const slugify = text => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+        // Função para obter o parâmetro da URL
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // --- Estrutura de Dados do Curso ---
+        let courseData = [
+            { title: 'Grupo exclusivo de alunos', lessons: [
+                {title: 'Comunidade TPSZ - GRUPO DE SUPORTE A DÚVIDAS', gdriveId: '1QsP91HvOxfwFXb87omH047VQSl3Lny4F', materials: [{ name: 'Grupo no WhatsApp', size: '1 MB', id: '1QsP91HvOxfwFXb87omH047VQSl3Lny4F' }, { name: 'Siga no Instagram', size: '1 MB', id: '1jZTRANKzjLjkG4BPuP-DDH8MIkFwp5nh' }]}
+            ]},
+            { title: 'Prescricionário', lessons: [
+                {title: 'Guia de Prescrição do PS Zerado', gdriveId: '14O1BUXYjTGTP5I1SIEAaaMLcfUKCSd9C', materials: [{ name: 'Guia de Prescrição do PS Zerado', size: '1.9 MB', id: '14O1BUXYjTGTP5I1SIEAaaMLcfUKCSd9C' }]}
+            ]},
+            { title: 'Comece por Aqui', lessons: [
+                {title: 'Aula 01 - Bem-Vindo', gdriveId: '1GCVDjc3HE96EWmN8LN0DT_7T7sq2m7aK'},
+                {title: 'Aula 01 - Seja Bem-Vindo ao PS Zerado', gdriveId: '1jpd8r96TNErvf-0JbDQgTQ8ZXgrk3iX8'},
+                {title: 'Aula 02 - Como Ter Uma Boa Relação Com a Equipe e Seu Paciente', gdriveId: '1S8RD-Av08pgb-UazB6EthbvEApZoKdQM', materials: [{ name: 'Como Ter uma Boa Relação com a Equipe e seu Paciente', size: '1.2 MB', id: '1sF6gSYX0S8vgzvGv669CvVWxjPMBIy4B'}]},
+                {title: 'Aula 03 - Medo do Primeiro Plantão', gdriveId: '1ZvE9lnQjkctS8jp5dFTQ9Ii0sDGdmAK8', materials: [{ name: 'Medo do Primeiro Plantão', size: '1.1 MB', id: '12X1iE8fDOWwqqhk7fRj9-TdcR2pQigyY'}]},
+                {title: 'Aula 04 - Como Passar Um Caso', gdriveId: '1aTUIcOUXD7nlLGy4sSZ5LvLnmWFT00Im', materials: [{ name: 'Como Passar um Caso', size: '1.3 MB', id: '1BNy9T-8BrAG0zzyBFwHu1zSHQyHAL5Zg'}]},
+                {title: 'Aula 05 - Efeito Dunning Kruger na Medicina', gdriveId: '1syjtS29jisvQNxwzFwo1jTaZBoLRhA_7', materials: [{ name: 'Efeito Dunning Kruger na Medicina', size: '1.0 MB', id: '1dGbPNQutc7cu7djkl9mrr3FrU2ONsfLF'}]},
+                {title: 'Aula 06 - Como Conseguir (E Manter) Um Estágio', gdriveId: '1cCUVEirYmpPoYPWAkX80cOLVckQfk-es', materials: [{ name: 'Como Conseguir e Manter um Estágio', size: '1.4 MB', id: '12UjS1hmukv2CsWMq11GnOzdcnteB7Pzq'}]},
+                {title: 'Aula 07 - Como Pegar o Primeiro Plantão', gdriveId: '16sr2gndbgj8dScO4aDN9euWaT5UFikyx', materials: [{ name: 'Como Pegar o Primeiro Plantão', size: '1.5 MB', id: '1S3E0e4aJIJ2yL33k6VNPgrAEJsKFy6Uz'}]},
+                {title: 'Aula 08 - Qual Carreira Seguir?', gdriveId: '1iIffvBCMrUUeqalbtP97ypsA_P_LsajV', materials: [{ name: 'Qual Carreira Seguir?', size: '1.1 MB', id: '1T3MPNAfiVpFnMHq4CesFlubeHL2Lm56j'}]},
+                {title: 'Aula 09 - Guias e Documentos', gdriveId: '1n8Q-z4RrNFaPwl6n-TLiQq7Jm2kuCItH', materials: [{ name: 'Guias e Documentos', size: '1.8 MB', id: '1udwNzLGlJPZTU33_mA75Ln5y7DIbWN81'}]},
+                {title: 'Aula 10 - Protocolo de Manchester', gdriveId: '10KyMVyNmSZVf5vMEoKz1NGy0uZ3VwzgH', materials: [{ name: 'O Protocolo de Manchester', size: '2.1 MB', id: '1phZHjKuhlSGxcb8YlZGeOWsSddTq4FhS'}]},
+                {title: 'Aula 11 - Fast Hug', gdriveId: '1zdAx0GWiQ2lx5xdhfFuKm237f9_ezs3L', materials: [{ name: 'FAST-HUG', size: '1.0 MB', id: '1dmvsriR-3Bi6chDgkhQxRWN2YbjS8Gk2'}]},
+                {title: 'Aula 12 - Os ABC da Prescrição', gdriveId: '1EeEv35dK65U9Q9AYsm6M46oNLbi_JbBE', materials: [{ name: 'Os ABC da Prescrição', size: '1.7 MB', id: '1LmRHBWaeBI8hzSYa7gnQTeKjMxe_eBAe'}]}
+            ]},
+            { title: 'Queixas mais comuns no PS', lessons: [
+                {title: 'Aula 01 - Dor Abdominal', gdriveId: '13ib9wc5zm0GiozAamsksc0I8KlHen7YV', materials: [{ name: 'Dor Abdominal', size: '1.5 MB', id: '17PJQTBKt1IvpUCi48tVyVtQ9TYtd-wjg' }, { name: 'Dor Abdominal, Naúseas e Vômito', size: '1.8 MB', id: '1-z0qSU55aizZ0VAavqTMUzLKqOkVQiNB' }]},
+                {title: 'Aula 03 - Dor Abdominal', gdriveId: '1cMEd8sOoFAwXrbU4AUbZmTSPLMYlzBrB', materials: [{ name: 'Dor Abdominal', size: '1.5 MB', id: '17PJQTBKt1IvpUCi48tVyVtQ9TYtd-wjg' }, { name: 'Dor Abdominal, Naúseas e Vômito', size: '1.8 MB', id: '1-z0qSU55aizZ0VAavqTMUzLKqOkVQiNB' }]},
+                {title: 'Aula 12 - Dor Abdominal', gdriveId: '18fEmJeI2IoqR5SjVcsPofO-DwW1tG6wO', materials: [{ name: 'Dor Abdominal', size: '1.5 MB', id: '17PJQTBKt1IvpUCi48tVyVtQ9TYtd-wjg' }, { name: 'Dor Abdominal, Naúseas e Vômito', size: '1.8 MB', id: '1-z0qSU55aizZ0VAavqTMUzLKqOkVQiNB' }]},
+                {title: 'Aula 28 - Dor Abdominal', gdriveId: '1aCpQDFdxohJdgcHCVHPW_jCP7hBueRsC', materials: [{ name: 'Dor Abdominal', size: '1.5 MB', id: '17PJQTBKt1IvpUCi48tVyVtQ9TYtd-wjg' }, { name: 'Dor Abdominal, Naúseas e Vômito', size: '1.8 MB', id: '1-z0qSU55aizZ0VAavqTMUzLKqOkVQiNB' }]},
+                {title: 'Aula 31 - Dor Abdominal', gdriveId: '1zzz8gkPdA1vJv5Zw8wd60-8E_Bfjwik9', materials: [{ name: 'Dor Abdominal', size: '1.5 MB', id: '17PJQTBKt1IvpUCi48tVyVtQ9TYtd-wjg' }, { name: 'Dor Abdominal, Naúseas e Vômito', size: '1.8 MB', id: '1-z0qSU55aizZ0VAavqTMUzLKqOkVQiNB' }]},
+                {title: 'Aula 02 - Lombalgia', gdriveId: '1nUoRJGXpgcQLgfaqUUFaC-MT0cbvyKgH', materials: [{ name: 'Lombalgia', size: '1.3 MB', id: '1LhLYdZ3GLtoIQDXG3Xc-Ez4Xev90MD1r'}]},
+                {title: 'Aula 06 - Lombalgia', gdriveId: '1jyUMem1O2wt04nKn2ZbAF8VHh81oSpUY', materials: [{ name: 'Lombalgia', size: '1.3 MB', id: '1LhLYdZ3GLtoIQDXG3Xc-Ez4Xev90MD1r'}]},
+                {title: 'Aula 03 - Diarreia Aguda', gdriveId: '1RgrJBcmb36Cj9MZM6OBinojVYpZPfi4M', materials: [{ name: 'Diarreia Aguda', size: '1.4 MB', id: '1Lj_Xm5fKx6pPXdLvzDj1y_ysw2gagOyR' }, { name: 'Diarreia Aguda - Artigo', size: '2.0 MB', id: '1JwTLFqBi_hki-mHGP23OL51tQmBIsxi7'}]},
+                {title: 'Aula 06 - Diarréia Aguda', gdriveId: '16SVFc1CCTa0XsSYmvjHivQ5hJMlVdxQi', materials: [{ name: 'Diarreia Aguda', size: '1.4 MB', id: '1Lj_Xm5fKx6pPXdLvzDj1y_ysw2gagOyR' }, { name: 'Diarreia Aguda - Artigo', size: '2.0 MB', id: '1JwTLFqBi_hki-mHGP23OL51tQmBIsxi7'}]},
+                {title: 'Aula 04 - Náuseas e Vômitos', gdriveId: '1bXGDZ_zIZYRpMNbzu0AB__pqRx2L77iT', materials: [{ name: 'Náuseas e Vômitos', size: '1.2 MB', id: '1O8HhWkKdyFj8YXYr1tROiB2SVZkDL1hO'}]},
+                {title: 'Aula 07 - Náuseas e Vômitos', gdriveId: '1xjS6SK9xfkTUJ96kMtC0BONlP9Cp7g85', materials: [{ name: 'Náuseas e Vômitos', size: '1.2 MB', id: '1O8HhWkKdyFj8YXYr1tROiB2SVZkDL1hO'}]},
+                {title: 'Aula 05 - Vertigem', gdriveId: '1R5qZqsq1V0SbeIDXAo7OsgGs6wiAMFFf', materials: [{ name: 'Vertigem', size: '1.1 MB', id: '17y4gjns5xE0HTNQ25zTFdRYeNHjog10J'}]},
+                {title: 'Aula 06 - Epistaxe', gdriveId: '12WG2wsoqT_qKlvCkDSQnMgZI8HVAtQ1u', materials: [{ name: 'Epistaxe', size: '1.0 MB', id: '1AgygC1zqH5Lsz0zoasvThbz7HquUqmOF' }, { name: 'Epistaxe', size: '1.0 MB', id: '1PRtQg9hO7zbi-XC82-4Apjc5xb92S2UX'}]},
+                {title: 'Aula 29 - Epistaxe', gdriveId: '1shgEmz-Hc2B3VNyG6VuZEe6jD5vaePJP', materials: [{ name: 'Epistaxe', size: '1.0 MB', id: '1AgygC1zqH5Lsz0zoasvThbz7HquUqmOF' }, { name: 'Epistaxe', size: '1.0 MB', id: '1PRtQg9hO7zbi-XC82-4Apjc5xb92S2UX'}]},
+                {title: 'Aula 06 - Conjuntivite', gdriveId: '1K7LFJQ6mENEE7jIq3Rh2ePDX569zyu98', materials: [{ name: 'Conjuntivite', size: '1.1 MB', id: '1L_R9W4QcNUAc0mv9MbwXvwcAzvk9IwZ2' }, { name: 'Conjuntivite', size: '1.1 MB', id: '1gHZ6ym1AuIhlRsd3-QErh7x4_xqWY_rg'}]},
+                {title: 'Aula 07 - Conjuntivite', gdriveId: '1ZcOPbLQLF7cYKJjtLTYMw0Ju0eqMhSG7', materials: [{ name: 'Conjuntivite', size: '1.1 MB', id: '1L_R9W4QcNUAc0mv9MbwXvwcAzvk9IwZ2' }, { name: 'Conjuntivite', size: '1.1 MB', id: '1gHZ6ym1AuIhlRsd3-QErh7x4_xqWY_rg'}]},
+                {title: 'Aula 06 - Síncope', gdriveId: '1NFimhUnvt3jdzbDHJu6KM67KabP1jWtY', materials: [{ name: 'Síncope', size: '1.3 MB', id: '17uhWSfjU4_-1BEOGJ1V349arvNrQF5wP'}]},
+                {title: 'Aula 08 - Síncope', gdriveId: '1aTrICP1PBxc-ToYP2LlkPAJBociVthsK', materials: [{ name: 'Síncope', size: '1.3 MB', id: '17uhWSfjU4_-1BEOGJ1V349arvNrQF5wP'}]},
+                {title: 'Aula 09 - Icterícia', gdriveId: '19NSeao7M6G60yOM_4-hJW4ioxqnOpEta', materials: [{ name: 'Icterícia', size: '1.4 MB', id: '13-CRtJmZGbaWiGK_jPyDHRc_3XKi6edw' }, { name: 'Icterícia', size: '1.4 MB', id: '1ujEC6ujUSCm-rVX3SyPKhXUD0OPUVY57'}]},
+                {title: 'Aula 13 - Icterícia', gdriveId: '19tH5bF2tGoRK4KOpHCNy8bQNXVUUfsH6', materials: [{ name: 'Icterícia', size: '1.4 MB', id: '13-CRtJmZGbaWiGK_jPyDHRc_3XKi6edw' }, { name: 'Icterícia', size: '1.4 MB', id: '1ujEC6ujUSCm-rVX3SyPKhXUD0OPUVY57'}]},
+                {title: 'Aula 05 - Ascite', gdriveId: '1o-mV-O09WZ3tp5HgsrrNV1gA2IOvEfqR', materials: [{ name: 'Ascite', size: '1.2 MB', id: '1T0h1JcnMi0MJYF66e0x5QvAq0kDVec-h'}]},
+                {title: 'Aula 10 - Ascite', gdriveId: '1fWX0pAgm9jO3sPZEuQvl8T6SLPyke64m', materials: [{ name: 'Ascite', size: '1.2 MB', id: '1T0h1JcnMi0MJYF66e0x5QvAq0kDVec-h'}]},
+                {title: 'Aula 20 - Ascite', gdriveId: '1bW9w81TW6un-gS-o6UAmlW3jD9jU38Dm', materials: [{ name: 'Ascite', size: '1.2 MB', id: '1T0h1JcnMi0MJYF66e0x5QvAq0kDVec-h'}]},
+                {title: 'Aula 02 - Cefaleia', gdriveId: '18TVHRgXSbd5GT8LWc1fvMZLTaYdLl2nX', materials: [{ name: 'Cefaleias', size: '1.6 MB', id: '16iKNtKXdV3_R05xYMRf7W0S_9cLerTGZ' }, { name: 'Cefaleia', size: '1.5 MB', id: '1qrzOzsE7HDBnXvjzRwdUOyWKLP2nxoGU'}]},
+                {title: 'Aula 11 - Cefaleia', gdriveId: '1iNV0a_HvsbNuwlYmKCpUfa1f4mYqerJ', materials: [{ name: 'Cefaleias', size: '1.6 MB', id: '16iKNtKXdV3_R05xYMRf7W0S_9cLerTGZ' }, { name: 'Cefaleia', size: '1.5 MB', id: '1qrzOzsE7HDBnXvjzRwdUOyWKLP2nxoGU'}]},
+                {title: 'Aula 21 - Cefaleia', gdriveId: '1E8OaykP4Ly7_DsObx3gI8vaUWWZKYDJW', materials: [{ name: 'Cefaleias', size: '1.6 MB', id: '16iKNtKXdV3_R05xYMRf7W0S_9cLerTGZ' }, { name: 'Cefaleia', size: '1.5 MB', id: '1qrzOzsE7HDBnXvjzRwdUOyWKLP2nxoGU'}]},
+                {title: 'Aula 32 - Cefaleia', gdriveId: '1kTJJhJpQkGqQnIHYRMz36MdeXiEydS_3', materials: [{ name: 'Cefaleias', size: '1.6 MB', id: '16iKNtKXdV3_R05xYMRf7W0S_9cLerTGZ' }, { name: 'Cefaleia', size: '1.5 MB', id: '1qrzOzsE7HDBnXvjzRwdUOyWKLP2nxoGU'}]}
+            ]},
+            { title: 'Emergências Respiratórias', lessons: [
+                {title: 'Aula 01 - Asma', gdriveId: '1Og6U-7VhdcnyQO6FVeBJIOxfC2mgpQNV', materials: [{ name: 'Asma', size: '1.8 MB', id: '17Ose16-tAcqq7JT9zhVnmdLnbHEKhVAF'}]},
+                {title: 'Aula 02 - DPOC', gdriveId: '1DrrW4gPe_Ug2qsU-c0nBlv1CB-VyWg5Q', materials: [{ name: 'DPOC', size: '1.9 MB', id: '1U6eVgP0qpqFX6MKhSXkbCyqOds-l0Odw'}]},
+                {title: 'Aula 03 - Pneumonia', gdriveId: '1NVxKEgWVGovb46pmrSfEjLJipJ1GQPX9', materials: [{ name: 'Pneumonia', size: '2.0 MB', id: '1SHyAHHDqWSkom19KczeoWYqhCg6Z3CCg'}]},
+                {title: 'Aula 04 - Derrame Pleural', gdriveId: '1AgFzHkKm73j-hk9C0NEVdBSqVDXkIZzC', materials: [{ name: 'Derrame Pleural', size: '1.7 MB', id: '1mQazX1NPu6zr5KqP8b0JjVB8G5xQmN9F'}]}
+            ]},
+            { title: 'Emergências Gastrointestinais / Hepáticas', lessons: [
+                {title: 'Aula 01 - Pancreatite Aguda', gdriveId: '16tmCm1WIjEAYI8Mm8W_HVupSplT0k-WS', materials: [{ name: 'Pancreatite Aguda', size: '1.6 MB', id: '14unbx9BdM97Q8k0WADjSMU2JJ1vn1obo'}]},
+                {title: 'Aula 02 - Hemorragia Digestiva Alta', gdriveId: '1Bub7e8tsARbbs4TXnIWycvCqu27FnM1w', materials: [{ name: 'Hemorragia Digestiva Alta', size: '1.8 MB', id: '1kvdMvjvazc-u8emic-dIpcD7vLt5oEOB'}]},
+                {title: 'Aula 03 - Hemorragia Digestiva Baixa', gdriveId: '1AHh8Mr1OUiQphcoeXJZMeBwzfoQhLKxI', materials: [{ name: 'Hemorragia Digestiva Baixa', size: '1.7 MB', id: '1lZiMyAU2OLuJ-dAfYf91xaRv6hNL9jc3'}]},
+                {title: 'Aula 02 - Ingestão de Corpo Estranho', gdriveId: '1syrIagJPN18MbrE_yy0qOroF9ikLjYps', materials: [{ name: 'Ingestão de Corpo Estranho', size: '1.2 MB', id: '1R_X9PNkNSLizKsGjBTbFymSWyDQLY6rn'}]},
+                {title: 'Aula 08 - Ingestão de Corpo Estranho', gdriveId: '1_LYG6jjNSkG8djor6JQP84lpRVLVg_XX', materials: [{ name: 'Ingestão de Corpo Estranho', size: '1.2 MB', id: '1R_X9PNkNSLizKsGjBTbFymSWyDQLY6rn'}]}
+            ]},
+            { title: 'Emergência Urológicas / Nefrológicas', lessons: [
+                {title: 'Aula 01 - Hipocalemia', gdriveId: '1U5zzi9t7CFSrsRa23PsXQFIhvXhr_7cl', materials: [{ name: 'Hipocalemia', size: '1.4 MB', id: '1I5xQHDgz129843d6T8GySv0Wz9PER5Dd'}]},
+                {title: 'Aula 02 - Hipercalemia', gdriveId: '1ZAxFC7EPBMzpyYnK9NkurD_k2Gk1MNUi', materials: [{ name: 'Hipercalemia', size: '1.5 MB', id: '1LFFb6VJo2GiSYhEywVJlP01aZgkv1WSG'}]},
+                {title: 'Aula 03 - Hiponatremia', gdriveId: '1txujv7GRyyr_uwnJMDWQR0QCkwvFJFa6', materials: [{ name: 'Hiponatremia', size: '1.4 MB', id: '1tEK9KoTK257rwUDG04qK7NeP5lOXFepV'}]},
+                {title: 'Aula 04 - Hipernatremia', gdriveId: '17xqj1RjF6DqZzQM0ZSYjIUYMdxHPGIS0', materials: [{ name: 'Hipernatremia', size: '1.5 MB', id: '19CyYjx8eEEn9P3t9Bxu1ziEcyiXOelcT'}]},
+                {title: 'Aula 05 - IRA', gdriveId: '1aur293aGjorSWir8PoLAN6FCBiZXc9fX', materials: [{ name: 'IRA', size: '1.6 MB', id: '1re6I2fZOfbXfQ_v-7u2-XNcWx8E5Yhym'}]},
+                {title: 'Aula 06 - Cólica Renal', gdriveId: '13DfMSTuMTVkP2-ezntsqtZSO1xtAcL48', materials: [{ name: 'Cólica Renal', size: '1.3 MB', id: '1CFObEmcQE54O_BqevE06dtcuBSOcaE6P'}]},
+                {title: 'Aula 05 - ITU', gdriveId: '1ZgnjKYx2pNUW0aqI5d3Vh7oFe9vrO1wi', materials: [{ name: 'Infecção do Trato Urinário - ITU', size: '1.8 MB', id: '1E8uLKuCSAnKFutxiRuC2vnMmnnsITIXZ' }, { name: 'Infecção do Trato Urinário - ITU', size: '1.8 MB', id: '1QiVwT0AElEH1NTD_JReJw_HPW_NXB-6a'}]},
+                {title: 'Aula 07 - ITU', gdriveId: '1HDqfANa4eUGac6sfimSl1ynKHuzi3uGj', materials: [{ name: 'Infecção do Trato Urinário - ITU', size: '1.8 MB', id: '1E8uLKuCSAnKFutxiRuC2vnMmnnsITIXZ' }, { name: 'Infecção do Trato Urinário - ITU', size: '1.8 MB', id: '1QiVwT0AElEH1NTD_JReJw_HPW_NXB-6a'}]},
+                {title: 'Aula 09 - ITU', gdriveId: '1kndO1vWOuYLGeh3pwhJJR7ZAwinGeOkh', materials: [{ name: 'Infecção do Trato Urinário - ITU', size: '1.8 MB', id: '1E8uLKuCSAnKFutxiRuC2vnMmnnsITIXZ' }, { name: 'Infecção do Trato Urinário - ITU', size: '1.8 MB', id: '1QiVwT0AElEH1NTD_JReJw_HPW_NXB-6a'}]}
+            ]},
+            { title: 'Emergências Infecciosas', lessons: [
+                {title: 'Aula 01 - Dengue', gdriveId: '17sF8uCUdKGKekGNRv9tRAdZrEXVOT965', materials: [{ name: 'Dengue', size: '1.9 MB', id: '1KIEDHweUkYlyd7OoGGRQOezfQJlCuGE1'}]},
+                {title: 'Aula 02 - Arboviroses', gdriveId: '1RM7R8a00CawjTQNVwsGQNdAWVydg0kCA', materials: [{ name: 'Arboviroses', size: '2.1 MB', id: '1Iwz840fb0ahQxfP17IQPPBXJfGVx3VBx'}]},
+                {title: 'Aula 03 - IVAS', gdriveId: '1kOOoZCMTcwrvM_YWx3qhCmLSsk1mNge2', materials: [{ name: 'IVAS', size: '1.5 MB', id: '1ouXWGAUnobICEzIcHZmHWc55Qgtkkggv'}]},
+                {title: 'Aula 04 - Infecções Cutâneas', gdriveId: '1K4lucFqbvICxhCVdCGyKBZlRwbhrIQ9E', materials: [{ name: 'Infecções Cutâneas', size: '1.7 MB', id: '1Uu7RkvCzLolpT5Q6139V_0TWABqvqJsV'}]},
+                {title: 'Aula 07 - Profilaxia Antitetânica', gdriveId: '17eQXQqrZ82xITx8ugRt4NHlKLY-eEGT_', materials: [{ name: 'Profilaxia Antitetânica', size: '1.3 MB', id: '1fRciZiU5jMHJp-FIUczQkTI9PxzaCPBw'}]},
+                {title: 'Aula 08 - IST', gdriveId: '1-cLZzIZS6FgeDjzOv06U8a5-SA5uPra3', materials: [{ name: 'PCDT - IST: 2022 ISBN', size: '3.0 MB', id: '128MhUXxvckSTYz-FS31K9ITYYLH44_Kf'}]},
+                {title: 'Aula 09 - Leptospirose', gdriveId: '1CaosKmUNfwTBdjdgRtIr3AIYM55LUYci', materials: [{ name: 'Leptospirose', size: '1.6 MB', id: '1dkugpq_OMr_Si4It1PcNLLUaIlDbufN2'}]}
+            ]},
+            { title: 'Emergências Metabólicas / Reumatológicas', lessons: [
+                {title: 'Aula 01 - Hipoglicemia', gdriveId: '1PwcQREst0lBGph9snyJZSaj9tis8Ojt8', materials: [{ name: 'Hipoglicemia', size: '1.4 MB', id: '13bouSW5dUkLhnr9PBvEMQucPZwAf7Po0'}]},
+                {title: 'Aula 02 - Hiperglicemias', gdriveId: '1H9d1c39yd3caJBnGrhIjiuIKooZ3U1Ez', materials: [{ name: 'Hiperglicemia', size: '1.6 MB', id: '1J8mTuPvi5TgbFLKrcfsO2yKn2QNJoQUb'}]},
+                {title: 'Aula 03 - Gasometria Arterial', gdriveId: '1xExZlSJ-nXo5mlq_jZrCKkmGwBxtgpsp', materials: [{ name: 'Interpretação da Gasometria Arterial', size: '1.8 MB', id: '1-VTJpQayt-H2GTslvIin_OzEXEZmu-pZ' }, { name: 'Gasometria Arterial - Exercícios', size: '1.2 MB', id: '17BYsJBjdrhfEOqy5qiESAS5KvdNcBCAi'}]},
+                {title: 'Aula 04 - Gasometria: Aplicação Prática I', gdriveId: '1766UEdQoRgZDMDDZefB8xgwJPRb7Ola1'},
+                {title: 'Aula 05 - Gasometria: Aplicação Prática II', gdriveId: '1O2BTs_LdOYw7oAeXGYwE3b4UW2fIryM-'},
+                {title: 'Aula 06 - Gasometria: Aplicação Prática III', gdriveId: '1xRHeqwVpS0yyAmYBxdksfy6DWLgjzipC'},
+                {title: 'Aula 07 - Gota', gdriveId: '1B24Lhevm8SZeOOKSkwbMl9Og-T6Xwn1D', materials: [{ name: 'Gota', size: '1.3 MB', id: '1MSOpykGYnCkQ8YbyVNl7dDspyA7uRrAi'}]}
+            ]},
+            { title: 'Emergências Hematológicas / Oncológicas', lessons: [
+                {title: 'Aula 01 - Hemotransfusões', gdriveId: '1ugjQt3rZsrzUrsiq7rpdZqF2W9jIe3bl', materials: [{ name: 'Hemotransfusões', size: '1.9 MB', id: '1uQWC0KrWoqq7mmE5zX_EsRyTbo3iUSRX'}]},
+                {title: 'Aula 02 - Neutropenia Febril', gdriveId: '1y5kNmduZs2C_RmbVIII6D1Jr0qVSdf11', materials: [{ name: 'Neutropenia Febril', size: '1.6 MB', id: '1cigjjAWxiFuAVgCRRoYlUaamQntYXpeU'}]},
+                {title: 'Aula 03 - Crise Falcêmica', gdriveId: '1MPLcukmmYlLeVVPm3TvU4Q_UdcSt5f64', materials: [{ name: 'Crise Falcêmica', size: '1.5 MB', id: '1GeA_Non5Lroh1W1RWISDinkt6vUPryeq'}]}
+            ]},
+            { title: 'AVALIAÇÃO PSIQUIATRICA NO PS', lessons: [
+                {title: 'Aula 06 - Ansiedade nos Plantões: Dr. João Marcos (26/09)', gdriveId: '15mIGexG0RYy-QPNGcwMas6M9goChXsug'},
+                {title: 'O PACIENTE COM COMPORTAMENTO SUICÍDA', gdriveId: 'ID_DO_VIDEO_AQUI', materials: [{ name: 'Tentativa de Auto-Extermínio', size: '1.4 MB', id: '1Wsq0uf74es10OJVC1Cq-nCjjt5a-upL5'}]}
+            ]},
+            { title: 'Causas Externas', lessons: [
+                {title: 'Aula 01 - Intoxicação Exógena', gdriveId: '1U4zhxskw9l82wCdrejzk2HdWRv6DunMF', materials: [{ name: 'Intoxicações Exógenas', size: '1.8 MB', id: '1j5VmG1V7LqayXA-zKrnBSpMQuR16bAbj'}]},
+                {title: 'Aula 02 - Mordeduras', gdriveId: '1Uwtczxb3sS68o5DHoOH1JENcbbZKS58G', materials: [{ name: 'Mordeduras', size: '1.5 MB', id: '1lJLj7ARTunzqXZmdQb5vW8thnNZAvVfx'}]},
+                {title: 'Aula 03 - Acidente Ofídico', gdriveId: '1zw06rSKZk033QVU01ySm-1UBohcWnFIU', materials: [{ name: 'Acidente Ofídico', size: '1.9 MB', id: '1-Q1-ykGi7lNvVhzemPAYDe_selixa7b_'}]},
+                {title: 'Aula 25 - Acidente Ofídico', gdriveId: '13yc3VFk9gCxsZFPHkWoOUBhrSKJUNq8y', materials: [{ name: 'Acidente Ofídico', size: '1.9 MB', id: '1-Q1-ykGi7lNvVhzemPAYDe_selixa7b_'}]},
+                {title: 'Aula 04 - Escorpionismo', gdriveId: '1IgpbAVtoFdwBmij283q7fLkvJOE4TmZt', materials: [{ name: 'Escorpionismo', size: '1.6 MB', id: '1k6RA0qFgJZ99sgJsUvZJJdyIS3MSjxuC'}]},
+                {title: 'Aula 05 - Araneísmo', gdriveId: '183jpa2JDefnpbCtSFlLxk7rTbkTayNGp', materials: [{ name: 'Araneísmo', size: '1.7 MB', id: '113I3mLnfukfn-4VBpsCxt0a-Uinv83ZI'}]}
+            ]},
+            { title: 'Emergências Cirúrgicas', lessons: [
+                {title: 'Aula 01 - Apendicite Aguda', gdriveId: '1XWDU_CKtmQA6D3E9jHjamZz1Rcrbts-X', materials: [{ name: 'Apendicite Aguda', size: '1.6 MB', id: '1J6yuEzMgei8Qp2oLdRrAHSIB3nTvkrfR'}]},
+                {title: 'Aula 02 - Diverticulite Aguda', gdriveId: '1v9Hnp_b5-mV7BAYjEEh5QfWiPJV4x2Yt', materials: [{ name: 'Diverticulite Aguda', size: '1.5 MB', id: '1GtgCn3pCqILhjr2OP6G1sFROVx_WKxZo'}]},
+                {title: 'Aula 03 - Colecistite Aguda', gdriveId: '1g-DxWxGdvKIWnXrZG3aNJZln_cVC1ec-', materials: [{ name: 'Colecistite Aguda', size: '1.6 MB', id: '1bSZgvLH662nwXd1lUKYFyRdV4H1daoXS'}]},
+                {title: 'Aula 04 - Colangite Aguda', gdriveId: '16OEHELPQiRXIMz30RyCZGolAG2wQKq9v', materials: [{ name: 'Colangite Aguda', size: '1.5 MB', id: '1X3IVvA1LUSN72iFy74m6EveMSuypuq_o'}]},
+                {title: 'Aula 05 - Abdôme Agudo Obstrutivo', gdriveId: '1aE9aJgUctuC5e83w37PESGtRvsw0w80d', materials: [{ name: 'Abdome Agudo Obstrutivo', size: '1.8 MB', id: '1loM-F2F5LvSttdBrebDHg4UqmU5uGfAk'}]},
+                {title: 'Aula 06 - Abdômen Agudo Perfurativo', gdriveId: '1uzuSRFmYOtMV14aDZtLkHpJOM5s8BXOO', materials: [{ name: 'Abdome Agudo Perfurativo', size: '1.7 MB', id: '1CaFh6C0ht2iCt_T_EILShYKL4ZQ3D90M'}]},
+                {title: 'Aula 07 - Abdômen Agudo Vascular', gdriveId: '1YVynfrEM_stsizagBDWLlvsTiL6TyP_N', materials: [{ name: 'Abdome Agudo Vascular', size: '1.8 MB', id: '1UwxhYWlmN3q9YraJrlHhqkm9g6dGj0HU'}]},
+                {title: 'Aula 08 - Abdômen Agudo Hemorrágico', gdriveId: '1MjtueNWnIGsm-6eqXreHSJLEgvNU4o8z', materials: [{ name: 'Abdome Agudo Hemorrágico', size: '1.7 MB', id: '1UL_-Vd65P_ZchvAn6kNbM0h_iHGYWfcj'}]},
+                {title: 'Aula 09 - Doenças Orificiais', gdriveId: '1iXIEO-5sZtj88Wn1_4NVnlw7AF0JXs-X', materials: [{ name: 'Doenças Orificiais', size: '1.4 MB', id: '14g74HQ2F64t6Oka2yc6IS3jMGGLCgOL3'}]},
+                {title: 'Aula 10 - Escroto Agudo', gdriveId: '1XhtKo_B_w2JV0cd9-GScf6LlIBEpnV4f', materials: [{ name: 'Escroto Agudo', size: '1.5 MB', id: '19egr6T5-LiUZbE68vosbSJlhduP5Ht'}]},
+                {title: 'Aula 34 - Escroto Agudo', gdriveId: '1lEU9dMWRlFRs9WtQK4vHpiKVn5rp88fr', materials: [{ name: 'Escroto Agudo', size: '1.5 MB', id: '19egr6T5-LiUZbE68vosbSJlhduP5Ht'}]}
+            ]},
+            { title: 'Emergências Vasculares', lessons: [
+                {title: 'Aula 01 - TVP', gdriveId: '1JU0E7onyTA6TFX_nzzu_FWc41OxnUKPW', materials: [{ name: 'Trombose Venosa Profunda - TVP', size: '1.9 MB', id: '195HkEDDaIFqCIP1IoQjKRU0e3VEGEoQ7'}]},
+                {title: 'Aula 02 - TEP', gdriveId: '1LuNFHlV3RjgyCPOV_Kyj-wNloXDKclLa', materials: [{ name: 'Tromboembolismo Pulmonar - TEP', size: '2.0 MB', id: '1UvczilxI6EXbSi6GaAzF0bZ-nX2BoTMz'}]},
+                {title: 'Aula 03 - Oclusão Arterial Aguda', gdriveId: '1HBYRJR-Y0Q_05PBShNQqDjLwPEfugL0I', materials: [{ name: 'Oclusão Arterial Aguda', size: '1.8 MB', id: '1tMqVX4Mf4hNcU7ALLqxU7PqnKxh30MDe'}]},
+                {title: 'Aula 04 - Dissecção de Aorta', gdriveId: '1kviAgPMvYeazTdEgqbFn7BwNrusnyVYT', materials: [{ name: 'Dissecção Aguda de Aorta', size: '1.9 MB', id: '1Ko6bopvxZZwvGgMWvEUKgGx17B7LwnXM'}]}
+            ]},
+            { title: 'Emergências Cardiológicas', lessons: [
+                {title: 'Aula 01 - Dor Torácica no Pronto-Socorro', gdriveId: '1YhIK9bJzsNOL-BqXp0CiOTe3gClcBdfQ'},
+                {title: 'Aula 02 - Taquiarritmia no Pronto-Socorro', gdriveId: '1Pi1GmNUZKLpSj2hqptNr5RK29Si1fBWQ'},
+                {title: 'Aula 03 - Bradicardia no PS', gdriveId: '1sUWyh538yK0lsqcXNwyFKkjC5aSoca-K'},
+                {title: 'Aula 04 - Insuficiência Cardíaca Descompensada', gdriveId: '1H33EySEOO6FXXwXCPIEKI0ONjcF-bsg7', materials: [{ name: 'Insuficiência Cardíaca Descompensada', size: '2.1 MB', id: '1b81PUCKuDEyEvfZFyeFqLaw-f8V82Pxa'}]},
+                {title: 'Aula 05 - Abordagem das Urgências e Emergências Hipertensivas', gdriveId: '1xQLs6xfZFQ-H80rc3Jm9eoIklTwdzzwS'},
+                {title: 'Aula 06 - SCA', gdriveId: '1lxxKek0y_6yM0FSCGFnm14Zv-Ul8R0ay', materials: [{ name: 'Síndrome Coronariana Aguda - SCA', size: '2.2 MB', id: '1mK3Rpa-XB9sEPIY8AbgyTAETXg_88HOa'}]}
+            ]},
+            { title: 'Emergências Neurológicas', lessons: [
+                {title: 'Aula 01 - AVC', gdriveId: '1M3Z1QB0Fw49M52XjRCEDlXcbahaWUybg', materials: [{ name: 'AVC', size: '2.0 MB', id: '1ZSXUchMDW7Exq0w7NbETySZIgP84Jbi8'}]},
+                {title: 'Aula 03 - Crise Convulsiva', gdriveId: '1O3M1mL2CF12qEyN3LegbO7tCtoEpxxOp', materials: [{ name: 'Crise Convulsiva', size: '1.8 MB', id: '14ySk8LNH3gptkbwQnnCCiS5vD0v3m2rK'}]},
+                {title: 'Aula 05 - Crise Convulsiva', gdriveId: '1mwyeKRhYZNA4fqK3LOLGM1COb71aYv8W', materials: [{ name: 'Crise Convulsiva', size: '1.8 MB', id: '14ySk8LNH3gptkbwQnnCCiS5vD0v3m2rK'}]},
+                {title: 'Aula 04 - Meningites e Encefalites', gdriveId: '173hXmop7zHSkmPHuETCRbXgq3dVAPbRp', materials: [{ name: 'Meningite e Encefalite', size: '1.9 MB', id: '1ZL2S5VrR0Zll855uW__D5qMygdU2Mk9c'}]},
+                {title: 'Aula 05 - Check-Points: Neurologia', gdriveId: '136qe5sX8srtS_pf9KzngX3T5htsRh8ch'}
+            ]},
+            { title: 'O Paciente Grave', lessons: [
+                {title: 'Aula 01 - Atendimento Inicial ao Paciente Grave', gdriveId: '1tgrTygIxe3l7oSzsr0fW6x-_ev-2exim', materials: [{ name: 'Atendimento Inicial ao Paciente Grave', size: '2.0 MB', id: '1Yy10s0c7Tb6v7EigRbvC4sXh85jDPpG2'}]},
+                {title: 'Aula 02 - PCR', gdriveId: '1YkxEjVvKRDFybNAWw3wgSfyx3XHg2zl7', materials: [{ name: 'PCR', size: '2.1 MB', id: '1JGukV2Os9ztH5I76nsvJCfAybrzqW2wz'}]},
+                {title: 'Aula 03 - Insuficiência Respiratória Aguda', gdriveId: '1Sa4FeuCtkde4rXdcofSDGwNH1YqIJvX3', materials: [{ name: 'Insuficiência Respiratória Aguda', size: '1.9 MB', id: '13mpRZEMiayzm06SePBZFDtjhpWBvH4ZJ'}]},
+                {title: 'Aula 09 - Insuficiência Respiratória Aguda', gdriveId: '1eNXgB4TosQIvZ9L16zNlLWXUFsErbG0s', materials: [{ name: 'Insuficiência Respiratória Aguda', size: '1.9 MB', id: '13mpRZEMiayzm06SePBZFDtjhpWBvH4ZJ'}]},
+                {title: 'Aula 04 - Sepse', gdriveId: '1qLq4bYxfK69eovCsBNApRo-8w2J9wV51', materials: [{ name: 'Sepse', size: '2.2 MB', id: '1ibTd1oXBPf0BvANnKgUfApDbCl8XbmtI'}]},
+                {title: 'Aula 05 - Abordagem Inicial ao Paciente Chocado', gdriveId: '1GZ3cnPSpJLIg51Zd8Rv1OnPi2Wsr_3-m', materials: [{ name: 'Abordagem Inicial ao Paciente Chocado', size: '2.0 MB', id: '1KEX857SVkM5l62kUWYZUqZO0hfrF-0V0'}]},
+                {title: 'Aula 06 - Rebaixamento do Nível de Consciência (RNC)', gdriveId: '16ApeUROeVsjl1ydjwKZi7E89BczxKsNs'},
+                {title: 'Aula 73 - Rebaixamento do Nível de Consciência (RNC)', gdriveId: '1K6vvGduofZoSWBE_1mQj869_5wp2yuWu'},
+                {title: 'Aula 07 - Anafilaxia', gdriveId: '1QRMhCupcWj1IoBV-zEsykZDvPtzvhrLY', materials: [{ name: 'Anafilaxia', size: '1.8 MB', id: '19QT5zf2UkdOcxubjHw0DRni-uGQh6gC2'}]}
+            ]},
+            { title: 'Atendimento ao Trauma', lessons: [
+                {title: 'Aula 01 - ABCDE do Trauma', gdriveId: '1Rv_L784i6_2JbOGg-clcyj2TlmxiNKxe', materials: [{ name: 'ABCDE do Trauma', size: '2.5 MB', id: '1C14JTNuJJbnolZA6rTf3wZKHUgGt82x_'}]},
+                {title: 'Aula 02 - ABCDE do Trauma', gdriveId: '1ZPmDoQLzcPMiiK5V3EqqcR1kiBaIx82q', materials: [{ name: 'ABCDE do Trauma', size: '2.5 MB', id: '1C14JTNuJJbnolZA6rTf3wZKHUgGt82x_'}]},
+                {title: 'Aula 03 - Letra A', gdriveId: '1L5afx2jETVNIL7Ow73LQO56p3QAHCfeR', materials: [{ name: 'Letra A', size: '1.2 MB', id: '13ra_Z6UAE8dimH70sF-CtWQoikmKODCc'}]},
+                {title: 'Aula 03 - Letra B', gdriveId: '1-iW5Y0xFBfJP4MSsOrgWVkgNLzfXDI7g', materials: [{ name: 'Letra B', size: '1.3 MB', id: '1HFrXwIAS8UKQvcx3zg7OGW0b7N27b_jv'}]},
+                {title: 'Aula 04 - Letra B', gdriveId: '1Nv_NH9ZJPbYMDCsxxZA_YLhHaSOApokw', materials: [{ name: 'Letra B', size: '1.3 MB', id: '1HFrXwIAS8UKQvcx3zg7OGW0b7N27b_jv'}]},
+                {title: 'Aula 04 - Letra C', gdriveId: '1SNiqMmWCP3-mj2_X1Fc_hsqd7jOEQ3on', materials: [{ name: 'Letra C', size: '1.4 MB', id: '1BYAI5J-NrTKrWXeOV5VcKgFb2bo7csam'}]},
+                {title: 'Aula 05 - Letra C', gdriveId: '1XQRvMST9qxxvIk9a2kTRK8Bdqyh3MBGl', materials: [{ name: 'Letra C', size: '1.4 MB', id: '1BYAI5J-NrTKrWXeOV5VcKgFb2bo7csam'}]},
+                {title: 'Aula 05 - Letra D', gdriveId: '1vAq-iXmrMhclOhtRGpAFxapOabO_B0LV', materials: [{ name: 'Letra D', size: '1.2 MB', id: '1FLuXppriNb19iFwj8-gmL6HMgwbHJPKc'}]},
+                {title: 'Aula 06 - Letra D', gdriveId: '1vxPJnPYbOXivf-KW9B7pJpHZUL2QDjFG', materials: [{ name: 'Letra D', size: '1.2 MB', id: '1FLuXppriNb19iFwj8-gmL6HMgwbHJPKc'}]},
+                {title: 'Aula 06 - Letra E', gdriveId: '12dMBjTk1Cwb8WwRXTzoewMqPWLRP3jsE', materials: [{ name: 'Letra E', size: '1.1 MB', id: '1ucLXxC_7wMCKqiKpGwfFjDDUoB-5g4VQ'}]},
+                {title: 'Aula 07 - Letra E', gdriveId: '185OjZdumi8NrBGO7IOrwyKZUxekDpRaG', materials: [{ name: 'Letra E', size: '1.1 MB', id: '1ucLXxC_7wMCKqiKpGwfFjDDUoB-5g4VQ'}]},
+                {title: 'Aula 08 - Conclusão', gdriveId: '14UX5Gd9ISwAB5or2Dk3d6t9fN51UTkCF'},
+                {title: 'Aula 07 - Conclusão', gdriveId: '1JtTV-zPf9vc90gOgXmuaEHIYEmdLKLvg'},
+                {title: 'Aula 08 - Queimadura', gdriveId: '1VDxMzSjr1Fwwu32Sw30QdSAVvUlUF2UO', materials: [{ name: 'Queimaduras', size: '1.8 MB', id: '1-gS5NI3wRDJu5JodBDjs1aNevTI3jRjT'}]}
+            ]},
+            { title: 'Procedimentos', lessons: [
+                {title: 'Aula 01 - Acesso Venoso: Jugular Interna', gdriveId: '1zeqV5mUWHSUyQUsMAfqM53CIbB1pMoQt', materials: [{ name: 'Acesso Venoso - Jugular Interna', size: '1.6 MB', id: '1ilZa8Z7TE3LQvCBJ2QXLM91C_-1FVsfA'}]},
+                {title: 'Aula 02 - Acesso Venoso: Subclávia', gdriveId: '1ZJHat7gf_jJPCOcyF4TerQ_IvL9QTmby', materials: [{ name: 'Acesso Venoso - Subclávia', size: '1.5 MB', id: '1oBGBWDWxtwcjKdxd9bwMszCSwCVdC52-'}]},
+                {title: 'Aula 03 - Acesso Venoso: Femoral', gdriveId: '1o7YtWdJsV6rD0xAgJo5WsXhVmTInTz_T', materials: [{ name: 'Acesso Venoso Femoral', size: '1.5 MB', id: '1lJn_G7pPxOh3asB9pG7VX9ksUp7jggDF'}]},
+                {title: 'Aula 04 - Acesso Arterial Femoral: PAI', gdriveId: '1bzTd-wl-EPWZMuNBU4n1jSPDB5LuCPZb', materials: [{ name: 'Acesso Arterial Femoral', size: '1.6 MB', id: '1qNwnmyzkCiL_QYlX8g3Mcf56v8oPwUeb'}]},
+                {title: 'Aula 05 - Toracocentese Diagnóstica', gdriveId: '1nBIyAF4LfDsGdoCPFf_kag_TlsQ7YI9z', materials: [{ name: 'Toracocentese Diagnóstica', size: '1.4 MB', id: '15hLjc2CwsKFuKGNI-drG6Bd_snfN3yA_'}]},
+                {title: 'Aula 06 - Toracocentese e Drenagem Torácica', gdriveId: '17HnpLnyso8ykChVEbRPw_mzbLJ9r0bbg'},
+                {title: 'Aula 07 - Paracentese', gdriveId: '1L8l8Cu7xI3Kx4dL0GtcaVTlM5qdX631D', materials: [{ name: 'Paracentese', size: '1.4 MB', id: '1CazwrgH-VTeZB6hNhMx7ooua66mXXUfL'}]},
+                {title: 'Aula 08 - Sutura', gdriveId: '1l_kc99hh9ZN6qCH84ovSTqWqDDCjiRRB', materials: [{ name: 'Sutura', size: '1.8 MB', id: '19zIBuUYnAHTTiGfrddUVEwCtQBqa5iZ1'}]},
+                {title: 'Aula 09 - Retirada de Corpo Estranho no Ouvido', gdriveId: '1PVWn-nd-D8-HChvRpFvkMQKy8FQTv_eC', materials: [{ name: 'Retirada de Corpo Estranho do Ouvido', size: '1.2 MB', id: '1aq6kO5sQrA6jtzxhQ0ulTEw9qXXqeY3x'}]},
+                {title: 'Aula 03 - Cantoplastia', gdriveId: '1lV9JEaV_wfp3RETsN-gLWrP--vALKVeM', materials: [{ name: 'Cantoplastia', size: '1.3 MB', id: '1UNciky3PQvopN4SIjmsLbFuy7raspsOr'}]},
+                {title: 'Aula 10 - Cantoplastia', gdriveId: '1IEOZPbL1WVf-0VdHXrcmT5FfdF3c05Zk', materials: [{ name: 'Cantoplastia', size: '1.3 MB', id: '1UNciky3PQvopN4SIjmsLbFuy7raspsOr'}]},
+                {title: 'Aula 11 - Drenagem de Abscesso', gdriveId: '1QjKYq2-Cej23dJi3fqYCwWsvpA2VnU8T', materials: [{ name: 'Drenagem de Abscesso', size: '1.4 MB', id: '1jZuVBSKuVvhw5bEqtYGLDJSc2YoVoL9q'}]},
+                {title: 'Aula 12 - Punção Lombar', gdriveId: '1Bkva-msJSEQt3_Xeaz7evrGQCXt9-b_k', materials: [{ name: 'Punção Lombar', size: '1.6 MB', id: '1pY9r03TVXwgzxJGat5inI38UGxEGeWmD'}]},
+                {title: 'Aula 13 - Punção Suprapúbica', gdriveId: '1x3uFE9WKnDknXOXqlLxGj77FxF7krnAq', materials: [{ name: 'Punção Suprapúbica', size: '1.3 MB', id: '1YKIHK9CwawmSaIHO51oCns08EosqZxEE'}]},
+                {title: 'Aula 14 - Sondagem Vesical de Demora', gdriveId: '1XvTGigdDh0YQwyBTV47haGk0Uc84NOpj', materials: [{ name: 'Sondagem Vesical de Demora', size: '1.5 MB', id: '1s5TZTENg7cehE-DOBS896WEC77KSGoWS'}]}
+            ]},
+            { title: 'Intubação Orotraqueal', lessons: [
+                {title: 'Aula 01 - Tomada de Decisão', gdriveId: '1FEAJCH4mK2s5Kt0CteX0zuZ9hK0ZJekY'},
+                {title: 'Aula 02 - Habilidades Técnicas', gdriveId: '1RwsfKyElVB8OHvEqzxwXNi11hBWE89xq'},
+                {title: 'Aula 03 - Habilidades Teóricas', gdriveId: '1EeEv35dK65U9Q9AYsm6M46oNLbi_JbBE'}
+            ]},
+            { title: 'Ventilação Mecânica', lessons: [
+                {title: 'Aula 04 - Ventilação Mecânica [Thiago Bissoli]', gdriveId: '1EE2hl40i_Sf5l_Wn4ZU2Gz_jE451thhv'}
+            ]},
+            { title: 'Cuidados Paliativos', lessons: [
+                {title: 'Aula 01 - Introdução', gdriveId: '1EMcygVE2gmhReAMZBN1Hj2AhcFijCDGu', materials: [{ name: 'Introdução', size: '1.2 MB', id: '1FaglcaPp2-y4QhyyiCg7DX2CSbCjZjRu'}]},
+                {title: 'Aula 02 - Como Paliar na Emergência', gdriveId: '1wMkG1hVWwZy2KvCZZ9RwqEgmIUNHK9qx', materials: [{ name: 'Como Paliar na Emergência', size: '1.5 MB', id: '1Y5MGe1AdX-pf6eBzDj97PCEbXCRHl_A4'}]},
+                {title: 'Aula 03 - Manejo de Sintomas: Dor', gdriveId: '1hKZoLGHtIuIPv2KoWtTDbdy2o8ePA4hW'},
+                {title: 'Aula 04 - Manejo de Sintomas: Outros', gdriveId: '1-S-8qJ5aZxpo6GMfnFTpxOX3kl3PybnM'},
+                {title: 'Aula 05 - Checkpoint dos Cuidados Paliativos', gdriveId: '1Ki_R3DLFG5Z4RvWa_ImHVefCbKf2VhZ1', materials: [{ name: 'Check-Points dos Cuidados Paliativos', size: '1.3 MB', id: '102Y-iX00THPQ6jG8yQid8bDLRCr-B1P3'}]}
+            ]},
+            { title: 'Módulo UTI', lessons: [
+                {title: 'Aula 01 - Perfusão Tecidual [Thiago Sequeira]', gdriveId: '13iVaI4xqHPE1Z8Hnwxr7FERGjeDfA3r0'},
+                {title: 'Aula 02 - Drogas Vasoativas e Inotrópicas [Thiago Sequeira]', gdriveId: '1Nu3Lw14_8_5y2D3lnf11wlrr79bUzI01'},
+                {title: 'Aula 03 - Reposição Volêmica [Thiago Bissoli]', gdriveId: '16VmTyj_PQV3p2GeMiAxpXGGiH_EqQ8yo'},
+                {title: 'Aula 04 - Ventilação Mecânica [Thiago Bissoli]', gdriveId: '1EE2hl40i_Sf5l_Wn4ZU2Gz_jE451thhv'}
+            ]}
+        ];
+        
+        // Inicializa o estado de conclusão de cada módulo
+        courseData = courseData.map(module => ({
+            ...module,
+            completionStatus: Array(module.lessons.length).fill(false)
+        }));
+
+        // --- Estado da Aplicação ---
+        let state = {
+            activeModuleIndex: -1, 
+            activeLessonIndex: -1, 
+        };
+
+        // --- Elementos do DOM ---
+        const moduleListEl = document.getElementById('module-list');
+        const lessonTitleEl = document.getElementById('lesson-title');
+        const moduleProgressEl = document.getElementById('module-progress');
+        const prevLessonBtn = document.getElementById('prev-lesson-btn');
+        const nextLessonBtn = document.getElementById('next-lesson-btn');
+        const videoPlayer = document.getElementById('video-player');
+        const materialsSection = document.getElementById('materials-section');
+
+        // --- Funções ---
+
+        const createProgressCircle = (progress) => {
+            const radius = 18;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (progress / 100) * circumference;
+            return `<svg class="w-10 h-10 -m-1" viewBox="0 0 40 40"><circle class="text-gray-300" stroke-width="3" stroke="currentColor" fill="transparent" r="${radius}" cx="20" cy="20"/><circle class="progress-ring__circle text-pink-500" stroke-width="3" stroke-dasharray="${circumference} ${circumference}" style="stroke-dashoffset: ${offset}" stroke="currentColor" fill="transparent" r="${radius}" cx="20" cy="20"/></svg>`;
+        };
+        
+        const render = () => {
+            moduleListEl.innerHTML = '';
+            
+            courseData.forEach((module, moduleIndex) => {
+                const isActiveModule = state.activeModuleIndex === moduleIndex;
+                const completedCount = module.completionStatus.filter(Boolean).length;
+                const progress = module.lessons.length > 0 ? (completedCount / module.lessons.length) * 100 : 0;
+
+                const moduleWrapper = document.createElement('div');
+                
+                const moduleHeader = document.createElement('div');
+                moduleHeader.className = `p-3 rounded-lg flex items-center gap-4 cursor-pointer transition-colors ${isActiveModule ? 'bg-gray-200' : 'hover:bg-gray-200/50'}`;
+                moduleHeader.innerHTML = `
+                    <div class="flex-shrink-0">${createProgressCircle(progress)}</div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">${module.title}</h3>
+                        <p class="text-xs text-gray-500">${completedCount} de ${module.lessons.length} aulas concluídas</p>
+                    </div>
+                `;
+                moduleHeader.onclick = () => {
+                    if (state.activeModuleIndex === moduleIndex) {
+                        state.activeModuleIndex = -1;
+                        state.activeLessonIndex = -1;
+                    } else {
+                        state.activeModuleIndex = moduleIndex;
+                        state.activeLessonIndex = module.completionStatus.findIndex(status => status === false);
+                        if(state.activeLessonIndex === -1) state.activeLessonIndex = 0;
+                    }
+                    render();
+                };
+
+                const lessonList = document.createElement('ul');
+                lessonList.className = `lesson-list pl-8`; 
+                if(isActiveModule) {
+                   lessonList.classList.add('open');
+                }
+
+                module.lessons.forEach((lesson, lessonIndex) => {
+                    const isActiveLesson = isActiveModule && state.activeLessonIndex === lessonIndex;
+                    const isCompleted = module.completionStatus[lessonIndex];
+                    const isLastLesson = lessonIndex === module.lessons.length - 1;
+
+                    const li = document.createElement('li');
+                    li.className = `relative flex items-center text-sm group cursor-pointer`; 
+
+                    const circleBorderColor = isActiveLesson ? 'border-pink-500' : 'border-gray-300 group-hover:border-gray-400';
+                    const circleBgColor = isCompleted ? 'bg-pink-500' : 'bg-white';
+                    const contentBgColor = isActiveLesson ? 'bg-pink-100' : 'group-hover:bg-gray-200/50';
+                    const contentTextColor = isActiveLesson ? 'text-pink-600 font-semibold' : 'text-gray-600';
+                    const checkIconColor = isActiveLesson ? 'text-pink-600' : 'text-green-500';
+                    
+                    li.innerHTML = `
+                        <div class="absolute left-[7px] w-px bg-gray-300 h-full -translate-x-1/2 ${lessonIndex === 0 ? 'top-1/2' : ''} ${isLastLesson ? 'bottom-1/2' : ''}"></div>
+                        <div class="flex-shrink-0 mr-4 z-10">
+                             <div class="w-4 h-4 rounded-full ${circleBgColor} border-2 ${circleBorderColor} transition-colors bg-gray-50 flex items-center justify-center"></div>
+                        </div>
+                        <div class="flex-grow flex items-center justify-between p-2 my-1 rounded transition-colors ${contentBgColor}">
+                            <span class="${contentTextColor}">${lesson.title}</span>
+                            ${isCompleted ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${checkIconColor} flex-shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>` : ''}
+                        </div>
+                    `;
+                    
+                    li.onclick = (e) => {
+                        e.stopPropagation(); 
+                        state.activeModuleIndex = moduleIndex;
+                        state.activeLessonIndex = lessonIndex;
+                        render();
+                    };
+                    lessonList.appendChild(li);
+                });
+
+                moduleWrapper.appendChild(moduleHeader);
+                moduleWrapper.appendChild(lessonList);
+                moduleListEl.appendChild(moduleWrapper);
+            });
+            
+            materialsSection.innerHTML = '';
+
+            if (state.activeModuleIndex > -1) {
+                const currentModule = courseData[state.activeModuleIndex];
+                const currentLesson = currentModule.lessons[state.activeLessonIndex];
+                
+                lessonTitleEl.textContent = `${currentModule.title} - ${currentLesson.title}`;
+                moduleProgressEl.textContent = `Aula ${state.activeLessonIndex + 1} de ${currentModule.lessons.length}`;
+
+                videoPlayer.src = `https://drive.google.com/file/d/${currentLesson.gdriveId}/preview`;
+
+                if (currentLesson.materials && currentLesson.materials.length > 0) {
+                    currentLesson.materials.forEach(material => {
+                        const materialLink = document.createElement('a');
+                        materialLink.href = `https://drive.google.com/file/d/${material.id}/view`;
+                        materialLink.target = "_blank"; // Open in new tab
+                        materialLink.className = "flex items-center gap-4 p-4 bg-white rounded-lg hover:bg-gray-200/50 transition-colors border border-gray-200";
+                        materialLink.innerHTML = `
+                            <div class="flex-shrink-0 bg-red-100 p-2 rounded-lg">
+                                <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6zm3 4a1 1 0 011 1v2a1 1  0 11-2 0V9a1 1 0 011-1zm2-2a.5.5 0 00-.5.5v4a.5.5 0 001 0v-4a.5.5 0 00-.5-.5z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-pink-600">${material.name}</p>
+                                <p class="text-sm text-gray-500">${material.size}</p>
+                            </div>
+                        `;
+                        materialsSection.appendChild(materialLink);
+                    });
+                } else {
+                    materialsSection.innerHTML = '<p class="text-gray-500">Nenhum material disponível para esta aula.</p>';
+                }
+
+                prevLessonBtn.disabled = state.activeLessonIndex === 0;
+                nextLessonBtn.disabled = state.activeLessonIndex === currentModule.lessons.length - 1;
+            } else {
+                lessonTitleEl.textContent = "Selecione um módulo para começar";
+                moduleProgressEl.textContent = "";
+                videoPlayer.src = "";
+                materialsSection.innerHTML = '<p class="text-gray-500">Nenhum módulo selecionado. Selecione um módulo na barra lateral para ver o conteúdo.</p>';
+                prevLessonBtn.disabled = true;
+                nextLessonBtn.disabled = true;
+            }
+        };
+        
+        const completeAndGoToNext = () => {
+            if (state.activeModuleIndex === -1) return;
+
+            const currentModule = courseData[state.activeModuleIndex];
+            
+            // Marca a aula atual como concluída
+            if (state.activeLessonIndex !== -1 && !currentModule.completionStatus[state.activeLessonIndex]) {
+                currentModule.completionStatus[state.activeLessonIndex] = true;
+            }
+
+            // Tenta ir para a próxima aula no módulo atual
+            if (state.activeLessonIndex < currentModule.lessons.length - 1) {
+                state.activeLessonIndex++;
+            } else {
+                // Se for a última aula do módulo, tenta ir para o próximo módulo
+                if (state.activeModuleIndex < courseData.length - 1) {
+                    state.activeModuleIndex++;
+                    state.activeLessonIndex = 0; // Começa na primeira aula do novo módulo
+                } else {
+                    // Se for a última aula do último módulo
+                    alert('Parabéns! Você concluiu todas as aulas!');
+                    return; // Não faz nada
+                }
+            }
+            render();
+        };
+
+        const goToPrevLesson = () => {
+            if (state.activeLessonIndex > 0) {
+                state.activeLessonIndex--;
+                render();
+            } else if (state.activeModuleIndex > 0) {
+                // Se for a primeira aula do módulo, tenta ir para a última aula do módulo anterior
+                state.activeModuleIndex--;
+                const prevModule = courseData[state.activeModuleIndex];
+                state.activeLessonIndex = prevModule.lessons.length - 1; // Última aula do módulo anterior
+                render();
+            }
+        };
+        
+        // --- Inicialização e Event Listeners ---
+        prevLessonBtn.addEventListener('click', goToPrevLesson);
+        nextLessonBtn.addEventListener('click', completeAndGoToNext);
+        
+        // Lógica para carregar o módulo e a aula com base no parâmetro da URL OU um padrão
+        const moduleSlugFromURL = getQueryParam('modulo');
+        let moduleToLoadTitle = '';
+
+        if (moduleSlugFromURL) {
+            // Se houver um slug na URL, tenta carregar esse módulo
+            moduleToLoadTitle = courseData.find(module => slugify(module.title) === moduleSlugFromURL)?.title;
+        } else {
+            // Se não houver slug na URL, carrega 'Emergências Vasculares' por padrão
+            moduleToLoadTitle = 'Emergências Cirúrgicas';
+        }
+
+        if (moduleToLoadTitle) {
+            const initialModuleIndex = courseData.findIndex(module => module.title === moduleToLoadTitle);
+            
+            if (initialModuleIndex !== -1) {
+                state.activeModuleIndex = initialModuleIndex;
+                const targetModule = courseData[state.activeModuleIndex];
+                
+                // Tenta selecionar a terceira aula (índice 2)
+                const thirdLessonIndex = 0;
+                if (targetModule.lessons.length > thirdLessonIndex) {
+                    state.activeLessonIndex = thirdLessonIndex;
+                } else if (targetModule.lessons.length > 0) {
+                    // Se não houver uma terceira aula, seleciona a primeira aula
+                    state.activeLessonIndex = 0;
+                } else {
+                    // Se não houver aulas no módulo, desativa a seleção
+                    state.activeModuleIndex = -1;
+                    state.activeLessonIndex = -1;
+                }
+            }
+        }
+
+        render(); // Renderiza o estado inicial (com ou sem seleção via URL)
+    });
+    </script>
+</body>
+</html>

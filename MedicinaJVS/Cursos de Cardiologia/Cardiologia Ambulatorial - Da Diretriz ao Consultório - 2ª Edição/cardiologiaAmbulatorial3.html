@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula selecionada */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Cardiologia Ambulatorial - Da Diretriz ao Consultório: 2ª Edição</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+        <!-- Ícones de usuário e notificações foram removidos daqui -->
+    </header>
+
+    <!-- A barra de navegação que estava aqui foi removida -->
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <!-- Alterado p-4 para py-2 px-4 para reduzir o preenchimento vertical -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+
+            <!-- Materiais de Estudo Movidos para abaixo do título da aula -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+
+            <!-- Materiais de Estudo foram movidos, então esta seção é removida daqui -->
+        </aside>
+    </main>
+
+    <!-- A barra de navegação inferior foi removida completamente. -->
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // NOVO MÓDULO: Cardiologia de Hospital - Dor Torácica
+        // Módulo 1 - Fundamentos de Cardiologia
+        modulesData.push({
+            id: 'module_fundamentos_cardiologia',
+            title: 'Módulo 1 - Fundamentos de Cardiologia',
+            path: 'Início / Módulo 1',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1EffXUn3NMAD9vM2GrZvQ_D5_3j3UFkqo/view?usp=sharing'),
+                title: 'Aula 01 - Fisiopatologia da Doença Arterial Coronária',
+                description: 'Fisiopatologia da Doença Arterial Coronária',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/13aoKf9dNPSCb4IOFe7nX85T9ZDyeO6vr/view?usp=sharing'),
+                title: 'Aula 02 - Insuficiência Cardíaca (Parte 1)',
+                description: 'Insuficiência Cardíaca',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fe5axl-AsF4pkRxJdgOpUBUh_6D5d_J_/view?usp=sharing'),
+                title: 'Aula 02 - Insuficiência Cardíaca (Parte 2)',
+                description: 'Insuficiência Cardíaca',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aY7FHdP6cXSy4LbbX2ZxtaiJO1Hd7UD4/view?usp=sharing'),
+                title: 'Aula 03 - Valvopatias',
+                description: 'Valvopatias',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KTIzvQPttpPfM11iRlVCINGBLOe0oyXh/view?usp=sharing'),
+                title: 'Aula 04 - Doenças do Pericárdio',
+                description: 'Doenças do Pericárdio',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vtJvFi9auh3oOkjmBHAOZCIoVs_4hVJE/view?usp=sharing'),
+                title: 'Aula 05 - Doenças da Aorta (Parte 1)',
+                description: 'Doenças da Aorta',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wcnNooBSntR7w9JgjLSKduA87jTkZH2Z/view?usp=sharing'),
+                title: 'Aula 05 - Doenças da Aorta (Parte 2)',
+                description: 'Doenças da Aorta',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vjP9Kc6jab-vslhH_NJf7Gyvqi_s5VFc/view?usp=sharing'),
+                title: 'Aula 06 - Miocardiopatias',
+                description: 'Miocardiopatias',
+                icon: 'fas fa-video'
+            }],
+            materials: [{
+                title: 'M1_Fisiopatologia da Doença Arterial Coronária_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/15q4hjna8F5B9rG86ekNbNeRG_gf-cfaQ/view?usp=sharing'
+            }, {
+                title: 'M1_Insuficiência cardíaca_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/16W-BFMvpfLR5cHCNdfqsnzZuy0K5Qo4-/view?usp=sharing'
+            }, {
+                title: 'M1_Insuficiência cardíaca.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1mMfK2j2-0I9nltmOjXuuC0lMy-TSw-ip/view?usp=sharing'
+            }, {
+                title: 'M1_Valvopatias_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/19dMG1a3bDSbVAFLgs8xoSW-ayd385j43/view?usp=sharing'
+            }, {
+                title: 'M1_Valvopatias.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1TX4KHdKkrQ2sUW_rLAcdmsEySRgBxWP2/view?usp=sharing'
+            }, {
+                title: 'M1_Doenças do Pericárdio_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/18IeSXPnDOiKk6yTB7iX_H49eiK8lp3H9/view?usp=sharing'
+            }, {
+                title: 'M1_Doenças do Pericárdio.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1jov2dve2omz_KSTY7hKKEKb7EiF5Ax-_/view?usp=sharing'
+            }, {
+                title: 'M1_Doenças da aorta.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/14cJJ1KULAy8k3E5rFYdYMxx4X5R3SF6e/view?usp=sharing'
+            }, {
+                title: 'M1_Doenças da aorta_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1SRe73lJXWMJIdhWnbNF8wz3A9hQ-3jrZ/view?usp=sharing'
+            }, {
+                title: 'M1_Miocardiopatias.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1DLCZnWi1q8PAR3Z3xKO7_WDPpf7_L5wp/view?usp=sharing'
+            }, {
+                title: 'M1_Miocardiopatias_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1O-Fk375EzHdYC9GpnJCmPZ_50qBHaF2r/view?usp=sharing'
+            }]
+        });
+
+        // Módulo 2 - Aprofundamento em Doenças Cardiovasculares Comuns
+        modulesData.push({
+            id: 'module_aprofundamento_dcv',
+            title: 'Módulo 2 - Aprofundamento em Doenças Cardiovasculares Comuns',
+            path: 'Início / Módulo 2',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bJzW0XEfIQBkToYYOtpIRlUYq08z0otY/view?usp=sharing'),
+                title: 'Aula 01 - Doença Coronariana Crônica',
+                description: 'Doença Coronariana Crônica',
+                icon: 'fas fa-video'
+            }, {
+                id: null,
+                title: 'Aula 02 - Insuficiência Cardíaca',
+                description: 'Aula sem vídeo disponível.',
+                icon: 'fas fa-video-slash'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ujvOEckb6tGtBq5w4RkVU1qxfaflIHlL/view?usp=sharing'),
+                title: 'Aula 03 - Doenças Valvares',
+                description: 'Doenças Valvares',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/108Q3P31okxXUiJLGg3nqa8lD7eNLg6v7/view?usp=sharing'),
+                title: 'Aula 04 - Dislipidemia',
+                description: 'Dislipidemia',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1vtJvFi9auh3oOkjmBHAOZCIoVs_4hVJE/view?usp=sharing'),
+                title: 'Aula 05 - Doenças da Aorta (Parte 1)',
+                description: 'Doenças da Aorta',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1wcnNooBSntR7w9JgjLSKduA87jTkZH2Z/view?usp=sharing'),
+                title: 'Aula 05 - Doenças da Aorta (Parte 2)',
+                description: 'Doenças da Aorta',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i5zu2Wyw4zRu3wYj8FPhgYetCzDydMbC/view?usp=sharing'),
+                title: 'Aula 06 - Cardiopatias Congênitas - Parte 1',
+                description: 'Cardiopatias Congênitas: Parte I',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OYnozGEvrgu5AbupHZs0kWaO0GW00T93/view?usp=sharing'),
+                title: 'Aula 07 - Cardiopatias Congênitas - Parte 2',
+                description: 'Cardiopatias Congênitas: Parte II',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1DO83RMu_ylrEBqqrXr7MEF4MflKfqVIi/view?usp=sharing'),
+                title: 'Aula 08 - Taquicardias Supraventriculares',
+                description: 'Taquicardias Supraventriculares',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QkjVpg9BPy0hB8RmT7-c9NQ1Az_jULC5/view?usp=sharing'),
+                title: 'Aula 09 - Hipertensão Arterial Sistêmica',
+                description: 'Hipertensão Arterial Sistêmica',
+                icon: 'fas fa-video'
+            }],
+            materials: [{
+                title: 'M2_Doença coronariana crônica.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1-KYwG7nywLqy8EibAtUZUYrfyA-NQNPK/view?usp=sharing'
+            }, {
+                title: 'M2_Doença coronariana crônica_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1YLl9z5TE99SMQiO8v91WU3Ij3eML1lrf/view?usp=sharing'
+            }, {
+                title: 'M2_Insuficiência Cardíaca Crônica.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1B5kPfAl4FPhsWZosa-gvWv7s-tflb6qP/view?usp=sharing'
+            }, {
+                title: 'M2_Insuficiência Cardíaca Crônica_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1pOQNuF8y6Vclei4At4uOukQcj6xrmieq/view?usp=sharing'
+            }, {
+                title: 'M2_Valvopatias_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1CoxWaYWPsp-LIbXaTAUfHCRFWr_7rGb0/view?usp=sharing'
+            }, {
+                title: 'M2_Valvopatias.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1FYnj2F5205BA9K9d7eTqPIZYbEjKA_VP/view?usp=sharing'
+            }, {
+                title: 'M2_Dislipidemias_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1oMFd_38NFSLYtKh6UnufnO7d8O21-604/view?usp=sharing'
+            }, {
+                title: 'M2_Dislipidemias.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1tSwEQadtgyyXSVwFxhDbh41Vr1XUSIJn/view?usp=sharing'
+            }, {
+                title: 'M2_Cardiopatias Congênitas 1.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1Rgi7m1IDqKEk9oox8v6WKjmClcIY7v2a/view?usp=sharing'
+            }, {
+                title: 'M2_Cardiopatias Congênitas 1_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1mDXW88t1vEfiXxsCOIa8OfvPh1Ol_gnu/view?usp=sharing'
+            }, {
+                title: 'M2_Cardiopatias Congênitas 2_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1ZvtTi-vuWZFFbJPQNZtOsMqYrbiVkwcx/view?usp=sharing'
+            }, {
+                title: 'M2_Cardiopatias Congênitas 2.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1iUVKxciVDMR0LDDX5WPHNuCmun_l4E5B/view?usp=sharing'
+            }, {
+                title: 'M2_Taquicardias supraventriculares_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1A2-mkN0esMLpRZuCUL6R2PHj7GbsfTmX/view?usp=sharing'
+            }, {
+                title: 'M2_Taquicardias supraventriculares.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1Lk9JNje06dWKxwxAsn41mj0YpSfXxV5n/view?usp=sharing'
+            }, {
+                title: 'M2_HAS_Diagnóstico e tratamento.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/108gLlu69r13taTE1X_bRgSlvv9iBcCco/view?usp=sharing'
+            }, {
+                title: 'M2_HAS_Diagnóstico e tratamento_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1OSXPDk41bYseSG3ylxL9yuM1FcwbBI9y/view?usp=sharing'
+            }]
+        });
+
+        // Módulo 3 - Tópicos Avançados e Discussões de Caso em Cardiologia
+        modulesData.push({
+            id: 'module_topicos_avancados',
+            title: 'Módulo 3 - Tópicos Avançados e Discussões de Caso em Cardiologia',
+            path: 'Início / Módulo 3',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SxvIavdI-I1brmZPIe0lUV5nFVSJtIQ_/view?usp=sharing'),
+                title: 'Aula 01 - Investigação de HAS Secundária: Como e Quando?',
+                description: 'Investigação de HAS Secundária: Como e Quando?',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/16q4MfZ87RwwH8QCwB8mK5eenrvQ3KqaO/view?usp=sharing'),
+                title: 'Aula 02 - Síndrome Hipertensiva da Gestação',
+                description: 'Síndrome Hipertensiva da Gestação',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/18cS1SZr9rrF7yUh5W2pbHzlqFkh_ZVdt/view?usp=sharing'),
+                title: 'Aula 03 - Tratamento de Angina Refratária',
+                description: 'Tratamento de Angina Refratária',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nbk-_9A-U9H38pR_3i26_QCt8-Knxtin/view?usp=sharing'),
+                title: 'Aula 04 - Como Otimizar a Terapêutica no Paciente com Insuficiência Cardíaca?',
+                description: 'Como Otimizar a Terapêutica no Paciente com Insuficiência Cardíaca?',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Db6PfP2Lwaa8yP0FJUAC4X6fn47VYvgL/view?usp=sharing'),
+                title: 'Aula 05 - Fibrilação Atrial Paroxística em Pacientes Jovens',
+                description: 'Fibrilação Atrial Paroxística em Pacientes Jovens',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KlcwmJqL6tCGTrxtNaFD0GH9SUgPlE_C/view?usp=sharing'),
+                title: 'Aula 06 - Estenose Aórtica: Baixo Fluxo e Baixo Gradiente - Essa Entidade Existe?',
+                description: 'Estenose Aórtica: Baixo Fluxo e Baixo Gradiente - Essa Entidade Existe?',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1etpfPYkECqeEbFNOr4WG_8ewblv2lWB7/view?usp=sharing'),
+                title: 'Aula 07 - Prolapso Valvar Mitral: O Que é Importante Saber Sobre Isso?',
+                description: 'Prolapso Valvar Mitral: O Que é Importante Saber Sobre Isso?',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RSD0TbE1BNEHXjBsNbZmPbgCTgdTJs7M/view?usp=sharing'),
+                title: 'Aula 08 - Indicação de TAVI: Pra Quem?',
+                description: 'Indicação de TAVI: Pra Quem?',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1qnfkMrhI0ALML6nN_oa2JUimN7__cFQd/view?usp=sharing'),
+                title: 'Aula 09 - Como Diagnosticar e Manejar Hipercolesterolemia Familiar',
+                description: 'Como Diagnosticar e Manejar Hipercolesterolemia Familiar',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17JxId4RyWXifZ9Mp6i9ulDPzgzOUvP_R/view?usp=sharing'),
+                title: 'Aula 10 - Quando Corrigir Forame Oval Patente: Existe Indicação?',
+                description: 'Quando Corrigir Forame Oval Patente: Existe Indicação?',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UmoOVpoM3iEmp6HKo5FiNRpDpDzwR1rc/view?usp=sharing'),
+                title: 'Aula 11 - Insuficiência Cardíaca com Fração de Ejeção Preservada',
+                description: 'Insuficiência Cardíaca com Fração de Ejeção Preservada',
+                icon: 'fas fa-video'
+            }],
+            materials: [{
+                title: 'M3_Investigação de HAS secundária – Como e quando_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1-p5e2n9k3k3X1owFESIckZL7Sy06OK82/view?usp=sharing'
+            }, {
+                title: 'M3_Investigação de HAS secundária – Como e quando.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/18yRlL95aVLdc1viLKLihnp5lF0M1dE3H/view?usp=sharing'
+            }, {
+                title: 'M3_Síndrome hipertensiva da gestação_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/16w-6qSFniQYbyCGgMCJJij83FstPrOdT/view?usp=sharing'
+            }, {
+                title: 'M3_Síndrome hipertensiva da gestação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1M4v-dbVa5ppMcSM5qnNohlLUIyOyA4Zl/view?usp=sharing'
+            }, {
+                title: 'M3_Tratamento de angina refratária_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1Z6tJeBVjFIhdzD4bkPhTUn4ylNFNZYDp/view?usp=sharing'
+            }, {
+                title: 'M3_Tratamento de angina refratária.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1hegqWTkC4i3o0kIKoa5FeTbgk1tphuI7/view?usp=sharing'
+            }, {
+                title: 'M3_Como otimizar terapêutica em pacientes com IC crônica_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/11uw8vP-lLsU45cy8VOPwMTsZu5xE7hoA/view?usp=sharing'
+            }, {
+                title: 'M3_Como otimizar terapêutica em pacientes com IC crônica.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1sNjfqjJjlF-ZdF7qF0MnSIDL1YHu9Vb9/view?usp=sharing'
+            }, {
+                title: 'M3_Fibrilação atrial paroxística em pacientes jovens.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1-F1K97iYVF_VqkNOp1QhyAMnuzcKGvwv/view?usp=sharing'
+            }, {
+                title: 'M3_Fibrilação atrial paroxística em pacientes jovens_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1WnbUKucognNOtrvAYLFBaYhYdyKt84br/view?usp=sharing'
+            }, {
+                title: 'M3_Estenose aórtica baixo fluxo e baixo gradiente_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1kUoRs19UexGxsPKaAG48a7SX57o2OqR8/view?usp=sharing'
+            }, {
+                title: 'M3_Estenose aórtica baixo fluxo e baixo gradiente.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1nKxn74JZ3wpWf-GbjDXP1kMfEjlY8fzf/view?usp=sharing'
+            }, {
+                title: 'M3_Prolapso valvar mitral.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1YAayNopTl5ctncaHwLmTcav3km0xH-74/view?usp=sharing'
+            }, {
+                title: 'M3_Prolapso valvar mitral_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1yrQWIEXfQmSn2i1J_DxcIhGl3aL8uccJ/view?usp=sharing'
+            }, {
+                title: 'M3_Indicação de TAVI.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1ikI9z2esYcb-vJthV67Ik9FXHO91DTHV/view?usp=sharing'
+            }, {
+                title: 'M3_Indicação de TAVI_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1sdz5SWUkQGmHANWU7iqYJj4pttV2x1-K/view?usp=sharing'
+            }, {
+                title: 'M3_Como diagnosticar e manejar hipercolesterolemia familiar.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/16qOX_08MgzHbjfcPTm6OjblzdLkfo5x3/view?usp=sharing'
+            }, {
+                title: 'M3_Como diagnosticar e manejar hipercolesterolemia familiar_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1RiDzu88N7_J5EtMS7lH9erPMDCgKtoKo/view?usp=sharing'
+            }, {
+                title: 'M3_Quando corrigir forame oval patente_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1P_UzwOEiPEHVR94ItzQcsM62rI1osn6K/view?usp=sharing'
+            }, {
+                title: 'M3_Quando corrigir forame oval patente.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1y9e0D85jy-Z77b0tZag7utrjIvXxOygS/view?usp=sharing'
+            }, {
+                title: 'M3_Insuficiência cardíaca com fração de ejeção preservada_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1SYpSXu-N9xJZtSomaoxIF71XCWLSeEZt/view?usp=sharing'
+            }, {
+                title: 'M3_Insuficiência cardíaca com fração de ejeção preservada.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1z50lKTqWw5iqlWTfWuigPiPUseJUhMTa/view?usp=sharing'
+            }]
+        });
+
+        // Módulo 4 - Diretrizes e Condutas em Cardiologia
+        modulesData.push({
+            id: 'module_diretrizes_condutas',
+            title: 'Módulo 4 - Diretrizes e Condutas em Cardiologia',
+            path: 'Início / Módulo 4',
+            videos: [{
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kPKYDctvhZK8pD0JH5A3kdMKZC69FUJH/view?usp=sharing'),
+                title: 'Aula 01 - Diretrizes de Síndrome Coronariana Aguda com Supradesnível de ST',
+                description: 'Diretrizes de Síndrome Coronariana Aguda com Supradesnível de ST',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Qpe0-61vYQ78P3Jki3kKCqe4yzXUSfNJ/view?usp=sharing'),
+                title: 'Aula 02 - Diretrizes de Fibrilação Atrial',
+                description: 'Diretrizes de Fibrilação Atrial',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U6GuEqMyFP0s1xR3GUaJYKF4B71WZoE1/view?usp=sharing'),
+                title: 'Aula 03 - Diretrizes de Miocardites e Pericardites',
+                description: 'Diretrizes de Miocardites e Pericardites',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1yzYIpz4cAFk4AojGh-JEwZyUgLWgyqE-/view?usp=sharing'),
+                title: 'Aula 04 - Diretrizes de Doenças da Aorta',
+                description: 'Diretrizes de Doenças da Aorta',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TVaPnBrY29cv9C22isfFlpRNmM8LTdnq/view?usp=sharing'),
+                title: 'Aula 05 - Diretrizes de Assistência Circulatória Mecânica',
+                description: 'Diretrizes de Assistência Circulatória Mecânica',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1J3rXT7KneQPlG2CBTUZGaPHdQ2KsMdOx/view?usp=sharing'),
+                title: 'Aula 06 - Diretrizes de Transplante Cardíaco',
+                description: 'Diretrizes de Transplante Cardíaco',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/10L8FbAiTPTAXUopsTtHN2jo-wIwLYI9k/view?usp=sharing'),
+                title: 'Aula 07 - Diretrizes de Intervenção Percutânea',
+                description: 'Diretrizes de Intervenção Percutânea',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1J_vAxLDNmEk436lHzKiVD-COZVGE6wKO/view?usp=sharing'),
+                title: 'Aula 08 - Diretrizes de Cardioncologia',
+                description: 'Diretrizes de Cardioncologia',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kWoXuRUH5v9kWHEz2Weo9RwGSsEaMewf/view?usp=sharing'),
+                title: 'Aula 09 - Diretrizes de Parada Cardiorrespiratória',
+                description: 'Diretrizes de Parada Cardiorrespiratória',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1s8BmNRUpcdVjFeksu55Qrnpkuz-DZQdu/view?usp=sharing'),
+                title: 'Aula 10 - Diretrizes de Síndrome Coronariana Aguda sem Supradesnível de ST',
+                description: 'Diretrizes de Síndrome Coronariana Aguda sem Supradesnível de ST',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OxViEy0wCbVYR-mSRnM2mnj6o27Y5Y6n/view?usp=sharing'),
+                title: 'Aula 11 - Diretrizes de Endocardite Infecciosa',
+                description: 'Diretrizes de Endocardite Infecciosa',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dD1oOG1oXW9f994V-cH32E3waMO7Sp7x/view?usp=sharing'),
+                title: 'Aula 12 - Diretrizes de Valvopatias',
+                description: 'Diretrizes de Valvopatias',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/17m1kITVozlCz39WZIGNaKlHNhHkqpgLh/view?usp=sharing'),
+                title: 'Aula 13 - Diretrizes de Tromboembolismo Pulmonar',
+                description: 'Diretrizes de Tromboembolismo Pulmonar',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jYdmivohZdyIiDdmWh2frOkkrCouMROY/view?usp=sharing'),
+                title: 'Aula 14 - Diretrizes de Dislipidemia',
+                description: 'Diretrizes de Dislipidemia',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KjE7G30GdvCuFgNf5LE8khgLRzN242oI/view?usp=sharing'),
+                title: 'Aula 15 - Diretrizes de Hipertensão Arterial',
+                description: 'Diretrizes de Hipertensão Arterial',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1utljjb3cZNeAsIfZu_GImTocjBUY4dxp/view?usp=sharing'),
+                title: 'Aula 16 - Diretrizes de Avaliação Cardiovascular Perioperatória',
+                description: 'Diretrizes de Avaliação Cardiovascular Perioperatória',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1CSK82avQ5znAPzwlbjjQqfYEHV8cRIpg/view?usp=sharing'),
+                title: 'Aula 17 - Diretrizes de Insuficiência Cardíaca',
+                description: 'Diretrizes de Insuficiência Cardíaca',
+                icon: 'fas fa-video'
+            }, {
+                id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/12rTyXYXpdhcnXoqconkvTD56c0JlF61a/view?usp=sharing'),
+                title: 'Aula 18 - Diretrizes de Dispositivos Eletrônicos Implantáveis',
+                description: 'Diretrizes de Dispositivos Eletrônicos Implantáveis',
+                icon: 'fas fa-video'
+            }],
+            materials: [{
+                title: 'M4_Diretrizes de SCA com Supradesnível de ST.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1iHL2zc3y9FRvyKBuQwd1d-4zi6kYsDwi/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de SCA com Supradesnível de ST_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1oRenMG34Nw1FV5-OjMyKZGIX6yOeKPLZ/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Fibrilação Atrial.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1Q_4svtbyCiAABz4L5317u7hsZmXP-LqH/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Fibrilação Atrial_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1mFWrPk_bBl6eimH6GtrODf2EvnhXS8Pu/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Miocardites e Pericardites.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/109cpsHtgmSB8ZcbYKP12x2-lvFlSi3YS/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Miocardites e Pericardites_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1xx4iEBsUKafcDKn8geb6vbPr6aMh9_Lu/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Doenças da Aorta_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1mqKswYy5ZoGmivuKFvyZfhlZZ1WNC_AL/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Doenças da Aorta.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1nis1FmK0QrJYtWN100nYY326b03qXPJi/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Assistência Circulatória Mecânica.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1_b-fKuthiGYQROaqDWeknhy06BYAdqYF/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Assistência Circulatória Mecânica_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1yrYOOJ0t3ryuAdHW6lEXXiP6Nb3otO2D/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Transplante Cardíaco.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1EHdRSRstI7TWnSCGAZC95d2ZZciu-ZpU/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Transplante Cardíaco_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1j1d7-ouYZDKVHWbcdpw7BWJsiTvLYcXY/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Intervenção Percutânea_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1RnoHIPI7ziynJDZRPsv40AUhq7JnB9Sb/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Intervenção Percutânea.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1USeGiZS-LMYhP7oP3IzXqD33ZqyIt46Z/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Cardioncologia_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1PKNIvQejKgE0yXv28obgCJozPlHHS1oE/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Cardioncologia.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1YrLBvhYo6dhV0I-F5RjNr9SpW8yc-JXt/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Parada Cardiorrespiratória_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1NOejZYC5oqg0Le1nFbUhwGwPMt6LPK9W/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Parada Cardiorrespiratória.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1OH08YmLXPazyiB8oH4pqIdcmyOtAqiRZ/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de SCA sem supradesnível de ST_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1UkMsL3WHbqaeF4uXmPlTjUY8RZ4GdZNN/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de SCA sem supradesnível de ST.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1hWcaPnwnzCkXBckRTO5CxSljW0r1SzOK/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Endocardite Infecciosa.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/18b5U-BYnoH2o7p5gZiTnqOlc-G__GsoW/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Endocardite Infecciosa_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1w8wKcMMCOAmIGSQ-f_KOVOcFGnhcIuDB/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Valvopatias_anotacao.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/11_hvDbZytfzCScM25IgXx--mwyRjC4Jj/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Valvopatias.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1SUnpzSsPjnAjoOuFt-3bWRvP_xeGLdlo/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Tromboembolismo Pulmonar_anotacao.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1EztppDncKWUBOf0PF43wXL8Nal4obU-8/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Tromboembolismo Pulmonar.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1FxzhM4bTObBaBnL8Sw9XiCNmyz7fNhsw/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Dislipidemia_anotacao.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1nJ20i1x1Nxbb5TlTiovlQi_K4IJJ49eA/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Dislipidemia.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1otNsOtQMTkxDEbijxaZTB-xIBPQOq_pC/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Hipertensão Arterial.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/12OYdXk4VsbZfOuTODCSlKigJF6XOeKmu/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Hipertensão Arterial_anotacao.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1gc7kp2sLGVJ724zHDU_TFv0-LcCdCjJf/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Avaliação Cardiovascular Perioperatória_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1HDSalO9yPDmmiBn63zt0knpjqi6-IQQi/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Avaliação Cardiovascular Perioperatória.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1wjwbYHR6c6P8OHz0S0TVTrlGDniRMOO5/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Insuficiência Cardíaca.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1KewA5Inwz7DQHc52RXVBPmN85LxWCGvG/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Insuficiência Cardíaca_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1tOpXDKQoHdoLMaafEoveVAd1L3E8jKKO/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Dispositivos Eletrônicos Implantáveis_anotação.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1F7LfROW2Rpw20pih1mnGwbAy6iGTf3GL/view?usp=sharing'
+            }, {
+                title: 'M4_Diretrizes de Dispositivos Eletrônicos Implantáveis.pdf',
+                description: 'Material de estudo complementar.',
+                icon: 'fas fa-file-pdf',
+                link: 'https://drive.google.com/file/d/1HCYuQ2mLI02JceWdqDrkUYlFgGftu608/view?usp=sharing'
+            }]
+        });
+
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview'); // Added replace for drive_link
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement) return;
+
+            // Encontra o módulo selecionado
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstItemId = null;
+            let firstItemTitle = null;
+            let firstItemType = null;
+
+            // Renderiza os vídeos
+            module.videos.forEach(item => {
+                const itemDescription = item.description || '';
+                // Captura o ID e título do primeiro item para carregamento inicial (prioriza o primeiro vídeo do módulo)
+                if (firstItemId === null) {
+                    firstItemId = item.id;
+                    firstItemTitle = item.title;
+                    firstItemType = 'video';
+                }
+
+                videosHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Renderiza os materiais
+            module.materials.forEach(item => {
+                const itemDescription = item.description || '';
+                // Captura o ID e título do primeiro item para carregamento inicial, se ainda não houver um primeiro item (prioriza vídeos)
+                if (firstItemId === null && module.videos.length === 0) {
+                    firstItemId = item.link; /* Usar o link como ID para materiais para seleção */
+                    firstItemTitle = item.title;
+                    firstItemType = 'material';
+                }
+
+                materialsHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            videosContainer.innerHTML = videosHtml;
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstItemId && firstItemTitle && firstItemType) {
+                if (firstItemType === 'video') {
+                    loadVideo(firstItemId, firstItemTitle);
+                } else if (firstItemType === 'material') {
+                    loadMaterial(firstItemId, firstItemTitle);
+                }
+            } else {
+                // Limpa o player e o título se o módulo não tiver conteúdo
+                document.getElementById('contentPlayer').src = '';
+                document.getElementById('lessonTitle').textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+        }
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Clear existing options before populating
+            moduleSelector.innerHTML = '';
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[2].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[2].id);
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

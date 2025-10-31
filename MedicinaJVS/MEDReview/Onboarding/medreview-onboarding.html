@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">MEDReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_onboarding', title: 'ONBOARDING', content: [
+                { type: 'group', video: { title: 'Aula 01 - Boas-vindas!', link: 'https://drive.google.com/file/d/1dXpIetOEEcgFzS8QObgGihrqwRkwFPXX/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 02 - Método MED Review', link: 'https://drive.google.com/file/d/1FClEfWZAGmQUa1eomxtNaxbIpwfa3GJ1/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 03 - Cronograma', link: 'https://drive.google.com/file/d/14Ajlapz1ulucpecXt8qUXTZTF5EjlRZd/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 04 - Aulas', link: 'https://drive.google.com/file/d/1mo3KtHkMyas7ZwsDE_7sLJ8i8nT6qXVf/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 05 - Aulas na Prática', link: 'https://drive.google.com/file/d/14T1qAMNlP0gEFc_Swe-VWYOOmcgK_NNY/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 06 - Flashcards', link: 'https://drive.google.com/file/d/1A-FH3pRfiFJokpMbTHzzqzoLIWLTOWZ_/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 07 - Flashcards na Prática', link: 'https://drive.google.com/file/d/1O95yuoKkrgtqdZ8aXdP3eLZnmLqSOmvB/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 08 - Questões', link: 'https://drive.google.com/file/d/16sOoscSI8NAjhxQ1XQOk6agL5xp-pRSN/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 09 - Questões na Prática', link: 'https://drive.google.com/file/d/15ACu_2k5gLD3iw7Ktk5_l4cj7FmQyF36/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 10 - Onde Tirar Dúvidas?', link: 'https://drive.google.com/file/d/1QGlKH3MV5hwO-iLvM0zImcO-tXPZWooo/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 11 - Feedback', link: 'https://drive.google.com/file/d/1hf_EHDLBNdXO3843Q4OqlWxlfbKeruOL/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 12 - Suporte', link: 'https://drive.google.com/file/d/1lGAXS8RFuDZhNXLzlYs3mrNS6RLAuHBX/view?usp=sharing' }, materials: [] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') {
+                const titleElement = document.getElementById('itemTitle');
+                if (itemTitle) {
+                    titleElement.textContent = itemTitle;
+                }
+                return;
+            }
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials && selectedGroup.materials.length > 0) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            } else {
+                materialsContainer.innerHTML = '<p class="text-gray-400">Nenhum material de apoio para esta aula.</p>';
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[0].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[0].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
+

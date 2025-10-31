@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PS Zerado</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos personalizados */
+        body {
+            background-color: #111111;
+            font-family: 'Inter', sans-serif;
+            color: #ffffff;
+        }
+        .header-bg {
+            background-color: #1a1a1a;
+        }
+        .card {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 2 / 3;
+            display: flex; /* Módulos visíveis por padrão */
+            flex-direction: column;
+            justify-content: flex-end;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none; /* Remove sublinhado dos links */
+            color: white;
+        }
+        .card:hover:not(.locked) {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+        /* Estilo para módulos bloqueados */
+        .card.locked {
+            cursor: not-allowed;
+        }
+        .card.locked .card-image {
+            filter: grayscale(80%);
+        }
+        .card.locked .card-icon-top-left {
+            background-color: #555;
+        }
+        .card-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            transition: filter 0.3s ease;
+        }
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 30%, rgba(0, 0, 0, 0.1) 70%);
+            z-index: 2;
+        }
+        .card-content {
+            position: relative;
+            z-index: 3;
+            padding: 1.5rem;
+            width: 100%;
+        }
+        .card-icon-top-left {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            z-index: 3;
+            background-color: #27ae60;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #111;
+        }
+         .card-logo-bottom-right {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 3;
+            opacity: 0.8;
+           }
+           .hero-section {
+            height: 40vh;
+            background-image: url('https://placehold.co/1920x1080/1a1a1a/e0e0e0?text=PS+ZERADO&font=montserrat');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+           }
+           .hero-overlay {
+            background-color: rgba(0,0,0,0.5);
+           }
+           .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            background-color: #e53e3e;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+           }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#111111] text-white">
+
+    <!-- Header -->
+    <header class="header-bg shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0">
+                     <div class="bg-red-600 px-2 py-1 text-white font-bold text-lg rounded">PS ZERADO</div>
+                </div>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-gray-300 hover:text-white transition">Home</a>
+                    <a href="#" class="text-gray-300 hover:text-white transition">Suporte</a>
+                    <a href="#" class="text-gray-300 hover:text-white transition">FAQ</a>
+                    <a href="#" class="text-gray-300 hover:text-white transition">Suporte WhatsApp</a>
+                </nav>
+                <div class="hidden md:flex items-center space-x-6">
+                    <button class="text-gray-300 hover:text-white transition"><i data-lucide="search" class="w-5 h-5"></i></button>
+                    <button class="relative text-gray-300 hover:text-white transition">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span class="notification-badge">1</span>
+                    </button>
+                    <button class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-gray-300 hover:bg-gray-500 transition"><i data-lucide="user" class="w-5 h-5"></i></button>
+                </div>
+                <div class="md:hidden"><button class="text-gray-300 hover:text-white"><i data-lucide="menu" class="w-6 h-6"></i></button></div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-section flex items-center justify-center text-center">
+             <div class="absolute inset-0 hero-overlay"></div>
+        </section>
+
+        <!-- Course Modules Grid -->
+        <section class="py-12 sm:py-16 lg:py-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div id="modules-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                    <!-- Módulos serão inseridos aqui dinamicamente pelo JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#0a0a0a] mt-12 py-8">
+        <div class="container mx-auto px-4 text-center text-gray-400">
+            <p>&copy; 2024 PS Zerado. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            lucide.createIcons();
+
+            // Função para slugificar o texto (converter para URL amigável)
+            const slugify = text => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+            // Definição dos módulos do curso
+            const modules = [
+                // Para "Comunidade TPSZ", o URL é definido explicitamente como 'treinamento.html'
+                { title: 'Comunidade TPSZ', type: 'community', unlocked: true, image: 'https://cdn.areademembros.com/cache/qs3z3ReGKefmqNUPFQjrOFvZDisasJIdPghDPsh0-550x550-resized.jpg', url: 'Treinamento PS Zerado/treinamentoPSZerado1.html' },
+                // Para os demais módulos, o URL será gerado dinamicamente com a extensão .html
+                { title: 'Guia de Prescrições', type: 'guide', unlocked: true, image: 'https://cdn.areademembros.com/cache/gM6s9o77UJs8yDZpLc1rau9GzHrrREciiq5TGlsw-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado2.html' },
+                { title: 'Comece por aqui', type: 'start', unlocked: true, image: 'https://cdn.areademembros.com/cache/s40CoHe5A21qhAihyGMZEinJUCD5mwDBnxA0bIUD-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado3.html' },
+                { title: 'Queixas mais comuns no PS', type: 'common', unlocked: true, image: 'https://cdn.areademembros.com/cache/IJHxQkju0VrMTfdmXw6f7NgqWHIK7Www7jtLjcO7-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado4.html' },
+                { title: 'Cardiologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/exIxtEhCrjNNztkxoB5BIp0qaCpZNcgpFy7cakJS-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado5.html' },
+                { title: 'Gastroenterologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/AYBshJGxUimXSkG4gBura5sPNw4UHj0GaMBeAO13-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado6.html' },
+                { title: 'Nefrologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/n6pX6DjIo4jZm7cUE65GdZketDGX4clyanR9Ptgu-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado7.html' },
+                { title: 'Neurologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/9aVPBGcXkTn5LzSqdrE9kl9dLYeeJYzpfIxwvUSy-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado8.html' },
+                { title: 'Pneumologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/2McN9GyULyqy94u88XfLfuZXveV7xB4DOJqxQg47-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado9.html' },
+                { title: 'Endocrinologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/RNvekLlmyDRqbVtZAJB7108gmgGCHH5BFLgCzEIV-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado10.html' },
+                { title: 'Infectologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/eB6gAMfuXslSaQZtUXC8PzHqefexsGew5NCaQ0X6-550x550-resized.jpg', url: 'Treinamento PS Zerado/treinamentoPSZerado11.html' },
+                { title: 'Reumatologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/4xOyMZvy2sidZ3mKOKFYC90bmC5FnYbU1dz01jOs-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado12.html' },
+                { title: 'Psiquiatria', unlocked: true, image: 'https://cdn.areademembros.com/cache/gTIikV9G4b2LfSoiXjCPXDGRY9mdTZuZf3EsvAzX-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado13.html' },
+                { title: 'Dermatologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/hL6jTOdHe9hfzLvBYU3BQUqhQWkLHBXMGocBAcro-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado14.html' },
+                { title: 'Ginecologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/NQAyq5wpBLWmglSQpErYezCqERuDClRjcsl6hIlt-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado15.html' },
+                { title: 'Pediatria', unlocked: true, image: 'https://cdn.areademembros.com/cache/kUsddytc98SjUvEfSh1khPxF1chwo0LFbcuZkvap-550x550-resized.jpg', url: 'Treinamento PS Zerado/treinamentoPSZerado16.html' },
+                { title: 'Traumatologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/dSypY8mflmBBhncpgZNcnooefUz08WuO13vDO9F0-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado17.html' },
+                { title: 'Toxicologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/N4Ov6Esg05LjdHAsS0RZafSbPWGr5eq2g3vQxuhr-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado18.html' },
+                { title: 'Antibióticos', unlocked: true, image: 'https://cdn.areademembros.com/cache/2dPCqlEJE4jNLQkMBmRgreIZDtoFdQdvpG2vfXde-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado19.html' },
+                { title: 'Ventilação Mecânica', unlocked: true, image: 'https://cdn.areademembros.com/cache/rs7XaxEWWpHUnUPQULB2F3l8GCtPHBuIlKQLwxaf-550x550-resized.png', url: 'Treinamento PS Zerado/treinamentoPSZerado20.html' },
+                { title: 'Eletrocardiograma', unlocked: true, image: 'https://cdn.areademembros.com/cache/qIOKC1uCP3woDNaSo57vRkShywcpjabXkl36vktR-550x550-resized.jpg', url: 'Treinamento PS Zerado/treinamentoPSZerado21.html' },
+                { title: 'Radiologia', unlocked: true, image: 'https://cdn.areademembros.com/cache/wNHwy1IVUVmMPR9kYfOKn6cTALrqSd0IO3SZhHXI-550x550-resized.jpg', url: 'Treinamento PS Zerado/treinamentoPSZerado22.html' },
+                { title: 'Procedimentos', unlocked: true, image: 'https://cdn.areademembros.com/cache/kh3ANysKbfABnWqnHjskuCHKcMhKkI9se1lhQBqK-550x550-resized.jpg', url: 'Treinamento PS Zerado/treinamentoPSZerado23.html' }
+            ].map(m => ({ 
+                ...m, 
+                // Se a propriedade 'url', url: 'Treinamento PS Zerado/treinamentoPSZerado3.html' já existir no módulo, use-a. Caso contrário, gere um URL slugificado com '.html'
+                url: m.url || `/curso/${slugify(m.title)}.html` 
+            }));
+
+            const grid = document.getElementById('modules-grid');
+            
+            // Gerar HTML para todos os cards
+            modules.forEach(module => {
+                // Determina o ícone com base no status de desbloqueio
+                const icon = module.unlocked ? 'check' : 'lock';
+                
+                // Conteúdo HTML padrão para o título do card
+                let contentHtml = `<h2 class="text-3xl font-black uppercase">${module.title}</h2>`;
+
+                // Estrutura interna do card
+                const cardInnerHtml = `
+                    <img src="${module.image}" alt="${module.title}" class="card-image"/>
+                    <div class="card-overlay"></div>
+                    <div class="card-icon-top-left">
+                       <i data-lucide="${icon}" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div class="card-content">
+                        ${contentHtml}
+                    </div>
+                    <div class="card-logo-bottom-right">
+                       <div class="bg-red-600 px-2 py-0.5 text-white font-bold text-xs rounded">PS</div>
+                    </div>
+                `;
+
+                // Determina se o card será um link (se desbloqueado) ou apenas uma div (se bloqueado)
+                let finalCardHtml;
+                if (module.unlocked) {
+                    finalCardHtml = `<a href="${module.url}" class="card">${cardInnerHtml}</a>`;
+                } else {
+                    finalCardHtml = `<div class="card locked">${cardInnerHtml}</div>`;
+                }
+                grid.innerHTML += finalCardHtml;
+            });
+
+            // Recriar todos os ícones da biblioteca Lucide após a inserção no DOM
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

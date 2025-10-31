@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curso de Produtividade</title>
+    <!-- Incluindo Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca de ícones Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* bg-gray-800 */
+            overflow: hidden; /* Evita a rolagem do body principal */
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        /* Scrollbar customizada para a playlist */
+        #playlist-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #playlist-container::-webkit-scrollbar-track {
+            background: #111827; /* bg-gray-900 */
+        }
+        #playlist-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        #playlist-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="main-view" class="flex flex-col lg:flex-row h-screen">
+        <!-- Coluna Principal (Player de Vídeo ou Placeholder) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col bg-gray-800">
+            <header class="flex items-center justify-between mb-4">
+                <h2 id="current-view-title" class="text-2xl font-bold text-white">Produtividade</h2>
+            </header>
+            <div id="player-container" class="flex-1 flex flex-col items-center justify-center">
+                 <!-- Placeholder inicial -->
+                <div id="initial-placeholder" class="text-center text-gray-500">
+                    <i data-lucide="play-circle" class="w-24 h-24 mx-auto mb-4 text-gray-600"></i>
+                    <h3 class="text-2xl font-semibold">Selecione uma aula na playlist</h3>
+                    <p>O conteúdo será exibido aqui.</p>
+                </div>
+                <!-- Iframe para o vídeo -->
+                <div id="lesson-view" class="hidden w-full h-full flex flex-col">
+                    <h1 id="lesson-view-title" class="text-xl lg:text-2xl font-bold mb-4 text-center"></h1>
+                    <div class="relative w-full max-w-5xl mx-auto aspect-video bg-black rounded-lg shadow-2xl">
+                        <iframe id="lesson-view-iframe" class="w-full h-full rounded-lg" src="" allow="autoplay; fullscreen" frameborder="0"></iframe>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Coluna da Direita (Playlist) -->
+        <aside id="playlist-container" class="w-full lg:w-96 bg-gray-900 p-4 flex-shrink-0 flex flex-col overflow-y-auto">
+            <div id="course-playlist-content" class="space-y-4">
+                <!-- O conteúdo da playlist será gerado aqui pelo JavaScript -->
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        const courseData = [
+            {
+                moduleTitle: "Produtividade",
+                lessons: [
+                    {
+                        title: "Introdução",
+                        resources: [
+                            { type: 'video', title: "Boas vindas", src: "https://drive.google.com/file/d/131tGTwc6ClyHSAcW5DySGuDz1Basgx5J/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Como estabelecer novos hábitos",
+                        resources: [
+                            { type: 'video', title: "Princípios", src: "https://drive.google.com/file/d/1BdvxZpkIJw2ujRs2N6K9OH1-_OaFb07Z/view?usp=sharing" },
+                            { type: 'video', title: "O que Michelangelo e Michonne...", src: "https://drive.google.com/file/d/1xsbbAEmWty0UYhyOu4sJsdkL4-9QRhje/view?usp=sharing" },
+                            { type: 'video', title: "O que um palíndromo no..." },
+                            { type: 'video', title: "Qual a diferença entre hábito...", src: "https://drive.google.com/file/d/1tDlUEFQbo0kkqvd8M8YRORk-RfdiSlKM/view?usp=sharing" },
+                            { type: 'video', title: "O que hábitos tem a ver com...", src: "https://drive.google.com/file/d/1SfIBrhrmyRNYkGhrvdiYzBHMFt_PYhnU/view?usp=sharing" },
+                            { type: 'video', title: "O que é um hábito angular?", src: "https://drive.google.com/file/d/1y3LT1jPg3aXdxqnG5n6WuQKjsnW-xo8E/view?usp=sharing" },
+                            { type: 'video', title: "Como se formam os hábitos?", src: "https://drive.google.com/file/d/1FLUEAcZz0PTXEHQ3xG_93xV5tmX97RkA/view?usp=sharing" },
+                            { type: 'video', title: "Como estimular um hábito h...", src: "https://drive.google.com/file/d/1cfVwnhoCnh53anjPJuRx3GqgVNz_9rhZ/view?usp=sharing" },
+                            { type: 'video', title: "Como inibir um mau hábito?", src: "https://drive.google.com/file/d/1KiRAhrZf3MjyGDW8Znyjj2nr0p5BRfxg/view?usp=sharing" },
+                            { type: 'video', title: "Como usar a regra dos dois m...", src: "https://drive.google.com/file/d/1nDiA9rC34HubrsntuYoTAgh4U-ch5jWj/view?usp=sharing" },
+                            { type: 'video', title: "As 4 fases para masterizar uma atividade", src: "https://drive.google.com/file/d/12O8WqYKvQFAY6C8lTTHBLIG2OoJIdyte/view?usp=sharing" },
+                            { type: 'video', title: "Como desenvolver um novo h...", src: "https://drive.google.com/file/d/1xRT_L_4y9TCscqURRCcJWc0Me5QMVJra/view?usp=sharing" },
+                            { type: 'video', title: "Comece pelo porquê", src: "https://drive.google.com/file/d/1j2iAdNuN9eZ_-quMKCTZlsUGFuDgRv34/view?usp=sharing" },
+                            { type: 'video', title: "Como definir uma meta de for...", src: "https://drive.google.com/file/d/14wy_KGT2z5OMTpdsWMlfP7OquyyI5nEb/view?usp=sharing" },
+                            { type: 'video', title: "Metas ajustam, mas não são t...", src: "https://drive.google.com/file/d/1NaEEtp9OlYYqlaSASalHZg5krJuVY6QT/view?usp=sharing" },
+                            { type: 'video', title: "Como fazer brainstorm?", src: "https://drive.google.com/file/d/1T59jFEzGuH2JU_S9JH13CnJmcJoR7e0P/view?usp=sharing" },
+                            { type: 'video', title: "Aplicando os 5 passos em exemplos", src: "https://drive.google.com/file/d/1jUbgikkf-8ovNwHJ20yYGFfSY91Qx1gY/view?usp=sharing" },
+                            { type: 'video', title: "Quanto tempo leva para se faz...", src: "https://drive.google.com/file/d/1qYg7bekjy15uiAtIPi60ahagOKrMDMuV/view?usp=sharing" },
+                            { type: 'video', title: "12 dicas para implementar um novo hábito", src: "https://drive.google.com/file/d/1moJNKd9QfN_Dqj9CthaFQeWH1-My1c7L/view?usp=sharing" },
+                            { type: 'video', title: "Qual o maior inimigo de um h...", src: "https://drive.google.com/file/d/1gvyLDqP0i3RmdOK03TTbo7Ytl6Rz9a1s/view?usp=sharing" },
+                            { type: 'video', title: "O que fazer quando um hábito...", src: "https://drive.google.com/file/d/16accJMnTY0Hxe4-LPuLSw_nn2WxX9oNl/view?usp=sharing" },
+                            { type: 'video', title: "Resumo da primeira parte", src: "https://drive.google.com/file/d/1QC6TGoZT28RxO3iX6YKON66VD67RX8v0/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Como melhorar sua produtividade",
+                        resources: [
+                            { type: 'video', title: "Eliminando excessos" },
+                            { type: 'video', title: "Você não quer trabalho, quer ...", src: "https://drive.google.com/file/d/1fIHgPPNKyVTmp0PWIziVglXQCAdeeb2F/view?usp=sharing" },
+                            { type: 'video', title: "4 mitos sobre produtividade", src: "https://drive.google.com/file/d/1AakcsrVoeaLs_svfCKomyMxxLV6Cs-Hy/view?usp=sharing" },
+                            { type: 'video', title: "Como dizer não", src: "https://drive.google.com/file/d/17qfw--OUVDsPn64fqUetChD9jUP9W3Wi/view?usp=sharing" },
+                            { type: 'video', title: "Como definir prioridades", src: "https://drive.google.com/file/d/107tsUOE2Yy4spHOi3-VQblJL5ti8nNx5/view?usp=sharing" },
+                            { type: 'video', title: "Visualização" },
+                            { type: 'video', title: "Os 3 hábitos de produtividade", src: "https://drive.google.com/file/d/16_YAcOpOC377bkg-MpJNavGG7OFGCdq1/view?usp=sharing" },
+                            { type: 'video', title: "Princípio de Pareto", src: "https://drive.google.com/file/d/1hJEmpH3gZL01NUyzxJz_NRjZqeENSTPH/view?usp=sharing" },
+                            { type: 'video', title: "Lei de Parkinson", src: "https://drive.google.com/file/d/1pbnr9rYLNCI_bXTP1x-CPWHvUdFjKPI7/view?usp=sharing" },
+                            { type: 'video', title: "Lei de Emmett", src: "https://drive.google.com/file/d/1E0h04YPyCvOvwue0LhBTN4JZt9ZhAI_4/view?usp=sharing" },
+                            { type: 'video', title: "Qual tipo de pessoa você é?", src: "https://drive.google.com/file/d/1RuErxNIB7QsMMRVAtlaG59j74WgmzgfT/view?usp=sharing" },
+                            { type: 'video', title: "Por que você deve proteger s...", src: "https://drive.google.com/file/d/1Zm_NRS7ReOV9FDTXvh5cnqbBsWLB-CPw/view?usp=sharing" },
+                            { type: 'video', title: "Reuniões: um guia" },
+                            { type: 'video', title: "Quais os dois grandes segredos...", src: "https://drive.google.com/file/d/1Q5H5OGNNpCRXFYap18F8N1tKZdD4tDsY/view?usp=sharing" },
+                            { type: 'video', title: "Qual fluxograma usar para o...", src: "https://drive.google.com/file/d/1nJ2MJgMtPUtcHJy9wMRxilxeD2CPiDfk/view?usp=sharing" },
+                            { type: 'video', title: "Descrição prática de como ex...", src: "https://drive.google.com/file/d/1y3FP97070VGKvG74hIL8ndscpXeJPijV/view?usp=sharing" },
+                            { type: 'video', title: "Como organizar novos proj...", src: "https://drive.google.com/file/d/1c535DtQfYsfkSkXegRXsdjf3a-vd0LDE/view?usp=sharing" },
+                            { type: 'video', title: "Onde inferir em avaliação p...", src: "https://drive.google.com/file/d/1lNVHT5DjYTW2UDmv0mhamlR0W2d0PJWL/view?usp=sharing" },
+                            { type: 'video', title: "Como saber priorizar uma ta...", src: "https://drive.google.com/file/d/1C_caX8NBne3XrWxqXLnx6gcpVgrpbKrc/view?usp=sharing" },
+                            { type: 'video', title: "Como aumentar em 30% a p...", src: "https://drive.google.com/file/d/1fREcdWP4x4JRJHMCPz5sGpFLwZQFbXgz/view?usp=sharing" },
+                            { type: 'video', title: "Como o multitasking baixa a p...", src: "https://drive.google.com/file/d/1zwTBrja6uaTY4ls79ln3bxRPSKETcPWc/view?usp=sharing" },
+                            { type: 'video', title: "Por que agrupar as atividad...", src: "https://drive.google.com/file/d/1JWnyfNTbioqHf--TtTs0dyQB10xo-13z/view?usp=sharing" },
+                            { type: 'video', title: "Como criar um calendário a...", src: "https://drive.google.com/file/d/1pcxaTQ0GWqJHk7wbwFAvKahATkKzoXPL/view?usp=sharing" },
+                            { type: 'video', title: "O que um plantão pode lhe a...", src: "https://drive.google.com/file/d/1C_caX8NBne3XrWxqXLnx6gcpVgrpbKrc/view?usp=sharing" },
+                            { type: 'video', title: "Jornada do herói e produtivid...", src: "https://drive.google.com/file/d/1B5shDQTVuhYgzql6OKC2Ubz0gTe5ZkOI/view?usp=sharing" },
+                            { type: 'video', title: "Resumindo a parte de produt...", src: "https://drive.google.com/file/d/1iz-GoZUvu2PEJJgIR1cY2nP2gqUcp7I3/view?usp=sharing" }
+                        ]
+                    },
+                    {
+                        title: "Algumas dicas a mais",
+                        resources: [
+                            { type: 'video', title: "O que é sucesso e como medi...", src: "https://drive.google.com/file/d/1jLAGx4_ha99Ii1K-wl1SAe-NUN6-Hjbf/view?usp=sharing" },
+                            { type: 'video', title: "Como tomar decisões difíceis?", src: "https://drive.google.com/file/d/11tkxHGQenAAFRgG0frpjPtcVlzYJHCKo/view?usp=sharing" },
+                            { type: 'video', title: "Como se manter satisfeito na ...", src: "https://drive.google.com/file/d/18fh5tiME0LjH0gQm5ev5RhXbK0hqfA1F/view?usp=sharing" },
+                            { type: 'video', title: "Fechamento do curso", src: "https://drive.google.com/file/d/17BrvIUxl-rcfWTuY_vq8wimtIBK4EEyY/view?usp=sharing" }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const playlistContainer = document.getElementById('course-playlist-content');
+            const initialPlaceholder = document.getElementById('initial-placeholder');
+            const lessonView = document.getElementById('lesson-view');
+            const lessonViewTitle = document.getElementById('lesson-view-title');
+            const lessonViewIframe = document.getElementById('lesson-view-iframe');
+            let activeResourceItem = null;
+            
+            const openResourceView = (resource, resourceElement) => {
+                initialPlaceholder.classList.add('hidden');
+                
+                if (activeResourceItem) {
+                    activeResourceItem.classList.remove('bg-pink-600/40', 'font-semibold');
+                }
+                
+                if (resourceElement) {
+                    resourceElement.classList.add('bg-pink-600/40', 'font-semibold');
+                    activeResourceItem = resourceElement;
+                }
+
+                if (resource.type === 'video') {
+                    lessonViewTitle.textContent = resource.title;
+                    lessonViewIframe.src = resource.src ? resource.src.replace(/\/view(\?usp=sharing)?$/, '/preview') : 'about:blank';
+                    lessonView.classList.remove('hidden');
+                } else {
+                    lessonView.classList.add('hidden');
+                    initialPlaceholder.classList.remove('hidden');
+                    initialPlaceholder.querySelector('h3').textContent = "Recurso Indisponível";
+                    initialPlaceholder.querySelector('p').textContent = `O conteúdo para "${resource.title}" não está disponível.`;
+                }
+            };
+            
+            const formatTitle = (title) => {
+                if (!title) return '';
+                return title.replace(/^\s*\d*[\.\-]?\s*/, '');
+            };
+
+            playlistContainer.innerHTML = courseData.map((module, moduleIdx) => `
+                <div>
+                    <h3 class="font-bold text-lg px-2 pt-4 pb-2 text-pink-400">${formatTitle(module.moduleTitle)}</h3>
+                    <div class="space-y-2">
+                        ${module.lessons.map((lesson, lessonIdx) => `
+                            <div class="lesson-group bg-gray-800 rounded-lg">
+                                <button class="accordion-header w-full flex justify-between items-center p-3 text-left font-semibold text-gray-300 hover:bg-gray-700/50 transition-colors">
+                                    <span class="truncate">${formatTitle(lesson.title)}</span>
+                                    <i data-lucide="chevron-down" class="w-5 h-5 transition-transform flex-shrink-0 ml-2"></i>
+                                </button>
+                                <div class="accordion-content" style="max-height: 0px;">
+                                    <div class="p-2 space-y-1 border-t border-gray-700">
+                                        ${lesson.resources.map((resource, resourceIdx) => {
+                                            const icon = 'play-circle';
+                                            return `
+                                            <div class="resource-item flex justify-between items-center p-3 rounded-md text-sm hover:bg-pink-600/20 cursor-pointer transition-colors" 
+                                                 data-module-idx="${moduleIdx}" data-lesson-idx="${lessonIdx}" data-resource-idx="${resourceIdx}">
+                                                <div class="flex items-center overflow-hidden">
+                                                    <i data-lucide="${icon}" class="w-5 h-5 mr-3 text-gray-400 flex-shrink-0"></i>
+                                                    <p class="truncate">${resource.title}</p>
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const { moduleIdx, lessonIdx, resourceIdx } = item.dataset;
+                    const resource = courseData[moduleIdx].lessons[lessonIdx].resources[resourceIdx];
+                    openResourceView(resource, item);
+                });
+            });
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('i[data-lucide]');
+                    const isExpanded = content.style.maxHeight !== '0px';
+
+                    document.querySelectorAll('.accordion-content').forEach(otherContent => {
+                        if (otherContent !== content) {
+                            otherContent.style.maxHeight = '0px';
+                            otherContent.previousElementSibling.querySelector('i[data-lucide]').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

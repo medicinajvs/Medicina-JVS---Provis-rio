@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Terapia Intensiva</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        .selected-lesson {
+            background-color: #4299e1;
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hidden { display: none !important; }
+        
+        summary { list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+        details[open] summary .chevron { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg flex-shrink-0">
+        <div class="flex items-center space-x-4">
+            <button id="backButton" class="hidden bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </button>
+            <h1 id="mainTitle" class="text-xl font-bold text-white">Terapia Intensiva - Módulos</h1>
+        </div>
+    </header>
+
+    <div id="pageContainer" class="flex-grow">
+        <div id="moduleSelectionPage" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <main id="contentPage" class="hidden h-full p-4 lg:grid lg:grid-cols-3 lg:gap-x-4">
+            <section class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0">
+                    <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-4 bg-gray-800 border-b border-t border-gray-700 flex-shrink-0">
+                    <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione uma aula</h2>
+                </div>
+                <div class="p-4 overflow-y-auto flex-grow">
+                     <details id="materialsDropdown" class="bg-gray-900/50 rounded-lg">
+                        <summary class="p-4 cursor-pointer text-lg font-bold text-white flex justify-between items-center">
+                            <span>Materiais de Estudo</span>
+                            <i class="fas fa-chevron-down chevron transition-transform duration-200"></i>
+                        </summary>
+                        <div id="materialsContainer" class="p-4 border-t border-gray-700 space-y-3"></div>
+                    </details>
+                </div>
+            </section>
+            <aside class="mt-4 lg:mt-0 lg:col-span-1 bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col overflow-y-auto hide-scrollbar max-h-[calc(100vh-128px)]">
+                <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+                <div id="videosContainer" class="space-y-3"></div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const modulesData = [
+            { id: 'mod_hemo', title: 'Módulo Hemodinâmica', icon: 'fas fa-tachometer-alt', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MUD97AguiRfjk-p3WCuX1bfRzrEJ14hZ/view?usp=sharing'), title: 'Monitorização Hemodinâmica Invasiva' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1J7RXHHFvlmnsHXmk6qZk7TG2hJQmBHiv/view?usp=sharing'), title: 'Monitorização Hemodinâmica Não-Invasiva' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JuFCQb-ppKL3oB4XEQ_L-IEXhxYNG2J1/view?usp=sharing'), title: 'Marcadores da Perfusão Tecidual' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NlSK_nKbtSUjoX-K1_RE7yCXHs0oCrHE/view?usp=sharing'), title: 'Ecocardiografia no Choque' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PczC1__zdyO8GG9IeqpbQWht04sjg5AW/view?usp=sharing'), title: 'Choque Hipovolêmico e Reposição Volêmica' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Pn2oVN1aLmJsVsLkYepO-acVDrV1z3Tz/view?usp=sharing'), title: 'Choque Distributivo' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QQMq8xuAgZxHtWU1fJttQdJPvkqh14sk/view?usp=sharing'), title: 'Drogas Vasoativas no Choque' }
+            ], materials: [] },
+            { id: 'mod_cardio', title: 'Módulo Cardiovascular', icon: 'fas fa-heart-pulse', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1S6SzpLPzY2zZ1vGP7jssXIao8JYUpPqo/view?usp=sharing'), title: 'Arritmias Cardíaca: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KxB3DBR88DgsTBxEzaLxHzbKQNEpaCNh/view?usp=sharing'), title: 'Arritmias Cardíaca: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SRQRmEcB-QkWRr-wgfeAGkWaYAUpgv4T/view?usp=sharing'), title: 'Síndrome Coronariana Aguda: IAM' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K_0syMAVszgzzPU9nZnVnJ-an8bn3MEv/view?usp=sharing'), title: 'Urgências e Emergências Hipertensivas: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UBdaJvXhkCWhf417JC9KhINXH107NO8C/view?usp=sharing'), title: 'Urgências e Emergências Hipertensivas: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OjSX4yMcgIbHQ3bfM6d_zcCwQuRTxOh1/view?usp=sharing'), title: 'Pós-Operatório de Cirurgia Cardíaca: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JrLQNTvAAa2tlGYT6YtHR4ypwzJjG_qY/view?usp=sharing'), title: 'Pós-Operatório de Cirurgia Cardíaca: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MJuUpoRBUdsDyNkyMYrCCY1KSMlVhMJ1/view?usp=sharing'), title: 'Reanimação Cardiorrespiratória e Cerebral' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TwStLHXzja4vYSp-8VR74_Fnskbk4Abe/view?usp=sharing'), title: 'Choque Cardiogênico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K3g1FYJZ1kPeiAUlMFoNSW0q6dmu0bQc/view?usp=sharing'), title: 'Síndrome Aórtica Aguda' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KV7jviA0op7MWmwHgTrwjJoxlgo266o6/view?usp=sharing'), title: 'Valvopatias em UTI' }
+            ], materials: [] },
+            { id: 'mod_resp', title: 'Módulo Respiratório', icon: 'fas fa-lungs', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OOanxliloiDgbPFXpzh_9lyZ8VLbURNw/view?usp=sharing'), title: 'Monitorização Respiratória' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NzIJ_TAxj58fn12PmpFZ9Xr57sf9f-gD/view?usp=sharing'), title: 'Princípios da Ventilação Mecânica (VM): Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K4CKJAisdWNA0JWzlG_oX_D9jk-5PFKi/view?usp=sharing'), title: 'Princípios da Ventilação Mecânica (VM): Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UEn4tHo3fCQ_AaDmAgBqbucQbHl-g7kV/view?usp=sharing'), title: 'Princípios da Ventilação Mecânica (VM): Parte III' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SACOUOZ7z6ZEViFqauXUnD2HcaSxzW1d/view?usp=sharing'), title: 'Ventilação Não-Invasiva (VNI)' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OAnMtA3eELe31ggTOzKQAk65KNm7Ohom/view?usp=sharing'), title: 'Ventilação Mecânica em Doenças Obstrutivas' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nv8vEX8LZnzdJQegcFxCNxrNpNlrhWHN/view?usp=sharing'), title: 'Ventilação Mecânica em Doenças Pulmonares Restritivas' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Rd5LDMeDsneAv-PbTlGyxiI-zMSsHU4V/view?usp=sharing'), title: 'Ventilação Mecânica na SARA' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Q8mNrXQVm4eEHwFRGkOwgWoGzMOA7lZT/view?usp=sharing'), title: 'ECMO' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N8rpd5oIXIeQFaoxwXywnXhGs7-sh6bg/view?usp=sharing'), title: 'TVP/TEP' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MWa0NVszIfgbe6ItbAi02Mm8jvm67vmK/view?usp=sharing'), title: 'Assistência de Fisioterapia na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PAQjGDDtDk1Qq1ju-q4lF80oplonMhJS/view?usp=sharing'), title: 'Pós-Operatório de Cirurgia Torácica' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UNL2psYgrfC9VBpHMctlfn4Y68voEa6N/view?usp=sharing'), title: 'Desmame' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JPluXdNRHLufFYTZ7anIQI8PO68m5gBN/view?usp=sharing'), title: 'Indicações de Suporte Ventilatório' }
+            ], materials: [] },
+            { id: 'mod_covid', title: 'Módulo COVID-19', icon: 'fas fa-virus-covid', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LvEz6wnCiAlEPWsxdXWYrXozOSu9M4WT/view?usp=sharing'), title: 'Particularidades do Cuidado Intensivo ao Paciente com Covid' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QDPVoT-T1ygKZNE6k9VBwx0Jg3LbXIW6/view?usp=sharing'), title: 'Métodos de Suporte Ventilatório Não-Invasivos' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LSI7eG57cx_tc4zPH4QmkGuhBnjzEztq/view?usp=sharing'), title: 'Métodos de Suporte Ventilatório Invasivos' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NxHqrYC4hXr_d6z0wF4uDtZ2AHq8VtPP/view?usp=sharing'), title: 'Posição Prona e Outras Manobras de Resgate' }
+            ], materials: [] },
+            { id: 'mod_infeccao', title: 'Módulo Infecção e Sepse', icon: 'fas fa-bacterium', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PQQqhL-jHSWHrnzCL7WpbEP1SzuDnaqT/view?usp=sharing'), title: 'Pneumonia Associada a Ventilação Mecânica: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TTa-Hb4uebFHwM6MlnOqlAtoN6xbjZQB/view?usp=sharing'), title: 'Pneumonia Associada a Ventilação Mecânica: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KiYlynRl1tUHv_FLUNJnjSEkiTVeCYqq/view?usp=sharing'), title: 'Pneumonia Comunitária Grave' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NGy52INpp0GAetSuuCSvihJtF8D6f7Xe/view?usp=sharing'), title: 'Infecções Nosocomiais' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KyRcY5xxcy-5GOy55YenXMWn15Cplni0/view?usp=sharing'), title: 'Infecções Relacionadas a Cateteres: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nyh_jizJo5rlzNEOrFTMBENpZUOov2Tp/view?usp=sharing'), title: 'Infecções Relacionadas a Cateteres: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Tp511-xFod9vca2zZS-Dto8Tj_B5JUL8/view?usp=sharing'), title: 'Sepse e Choque Séptico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MTEO_MXElhwiU2gNxby-zhgTKAFbXUkS/view?usp=sharing'), title: 'Antibióticos em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1STTcwZs_jJ5NNVK75QhvYqMBrXzMny9z/view?usp=sharing'), title: 'AIDS na UTI: Epidemiologia e Fatores Prognósticos, Sepse e TARV' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SztiA7qWZ4fwKdjQKhLrZOzSiO_rhG6q/view?usp=sharing'), title: 'Infecções em Pacientes Imunodeprimidos' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MGwh8B2mEWSvyAjWVb0MvJzWWzOB0bva/view?usp=sharing'), title: 'Tétano na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MCHVhKF4f8wTWmrycPgV2-DOkLdgSOXW/view?usp=sharing'), title: 'Meningoencefalites' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UqAivceVbtT5hW7T2JAI3p8dfpmz9iM5/view?usp=sharing'), title: 'Síndrome Respiratória Aguda Grave na UTI' }
+            ], materials: [] },
+            { id: 'mod_neuro', title: 'Módulo Neurológico', icon: 'fas fa-brain', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KFknzpaFg2wbpNoGW8UUZOuKWfogg2km/view?usp=sharing'), title: 'Estados Alterados de Consciência' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NzM2eei2pzcIiwkAqm9cc_kaUpfKk17w/view?usp=sharing'), title: 'Monitorização Neurológica: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1P9txDWoFC8i93qSqU78QeRgH30lggPeB/view?usp=sharing'), title: 'Monitorização Neurológica: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KViSebuYGp3fb5ZORWS34vOBufcjrNSt/view?usp=sharing'), title: 'Monitorização Neurológica: Parte III' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TlAgquwyq9ipfr2OZ34-ear-aOIGr61r/view?usp=sharing'), title: 'AVC Hemorrágico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KuHRJWMdKoQBPGK9_YcfQZPhqCHEPi8K/view?usp=sharing'), title: 'AVCI: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LkbOU6AwdsD768K-NNYV1nhQzJijx-Eq/view?usp=sharing'), title: 'AVCI: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PTcf8rlFZRiZXHkUQ03idSpa5P2PfN81/view?usp=sharing'), title: 'AVCI: Parte III' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UVH-CmY6HUHH727eoODaY9eacPMWHfXW/view?usp=sharing'), title: 'Trombolíticos em Eventos Encefálicos: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N_2HxhrBp61GuinriwXNrAMwBcl-Bpc-/view?usp=sharing'), title: 'Trombolíticos em Eventos Encefálicos: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NQhV1JAhnPg_DsQ4TX3OFRR-ePil06k6/view?usp=sharing'), title: 'Manejo da Hipertensão Intracraniana' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SI-rVsvfa5CRLDDvx7wCYZQtnwK2Wo0U/view?usp=sharing'), title: 'Estado de Mal Epiléptico: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NBh6FT-VoC3Ufs22ixe-D1YMY_YlPVXN/view?usp=sharing'), title: 'Estado de Mal Epiléptico: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1R0PRuJ5ZGhXN7_o-6lb2c6OyU0w4MC5h/view?usp=sharing'), title: 'Miastenia Gravis: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L_dvwpdVsg7ZQ-ZxT3a1iHAl2AAoe_F8/view?usp=sharing'), title: 'Miastenia Gravis: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JSIhsEMf3inUyauyUDM1hKd1VVtdQ4OL/view?usp=sharing'), title: 'Polirradiculoneurites e Síndrome de Guillain-Barré' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UqJfDMFVadITiHXeDqvC6ckymjmltlAX/view?usp=sharing'), title: 'Pós-Operatório de Neurocirurgia: Cuidados Neurointensivos' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Mw857maTKy7_aqB35FgLZbNdf5PzqHvW/view?usp=sharing'), title: 'Diagnóstico de Morte Encefálica' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QPOGqEc9PxXLSzwVOTn9VZGFrXLbmT6H/view?usp=sharing'), title: 'HSA Aneurismática: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N5NzD4t2LKjIW39Tv04gaLsy31cgxJBE/view?usp=sharing'), title: 'HSA Aneurismática: Parte II' }
+            ], materials: [] },
+            { id: 'mod_gastro', title: 'Módulo Gastrointestinal', icon: 'fas fa-stomach', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Owx6fYq_mk1tGMmWlzCYxEwF2Kv2AqQ7/view?usp=sharing'), title: 'Hemorragia Digestiva Alta e Baixa' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MWYzcSKE1HXhQjsjMkDGAqqCKl40nrlw/view?usp=sharing'), title: 'Manejo do Paciente com ACLF (Acute On Chronic Liver Failure): Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QeZyR2cPRkXw29ZzAKiWdx-ERXCpR5A4/view?usp=sharing'), title: 'Manejo do Paciente com ACLF (Acute On Chronic Liver Failure): Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PHZ9MG0noKE3d5ebO5hq-MOxXZi3khHr/view?usp=sharing'), title: 'Abdome Agudo na UTI: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KJCLbzTaxNezh1SefsGkaaOgFczXZkR/view?usp=sharing'), title: 'Abdome Agudo na UTI: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Iw_hdGQTnHdEYdJm5W01VI2mPKtwblwN/view?usp=sharing'), title: 'Pancreatite Aguda Grave' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QYchd5HNQ3XeeIlUgUb0OQ41k5k2RAto/view?usp=sharing'), title: 'Hipertensão Intra-Abdominal: Síndrome Compartimental Abdominal' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OTFAKp6x0HgPEAVgMtARZRKIqlRXvA2P/view?usp=sharing'), title: 'Cuidados ao Obeso Mórbido e Pós-Operatório de Cirurgia Bariátrica: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L0kS7Wm4SO0a21c5Z7A02ANnysUSLtQQ/view?usp=sharing'), title: 'Cuidados ao Obeso Mórbido e Pós-Operatório de Cirurgia Bariátrica: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NdASOyjgl-MMsjH4kaJ6DKDi8VutLfGH/view?usp=sharing'), title: 'Manejo da Insuficiência Hepática Aguda Grave' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PVzLTzdtSUGq0raD4zRoJ_R_06xN-3m2/view?usp=sharing'), title: 'Pós-Operatório de Transplante Hepático' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UA1qonrtpmP0nXZv1fbgDCkuVUKAO_rL/view?usp=sharing'), title: 'Pós-Operatório de Cirurgia Abdominal de Grande Porte: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OW6bjYXmYuwZ2jhmD0MpxlwkZnMjoi1M/view?usp=sharing'), title: 'Pós-Operatório de Cirurgia Abdominal de Grande Porte: Parte II' }
+            ], materials: [] },
+            { id: 'mod_endocrino', title: 'Módulo Endócrino-metabólico', icon: 'fas fa-dna', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TqMN9-N123PrHaR9Wbi-32svXOOgPMph/view?usp=sharing'), title: 'Controle Glicêmico no Paciente Crítico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RRrStuIETRQ-RYUx4FVY6AdHPSP4CScV/view?usp=sharing'), title: 'Cetoacidose Diabética e Estado Hiperosmolar' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UKcbh2cAI9fb3ajwvGqCSjXjjWQOPqPF/view?usp=sharing'), title: 'Crise Tireotóxica' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Uh7UIJtL7aX_lfaUU-qAJ5Qup34gBGle/view?usp=sharing'), title: 'Estado Mixedematoso e Síndrome do Eutireoideo Doente' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OD_Vgk5b9XSgP0791nLMv-fD_hZ_TxOl/view?usp=sharing'), title: 'Insuficiência Adrenal no Paciente Crítico' }
+            ], materials: [] },
+            { id: 'mod_renal', title: 'Módulo Renal', icon: 'fas fa-kidneys', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QkBT5gbj8SJalSrmB-MT7PDelGJS7nsM/view?usp=sharing'), title: 'Insuficiência Renal Aguda' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JNai39qWt2vRqTqj3yW2osgW1ua5gvkl/view?usp=sharing'), title: 'Distúrbios Hidroeletrolíticos: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MMjgFLc7BP09avZe5pKJRkulWy4oIRlP/view?usp=sharing'), title: 'Distúrbios Hidroeletrolíticos: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OrLF6nXJMYj8J3bnIpJFygXBKKieOES-/view?usp=sharing'), title: 'Distúrbios Hidroeletrolíticos: Parte III' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nx6BpzwPajhlVvYRajZ65guS4auvbbhO/view?usp=sharing'), title: 'Distúrbios Ácido-Básicos: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SxiMb1G1Tr-OGE5e2-DJjXouSKPB_A-d/view?usp=sharing'), title: 'Distúrbios Ácido-Básicos: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TqlzGWoO8wA-CQVqlWMmoNAIogY9u8V4/view?usp=sharing'), title: 'Terapia de Substituição Renal na UTI: Qual a Evidência?' }
+            ], materials: [] },
+            { id: 'mod_hemato', title: 'Módulo Hematologia', icon: 'fas fa-vial', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PiMyoB6eVYQNPgEMbsGewUSkSBYHDRZf/view?usp=sharing'), title: 'Monitorização da Coagulação Perioperatória' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OK54LI5TmOXrjSlVEdWSghrnjBUUOM_M/view?usp=sharing'), title: 'Trombólise e Anti-Coagulaçao Plena: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TC6-JkwbaUXQJy0DsoSnttSF4m377E-i/view?usp=sharing'), title: 'Trombólise e Anti-Coagulaçao Plena: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OD4ha77KC_KtVhibkUaYTbu37s_GGhOv/view?usp=sharing'), title: 'Transfusão na Terapia Intensiva' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U15BREM563FobMjAjqvx5NdjpXXyPdW0/view?usp=sharing'), title: 'Coagulopatia no Paciente Crítico' }
+            ], materials: [] },
+            { id: 'mod_periop', title: 'Módulo Perioperatório', icon: 'fas fa-procedures', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ns4UNYTwBlp2YNOFWGbKa6JVZcgbKJSs/view?usp=sharing'), title: 'Avaliação de Risco Perioperatório' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OClkHH0XrI4BMi4YQBUWSBCaMnO73DNn/view?usp=sharing'), title: 'Indicações de UTI no Pós-Operatório' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SrnwHji5Nx_j9rwRHIaz_L76m_enfoHL/view?usp=sharing'), title: 'Cuidados Pós-Operatórios no Paciente de Alto Risco: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1P9nJky2kiBjAlO6kLhBhqb9KvbsqnA4D/view?usp=sharing'), title: 'Cuidados Pós-Operatórios no Paciente de Alto Risco: Parte II' }
+            ], materials: [] },
+            { id: 'mod_politrauma', title: 'Módulo Politraumatizado', icon: 'fas fa-car-burst', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nop-u_kxijFczKSjmD37HqC8Mao0f6RL/view?usp=sharing'), title: 'Resposta Orgânica ao Trauma: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OoSsa1Y0D2OJAfTR1pYpCilGaKLygq_p/view?usp=sharing'), title: 'Resposta Orgânica ao Trauma: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QB7ZiTU9CouImFd7cqmNVP3-UmmyYdJW/view?usp=sharing'), title: 'Morte Encefálica' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N5Hdumg7N2Mn7ADici-TmrL7RcTUG9Ga/view?usp=sharing'), title: 'Traumatismo Crânio-Encefálico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Jpkwsi_LSd64T1_nYZvAkF4DCS-AVJr4/view?usp=sharing'), title: 'Traumatismo Raquimedular e Choque Neurogênico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RlV3LmjuE3FYNZ_kQ59BFlR17tlaFwiA/view?usp=sharing'), title: 'Trauma de Tórax' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U_OZ3WwzA59AmTNkrraM0cMpXtJEoDFQ/view?usp=sharing'), title: 'Trauma de Abdome e Pelve: Visão do Intensivista' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LkXWEzPyRDqHPJdVO3lQs7dUmgwE0c3A/view?usp=sharing'), title: 'Particularidades do Trauma Ortopédico Grave' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QNLjzjprQteIitbmGsR-SEqcj0L1HwV6/view?usp=sharing'), title: 'Choque Hemorrágico no Trauma' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Qi4yc_8vwKuuauT8jM2VSbXPt0gcrRcw/view?usp=sharing'), title: 'Hipertensão Intracraniana' }
+            ], materials: [] },
+            { id: 'mod_queimado', title: 'Módulo Grande Queimado', icon: 'fas fa-fire-flame-simple', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QI81jWbso5g6yY5pAhoxqu1B3_9FiHn0/view?usp=sharing'), title: 'Reposição Volêmica no Grande Queimado' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L6MvB_QKNZwNT7SapZHAUKIn98bdwz8z/view?usp=sharing'), title: 'Particularidades do Paciente Queimado na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QcXa2TNDSrSXj8owR1XwDjCVv5Py9uAQ/view?usp=sharing'), title: 'Suporte Nutricional no Paciente Queimado' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1K13YQ0AX9BPcCXS-OJPn_ReOc0ix8Myi/view?usp=sharing'), title: 'Diagnóstico e Tratamento Cirúrgico do Queimado: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1M6rz6C7EeV5KMYSNgV6vLcxf1jMoFj49/view?usp=sharing'), title: 'Diagnóstico e Tratamento Cirúrgico do Queimado: Parte II' }
+            ], materials: [] },
+            { id: 'mod_obstetricia', title: 'Módulo Obstetrícia', icon: 'fas fa-baby-carriage', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UPIdtQAKbLean3dIt3WIHbMfMMN2LofT/view?usp=sharing'), title: 'Particularidades do Atendimento à Gestante na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MJLrNkrfzfCYzDURdoV9uA-sGVefdV-X/view?usp=sharing'), title: 'Pré-Eclâmpsia e Eclâmpsia' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OhB5sOBmfiQwGmZ_QDlxsAS73kQ3sYbW/view?usp=sharing'), title: 'Cetoacidose Diabética na Gestação' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UPXIX5CMMmITE4YN_aSTM1uCu-zaM44G/view?usp=sharing'), title: 'Síndrome HELLP' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NMka6e5tRenOcar6RLhUTCDDN2PNCK2z/view?usp=sharing'), title: 'Trauma na Gestação' }
+            ], materials: [] },
+            { id: 'mod_onco', title: 'Módulo Oncologia Clínica', icon: 'fas fa-ribbon', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Pul-0JZanQB03tddRrA8jki6OmIKTTrA/view?usp=sharing'), title: 'Particularidades no Paciente Oncológico Crítico: Trial de UTI - Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1STpAj-aSrSCoj0q3FV-sBshH0vwr3dyI/view?usp=sharing'), title: 'Particularidades no Paciente Oncológico Crítico: Trial de UTI - Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JB9cT5Yo1AX0cxFiVJ7Aq80fK9yX27VF/view?usp=sharing'), title: 'Sepse em Doente Oncológico' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QOFWrUcYh1cNHMIKe05AjJWIzFz7rnMZ/view?usp=sharing'), title: 'Emergências Oncológicas' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LJguus5IVknKfuxaqM9KdkJt2EwWzOEF/view?usp=sharing'), title: 'Antibioticoterapia e Tratamento Infeccioso em Pacientes Neutropênicos e Não-Neutropênicos: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1M-eBjZiCaQea0DLeNBhmWQAsq5uT9S4I/view?usp=sharing'), title: 'Antibioticoterapia e Tratamento Infeccioso em Pacientes Neutropênicos e Não-Neutropênicos: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OmRw3htgEwu8deeo4HgWrmYl67lwt1JX/view?usp=sharing'), title: 'Ressuscitação Volêmica e Manejo Hemodinâmico no Pós-Operatório' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QurBUEI-NyZdQPTv3X0fy8K2UcYDvWHr/view?usp=sharing'), title: 'Urgências Neurológicas no Paciente Onco-Hematológico: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SBSkNWa7rufhanwwt3IFHvq23kfq-umE/view?usp=sharing'), title: 'Urgências Neurológicas no Paciente Onco-Hematológico: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1SZS0_6p-t8zGblfBki0Afzjc366UK1nM/view?usp=sharing'), title: 'Particularidades da Injúria Renal Aguda e Diálise em Pacientes Oncológicos' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1KTGZD4GxWq6_mfjjwg5Inn_waQqSxDLi/view?usp=sharing'), title: 'Cuidados Paliativos na UTI Oncológica' }
+            ], materials: [] },
+            { id: 'mod_nutri', title: 'Módulo Suporte Nutricional', icon: 'fas fa-apple-whole', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L9wTrXi0thdN1WTG8FjgBuu228sLubsF/view?usp=sharing'), title: 'Princípios do Jejum e do Suporte Nutricional na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U_7jcKU0-F_VMDV3aNjOUfBjtwqKocSQ/view?usp=sharing'), title: 'Nutrição Enteral' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MjDFKGHVKIgsbTkpKYsdfJdj_21jkNLx/view?usp=sharing'), title: 'Nutrição Parenteral' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1S4P3ZdmIOLDycJSATiT6cPPekeaWdd1z/view?usp=sharing'), title: 'Imunonutrição' }
+            ], materials: [] },
+            { id: 'mod_sedacao', title: 'Módulo Sedação e Analgesia', icon: 'fas fa-pills', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1TL7kp9uM7WS-q7283qmiQoJdwYAHPKf-/view?usp=sharing'), title: 'Analgesia na UTI: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N6AfiBUbxzE4u__s8YfpsuPLa8w36Hyk/view?usp=sharing'), title: 'Analgesia na UTI: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1JNhQsjAgw5OYA_OsddTd5Aj-v1wy1iHx/view?usp=sharing'), title: 'Delirium na UTI: Profilaxia e Tratamento' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Tgh_eYVMBUBYmnRQIpOs711KkMBJwFbS/view?usp=sharing'), title: 'Sedação e Uso de Bloqueadores Neuro Musulares na UTI: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MukfWOlXmueMSrMxTLEJXvpHBnv04hr7/view?usp=sharing'), title: 'Sedação e Uso de Bloqueadores Neuro Musulares na UTI: Parte II' }
+            ], materials: [] },
+            { id: 'mod_procedimentos', title: 'Módulo Procedimentos e métodos de imagem em UTI', icon: 'fas fa-x-ray', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1S70vmd4eZdeKaU0kvZlMPin0fMuIe_0_/view?usp=sharing'), title: 'Acesso à Via Aérea' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OKby0mKFebkZ9_7ledbfJOWd9EE9_XZv/view?usp=sharing'), title: 'Intubação e Extubação Traqueal no Paciente com Via Aérea' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MfakZkJz_9cE-6_dFmvX7nFOw-F7dqf-/view?usp=sharing'), title: 'Traqueostomia na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U3K8swkjU8Yju5H0bJgV5Q1ljPh-bN6F/view?usp=sharing'), title: 'Acessos Vasculares: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QqiS-Q57WOgDdB5edUP_gCBKOkzvSAin/view?usp=sharing'), title: 'Acessos Vasculares: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Jxw0r1gAc_6QoYYc8UcyLlSRjf2pLxB_/view?usp=sharing'), title: 'Estimulação Cardíaca Artificial na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Snq5Z_-tRkJLkaLCZFntrkAU5DD7HOMg/view?usp=sharing'), title: 'Uso de Ultrassonografia na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PQ0JYx_DXDLaZy1fRzoLjylw9usUOU7V/view?usp=sharing'), title: 'Radiografia e Tomografia na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1IdJk7Wr3G2YJYne3jX8fqqFMeCL3tDyO/view?usp=sharing'), title: 'Broncoscopia na UTI' }
+            ], materials: [] },
+            { id: 'mod_multi', title: 'Módulo Multidisciplinar', icon: 'fas fa-users', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1N_qKBartt0R8ySdu6QV_8KxUeJE8QTao/view?usp=sharing'), title: 'Visita Multidisciplinar e Checklist' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1P9EN2na8OmZTNLk40jdl47LMIoCDpIiN/view?usp=sharing'), title: 'Atuação do Enfermeiro na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UnWPTTjboZ2fE9m8f7kht0zCsFOJqlpz/view?usp=sharing'), title: 'Atuação do Farmacêutico na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Q5pA0abIkZlN-ioYG3mZLhAdOF3pWni5/view?usp=sharing'), title: 'Atuação do Fisioterapeuta na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Nba6sneIAthnf9zvyv6wn10BjhZRsq_C/view?usp=sharing'), title: 'Atuação do Fonoaudiólogo na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1U7UNFyCpruwjmcieT0MwM9Yc5e_Amzcs/view?usp=sharing'), title: 'Odontologia e UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1S-ZpSenVE9m5XuHnahjp6Y2icuVnBT8a/view?usp=sharing'), title: 'Atuação do Psicólogo na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1T-WlfJmWBwBRDuE41VKfWHFZgPbs4T_d/view?usp=sharing'), title: 'Atuação do Assistente Social na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OJduBlOlO79D-kPCYVc8RojWFsKTfdQZ/view?usp=sharing'), title: 'Atuação do Nutricionista na Equipe Multiprofissional em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NJosc_MSkyXF4xb4Ul5_VVPMhUZjB4Ff/view?usp=sharing'), title: 'Atuação do Terapeuta Ocupacional na Equipe Multiprofissional em UTI' }
+            ], materials: [] },
+            { id: 'mod_etica', title: 'Módulo sobre aspectos éticos e bioéticos', icon: 'fas fa-balance-scale', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1QhtfJAuXd8nAiuNtiSYAIrg1qPIDBX0D/view?usp=sharing'), title: 'Direitos e Deveres dos Pacientes' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MB8emd4Fg0zUOT2cZ5sIrD7HWmXkYIVB/view?usp=sharing'), title: 'Humanização em UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1LmqePEh84sVeyy7B0CZ_EMPMEA8Ri252/view?usp=sharing'), title: 'Evidências e Desafios em Cuidados Paliativos na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1OkJW9gM1zh6gF2IFw-VByYrDDKyFoDWK/view?usp=sharing'), title: 'Aspectos Éticos da Morte Cerebral: Morte Encefálica' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1L2PnqUN-4hmKx2yl6B6MRaRMKPFdLxEj/view?usp=sharing'), title: 'Doação de Órgãos e Transplantes: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MklfG-1Iqdy3DKl-PQb0YyuEcwGXZs3_/view?usp=sharing'), title: 'Doação de Órgãos e Transplantes: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1NxoR5qXwN7PEThO5UFzfnyV7_8F4kzsB/view?usp=sharing'), title: 'Responsabilidade Médica Civil' }
+            ], materials: [] },
+            { id: 'mod_legislacao', title: 'Módulo Legislação e indicadores de qualidade em UTI', icon: 'fas fa-gavel', videos: [
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1UpOAm0Wg7SJfTp7_duTL34BsnpyBJTTk/view?usp=sharing'), title: 'Legislação Sanitária: Tópicos de Interesse para UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1RyHfi33aSmOdoiQ4OZVVB0AVF52jj8ik/view?usp=sharing'), title: 'Indicadores de Desfecho na UTI' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1MgHw-ANyK93ki4KQfdhdcnVD2iK7ZL98/view?usp=sharing'), title: 'Medicina Baseada em Evidências em UTI: Parte I' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Ml-D1LLh5dn65XP5e7ESCkHUtMLtCweL/view?usp=sharing'), title: 'Medicina Baseada em Evidências em UTI: Parte II' },
+                { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1PtvUgaIu-yGVAaRj63Jj5Ahj6sPUK756/view?usp=sharing'), title: 'Gerenciamento de Custos na UTI' }
+            ], materials: [] }
+        ];
+
+        // --- Funções de Navegação ---
+
+        function navigateTo(pageId) {
+            ['moduleSelectionPage', 'contentPage'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        function showModuleSelectionPage() {
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            modulesData.forEach(module => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showContentPage('${module.id}')">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <i class="${module.icon} text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${module.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${module.videos.length} aulas e ${module.materials.length} materiais</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = '2ª Edição UTI Online do HCFMUSP';
+            document.getElementById('backButton').classList.add('hidden');
+            navigateTo('moduleSelectionPage');
+        }
+
+        function showContentPage(moduleId) {
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            renderContent(module);
+            
+            document.getElementById('mainTitle').textContent = module.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            backButton.onclick = showModuleSelectionPage;
+            navigateTo('contentPage');
+        }
+        
+        // --- Funções de Renderização de Conteúdo ---
+
+        function renderContent(module) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const materialsDropdown = document.getElementById('materialsDropdown');
+            videosContainer.innerHTML = '';
+            materialsContainer.innerHTML = '';
+
+            let firstItem = null;
+            module.videos.forEach(item => {
+                if (!firstItem) firstItem = { type: 'video', data: item };
+                videosContainer.innerHTML += createItemHtml('video', item);
+            });
+            module.materials.forEach(item => {
+                if (!firstItem) firstItem = { type: 'material', data: item };
+                materialsContainer.innerHTML += createItemHtml('material', item);
+            });
+            
+            materialsDropdown.style.display = module.materials.length > 0 ? 'block' : 'none';
+            if (module.videos.length === 0) {
+                 videosContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma aula neste módulo.</p>';
+            }
+            
+            if (firstItem) {
+                if (firstItem.type === 'video') {
+                    loadVideo(firstItem.data.id, firstItem.data.title);
+                } else {
+                    loadMaterial(firstItem.data.link, firstItem.data.title);
+                }
+            } else {
+                updatePlayerAndSelection(null, '', 'Nenhum item disponível');
+            }
+        }
+
+        function createItemHtml(type, item) {
+            // Adiciona um ícone padrão se não for especificado
+            const iconClass = item.icon || (type === 'video' ? 'fas fa-video' : 'fas fa-file-pdf');
+            const onclickAction = type === 'video' 
+                ? `loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')`
+                : `loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')`;
+            const dataId = type === 'video' ? item.id : item.link;
+            return `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                     onclick="${onclickAction}" data-id="${dataId}">
+                    <div class="item-thumbnail-placeholder"><i class="${iconClass}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                    </div>
+                </div>`;
+        }
+
+        function loadVideo(videoId, lessonTitle) {
+            const isPlaceholder = !videoId || videoId.startsWith('placeholder');
+            const playerSrc = isPlaceholder ? '' : `https://drive.google.com/file/d/${videoId}/preview`;
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : lessonTitle;
+            updatePlayerAndSelection(videoId, playerSrc, displayTitle);
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const isPlaceholder = !link || link === '#';
+            const playerSrc = isPlaceholder ? '' : link.replace(/\/view\?usp=.*/, '/preview');
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : materialTitle;
+            updatePlayerAndSelection(link, playerSrc, displayTitle);
+        }
+
+        function updatePlayerAndSelection(itemId, playerSrc, title) {
+            document.getElementById('contentPlayer').src = playerSrc;
+            document.getElementById('lessonTitle').textContent = title;
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+            if (itemId) {
+                 const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+                if (currentSelected) currentSelected.classList.add('selected-lesson');
+            }
+            selectedItemId = itemId;
+        }
+
+        // --- Inicialização ---
+        window.onload = showModuleSelectionPage;
+    </script>
+</body>
+</html>

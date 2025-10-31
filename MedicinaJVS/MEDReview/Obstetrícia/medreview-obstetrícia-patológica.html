@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">MEDReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_gestacao_prenatal', title: 'GESTAÇÃO E PRÉ-NATAL', content: [
+                { type: 'group', video: { title: 'Aula 01 - Modificações do organismo materno', link: 'https://drive.google.com/file/d/1gsvJZ-DkR1GZASgvxrDAm7QGHxsQkAUw/view?usp=sharing' }, materials: [{ title: 'E-Book - Modificações Fisiológicas na Gestação', link: 'https://drive.google.com/file/d/1dvi7qApp7xZ6MM8-d6dJRdRZiyiNRH25/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Diagnóstico de gravidez', link: 'https://drive.google.com/file/d/1w8SRrpeNnPv147E26DHb_Xxw6AYx88_4/view?usp=sharing' }, materials: [{ title: 'E-Book - Diagnóstico de Gravidez', link: 'https://drive.google.com/file/d/1rl8gjkHfR-fpAvsbUG19vkqIqW0F8TGt/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Assistência Pré-Natal: Parte I', link: 'https://drive.google.com/file/d/1fX6VsvzRKihuFaudwcyxnaLP9grEMJsr/view?usp=sharing' }, materials: [{ title: 'E-Book - Assistência Pré-Natal: Parte I', link: 'https://drive.google.com/file/d/1eefz1LOL5WpPy_GByJBlIcWKZYEZKihr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Assistência Pré-Natal: Parte II', link: 'https://drive.google.com/file/d/1KRmW_GbQ3np4xXqTdARe0MBHxO-RZZIP/view?usp=sharing' }, materials: [{ title: 'E-Book - Assistência Pré-Natal: Parte II', link: 'https://drive.google.com/file/d/1DBZ0lElftI9bM85h1C8W6XeEaAo09L_U/view?usp=sharing' }] },
+            ]},
+            { id: 'module_parto_puerperio', title: 'PARTO E PUERPÉRIO', content: [
+                { type: 'group', video: { title: 'Aula 01 - Obstetrícia Básica: Bacia, Estática Fetal e Mecanismo de Parto', link: 'https://drive.google.com/file/d/1rq6TTVtO2STtiS62rkNwaT7HwUaZGnNl/view?usp=sharing' }, materials: [{ title: 'E-Book - Obstetrícia Básica: Bacia, Estática Fetal e Mecanismo de Parto', link: 'https://drive.google.com/file/d/1x_E07Ylge9IVG-dvqUyx8wxBfEgWkV0U/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Assistência ao Parto Vaginal', link: 'https://drive.google.com/file/d/1RvdXjfcsaUWpNVtS1xCw2wOm5XotiaU_/view?usp=sharing' }, materials: [{ title: 'E-Book - Assistência ao Parto Vaginal', link: 'https://drive.google.com/file/d/1R-RKBnN0ZHO8oVFHu0V4gqmPNMTzb3ZF/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Assistência ao Parto Pélvico', link: 'https://drive.google.com/file/d/1G_EcMAgbYYvTL7sWz-a5uH_0FuN1zx9f/view?usp=sharing' }, materials: [{ title: 'E-Book - Assistência ao Parto Pélvico', link: 'https://drive.google.com/file/d/11G6oNSs4y_D0aE1cVDaWtQNO6XyvwOcb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Parto Vaginal Operatório', link: 'https://drive.google.com/file/d/1f7zyhBYi1qYDmXqsEastHOq-gShuGRA7/view?usp=sharing' }, materials: [{ title: 'E-Book - Parto Vaginal Operatório', link: 'https://drive.google.com/file/d/16dYKnozH1am_flTtp9ZZNJQIWN6mJMa9/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Cesariana e Indução do Parto', link: 'https://drive.google.com/file/d/1fWUB1TFVmINaoqNF3UY9jJCgFvnJvzhE/view?usp=sharing' }, materials: [{ title: 'E-Book - Cesariana e Indução do Parto', link: 'https://drive.google.com/file/d/1n1N80pQzXTmKpdB5Z0lMFWzm_H1RITCm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Puerpério Fisiológico e Patológico', link: 'https://drive.google.com/file/d/1mhjr-NJZtYiPh-Q3n1B6dYzDsXUiC59j/view?usp=sharing' }, materials: [{ title: 'E-Book - Puerpério Fisiológico e Patológico', link: 'https://drive.google.com/file/d/1M-DVheLvAXU7gOUEh07pvGhQTagyXHyx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Hemorragia Pós Parto', link: 'https://drive.google.com/file/d/1XxQ_Ci-eB5uRMzKIsPiwS0b_S2nqUNdN/view?usp=sharing' }, materials: [{ title: 'E-Book - Hemorragia Pós Parto', link: 'https://drive.google.com/file/d/19nVSYUtKKb0GliEUsqmZhv-7fm7PJ2Lf/view?usp=sharing' }] },
+            ]},
+            { id: 'module_obstetricia_patologica', title: 'OBSTETRÍCIA PATOLÓGICA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Sangramento da Primeira Metade: Parte I', link: 'https://drive.google.com/file/d/1u_xd2Gryj7BBecxOexPDXt8WICgv9dub/view?usp=sharing' }, materials: [{ title: 'E-Book - Sangramento da Primeira Metade: Parte I', link: 'https://drive.google.com/file/d/18-h8sOR_ZqS1b_8oN2xBeJIJEx4yPIVu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Sangramento da Primeira Metade: Parte II', link: 'https://drive.google.com/file/d/1sDTrvIaFQVldqC2yvQcYLIDO5CPHTYOJ/view?usp=sharing' }, materials: [{ title: 'E-Book - Sangramento da Primeira Metade: Parte II', link: 'https://drive.google.com/file/d/1lCXU_MZLRGa53-R9aPbAMJm4QSrvn1gI/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Sangramento da Segunda Metade', link: 'https://drive.google.com/file/d/1YLk4WutfMprB5D3cYB6T6YMac-xR01nm/view?usp=sharing' }, materials: [{ title: 'E-Book - Sangramento da Segunda Metade', link: 'https://drive.google.com/file/d/1PK3EExUto55fi0dyDQKtvy3y08W7E5sf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Trabalho de Parto Prematuro', link: 'https://drive.google.com/file/d/1vnbt_h3wGGHwfhTaX7xHCS_bQCOixwgo/view?usp=sharing' }, materials: [{ title: 'E-Book - Trabalho de Parto Prematuro', link: 'https://drive.google.com/file/d/1Uzh9bbe0MMHSDEtCJYn0sl_x1KZiumEN/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Colo Curto e Incompetência Istmocervical', link: 'https://drive.google.com/file/d/1-wymZjgKnZt90fbGEtnar5urgGwX8KRq/view?usp=sharing' }, materials: [{ title: 'E-Book - Colo Curto e Incompetência Istmocervical', link: 'https://drive.google.com/file/d/1TYF9VsGIpKP3BusEUijNQZSEavW9HMRc/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - ROPREMA e Corioamnionite', link: 'https://drive.google.com/file/d/1MYm3A3-BsPN7WvBwAH4Xm2d4ED0-5024/view?usp=sharing' }, materials: [{ title: 'E-Book - ROPREMA e Corioamnionite', link: 'https://drive.google.com/file/d/1jueweaeAtZpgEn___7ImWGR8UjmnXyYE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Doença Hemolítica Perinatal', link: 'https://drive.google.com/file/d/1Es2jh74pcmvJGZ8Fgn4K0t968xTREjKY/view?usp=sharing' }, materials: [{ title: 'E-Book - Doença Hemolítica Perinatal', link: 'https://drive.google.com/file/d/1Me9nxfaDWlFd-NDVnfXC23mop1XKD2V7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Gemelaridade', link: 'https://drive.google.com/file/d/1LsDCYaifDAIj6AchlN5DdbBMof6w0xWJ/view?usp=sharing' }, materials: [{ title: 'E-Book - Gemelaridade', link: 'https://drive.google.com/file/d/1nAsfOKE6mWC_bUtO_K02OVvr7GYy06cJ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Sofrimento Fetal Agudo e Crônico', link: 'https://drive.google.com/file/d/11QrYtkG2w_nMU7SODykQ9fZCfmZ9R9n-B/view?usp=sharing' }, materials: [{ title: 'E-Book - Sofrimento Fetal', link: 'https://drive.google.com/file/d/1xZHdLVdd6NidwmWoamwxIN_Xi8EN1KXD/view?usp=sharing' }] },
+            ]},
+            { id: 'module_doencas_associadas_gestacao', title: 'DOENÇAS ASSOCIADAS À GESTAÇÃO', content: [
+                { type: 'group', video: { title: 'Aula 01 - Síndromes Hipertensivas: Parte I', link: 'https://drive.google.com/file/d/1Nfdz3pdS7ky6nVo375rZzcHcllzouw0a/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndromes Hipertensivas: Parte I', link: 'https://drive.google.com/file/d/1ulVVe2sSISgkF96718Cmig3lsj6QPZIL/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Síndromes Hipertensivas: Parte II', link: 'https://drive.google.com/file/d/1LLCBghpLvvk3Sk_Qn2Jftd94jo5sZWZd/view?usp=sharing' }, materials: [{ title: 'E-Book - Síndromes Hipertensivas: Parte II', link: 'https://drive.google.com/file/d/1IXlH2jxUes47yeJsZu-plXqhCG0ELEJR/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Diabetes na Gestação', link: 'https://drive.google.com/file/d/1ug0kzr7orzLISU9RJU9gZSy2UtHFP0uT/view?usp=sharing' }, materials: [{ title: 'E-Book - Diabetes na Gestação', link: 'https://drive.google.com/file/d/1UpNbADVr55Bk7BqVX2bFTC5GzzcMvSsZ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Tireoidopatias na Gestação', link: 'https://drive.google.com/file/d/1QNUUGFrW7kv9cxUYr7EQuKxdj_OHFdeS/view?usp=sharing' }, materials: [{ title: 'E-Book - Tireoidopatias na Gestação', link: 'https://drive.google.com/file/d/1C56QBXV4_FtT1xTZEdnlPRhX548vFyJV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Nutrição e Hiperêmese', link: 'https://drive.google.com/file/d/1qHcKmVPtg7L3Q1A7mVM_ovuZQaBDcZ-I/view?usp=sharing' }, materials: [{ title: 'E-Book - Nutrição e Hiperêmese', link: 'https://drive.google.com/file/d/1ZdjM9bDPIhwRHC7YamkwRtFr_ae0V0Cj/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Anemias na Gestação', link: 'https://drive.google.com/file/d/1DoLv-CbB-DYMD7TshcbZmX6u-LZb9Nfd/view?usp=sharing' }, materials: [{ title: 'E-Book - Anemias na Gestação', link: 'https://drive.google.com/file/d/1OldadOZBvhzKO4j3Q5Yv15PHuxM6HUuH/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Trombofilia', link: 'https://drive.google.com/file/d/1ABpJI1dNoof5i3PA5WJlZb2rUZ3RmXv9/view?usp=sharing' }, materials: [{ title: 'E-Book - Trombofilia e Trombose', link: 'https://drive.google.com/file/d/1S3jXIL0b_7m4Ok11pUDx0_Z0zxQVbCQq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Doenças Infecciosas na Gestação e ITU: Parte I', link: 'https://drive.google.com/file/d/1MQTxnd5P315KYk61ezt1P3Tb4-w16FrD/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Infecciosas na Gestação e ITU: Parte I', link: 'https://drive.google.com/file/d/1jaqJ0OoXbaoKVjmXyyZWr3oX3TLxD2sb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Doenças Infecciosas na Gestação e ITU: Parte II', link: 'https://drive.google.com/file/d/1rdXlvB3O0BFVusZerBg7PV6r15YKfjZ1/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Infecciosas na Gestação e ITU: Parte II', link: 'https://drive.google.com/file/d/1-wNzkBccO37VF9_xHdHHxA68wnBfpGsx/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Doenças Infecciosas na Gestação e ITU: Parte III', link: 'https://drive.google.com/file/d/1rUKxGsXvgZBqC_msJ0LGx4cobo02zT5l/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Infecciosas na Gestação e ITU: Parte III', link: 'https://drive.google.com/file/d/1yDMTNqremQ_Gn5AY-sCzkxLgDhPS-QSV/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Colagenoses na Gestação', link: 'https://drive.google.com/file/d/1iInKVU_CI8dSgXRPfJWv6HAWq4pEZNsQ/view?usp=sharing' }, materials: [{ title: 'E-Book - Colagenoses na Gestação', link: 'https://drive.google.com/file/d/1GP9Ag3J3eaUlxHPviSROoZgwDd_2ouPj/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Cardiopatias e PCR', link: 'https://drive.google.com/file/d/1-GItck1ms5CwPldWP8uNhuDSnENm85to/view?usp=sharing' }, materials: [{ title: 'E-Book - Cardiopatias e PCR', link: 'https://drive.google.com/file/d/16zLCouNVLWqLc7CjsfhmKxasqf9oT5nS/view?usp=sharing' }] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') {
+                const titleElement = document.getElementById('itemTitle');
+                if (itemTitle) {
+                    titleElement.textContent = itemTitle;
+                }
+                return;
+            }
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials && selectedGroup.materials.length > 0) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            } else {
+                materialsContainer.innerHTML = '<p class="text-gray-400">Nenhum material de apoio para esta aula.</p>';
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[2].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[2].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
+

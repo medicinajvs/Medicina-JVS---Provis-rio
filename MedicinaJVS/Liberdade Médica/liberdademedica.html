@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liberdade Médica</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark background similar to the image */
+            color: #e6edf3; /* Light text color */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1e24;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5c677a;
+        }
+        /* Hidden by default, shown by JavaScript */
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-16 bg-gradient-to-b from-blue-700 to-purple-700 flex flex-col items-center py-4 rounded-tr-lg rounded-br-lg shadow-lg">
+        <div class="mb-8">
+            <!-- Hamburger Menu Icon -->
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </div>
+        <nav class="flex flex-col space-y-8">
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Início">
+                <!-- Home Icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            </a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Favoritos">
+                <!-- Bookmark Icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+            </a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Perfil">
+                <!-- User Icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            </a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Configurações">
+                <!-- Settings Icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.526.32 1.01.5 1.5.5zm.928 6.643a3.5 3.5 0 10-3.5 3.5 3.5 3.5 0 003.5-3.5z"></path></svg>
+            </a>
+            <a href="#" class="text-white hover:text-gray-300 transition-colors duration-200" title="Ajuda">
+                <!-- Help Icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9.272a4.5 4.5 0 011.13-1.897l8.932-8.932a1 1 0 011.414 0l2.586 2.586a1 1 0 010 1.414l-8.932 8.932a4.5 4.5 0 01-1.897 1.13c-.27.086-.54.145-.81.18L3 21l-1.932-1.932a4.5 4.5 0 011.13-1.897c.035-.27.094-.54.18-.81zm0 0l-4.242 4.242"></path></svg>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col">
+        <!-- Top Header Bar -->
+        <header class="bg-[#161b22] px-6 py-4 flex items-center justify-between shadow-md rounded-bl-lg rounded-br-lg">
+            <div class="flex items-center space-x-4">
+                <span class="text-white text-lg font-semibold flex items-center">
+                    <span class="text-blue-500 mr-2">Z</span> Liberdade Médica
+                </span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" placeholder="Pesquisar" class="bg-[#21262d] text-gray-300 pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 md:w-80">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <!-- Notification Icon -->
+                    <div class="relative">
+                        <svg class="w-6 h-6 text-gray-400 hover:text-white cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                        <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-gray-900"></span>
+                    </div>
+                    <!-- User Avatar Icon -->
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Body -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            <!-- Navigation Tabs -->
+            <nav class="mb-6 flex space-x-4 text-sm md:text-base overflow-x-auto pb-2">
+                <a href="#" class="tab-link px-4 py-2 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200 whitespace-nowrap" data-tab="inicio">Início</a>
+                <a href="#" class="tab-link px-4 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="sala-vermelha">Sala Vermelha Sempre Tranquila</a>
+                <a href="#" class="tab-link px-4 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="pos-graduacao">Pós-Graduação em Paciente Grave</a>
+                <a href="#" class="tab-link px-4 py-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200 whitespace-nowrap" data-tab="metodo-plantao">Método Plantão Sempre Tranquilo</a>
+            </nav>
+
+            <!-- Content Sections Container -->
+            <div id="content-container">
+                <!-- Início Section -->
+                <div id="inicio" class="content-section active">
+                    <section class="mb-8">
+                        <h2 class="text-xl font-semibold mb-4">Conteúdos</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
+                            <!-- Card Módulo 1 -->
+                            <a href="MPST/metodoplantaosempretranquilo1.html" class="block group">
+                                <div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+                                    <img src="Imagens/LM/mPST-logo.webp" alt="Módulo 1" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Módulo';">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div>
+                                </div>
+                                <h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Método Plantão Sempre Tranquilo</h3>
+                            </a>
+
+                            <!-- Card Módulo 2 -->
+                            <a href="PGPG/posgradpacientegrave.html" class="block group">
+                                 <div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+                                    <img src="Imagens/LM/pacienteGrave-logo.jpeg" alt="Módulo 2" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x337/21262d/ffffff?text=Módulo';">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div>
+                                </div>
+                                <h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Pós-Graduação em Paciente Grave</h3>
+                            </a>
+
+                            <!-- Card Módulo 3 -->
+                            <a href="SVST/salavermelhasempretranquila0.html" class="block group">
+                                 <div class="relative w-full aspect-video bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+                                    <img src="Imagens/LM/salaVermelhaSempreTranquila.jpeg" alt="Módulo 3" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity duration-300" onerror="this.onerror=null;this.src='https.placehold.co/600x337/21262d/ffffff?text=Módulo';">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent"></div>
+                                </div>
+                                <h3 class="mt-3 text-lg font-bold text-gray-200 group-hover:text-white transition-colors duration-200 text-center">Sala Vermelha Sempre Tranquila</h3>
+                            </a>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Sala Vermelha Sempre Tranquila Section -->
+                <div id="sala-vermelha" class="content-section">
+                    <section class="mb-8">
+                        <h2 class="text-xl font-semibold mb-4">Sala Vermelha Sempre Tranquila</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="sala-vermelha-modules-grid">
+                            <!-- Content will be dynamically loaded here by JavaScript -->
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Pós-Graduação em Paciente Grave Section -->
+                <div id="pos-graduacao" class="content-section">
+                    <section class="mb-8">
+                        <h2 class="text-xl font-semibold mb-4">Pós-Graduação em Paciente Grave</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="pos-graduacao-modules-grid">
+                            <!-- Content will be dynamically loaded here by JavaScript -->
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Método Plantão Sempre Tranquilo Section -->
+                <div id="metodo-plantao" class="content-section">
+                    <section class="mb-8">
+                        <h2 class="text-xl font-semibold mb-4">Método Plantão Sempre Tranquilo</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="metodo-plantao-modules-grid">
+                            <!-- Content will be dynamically loaded here by JavaScript -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabLinks = document.querySelectorAll('.tab-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            // --- Dados para os Módulos ---
+
+            // Array de objetos para os 37 módulos da Sala Vermelha, incluindo títulos, URLs de imagem e URLs de página.
+            const salaVermelhaModulesData = [];
+            for (let i = 1; i <= 37; i++) {
+                salaVermelhaModulesData.push({
+                    title: `Módulo Sala Vermelha ${i}`,
+                    imageUrl: `Imagens/SVST/modulo${i}.avif`, // Certifique-se de que a pasta SVST exista dentro de Imagens
+                    pageUrl: `SVST/salavermelhasempretranquila${i}.html` // Exemplo de URL de página para cada módulo
+                });
+            }
+
+            // Array de objetos para os 20 módulos da Pós-Graduação, incluindo títulos, URLs de imagem e URLs de página.
+            const posGraduacaoModulesData = [];
+            for (let i = 1; i <= 20; i++) {
+                posGraduacaoModulesData.push({
+                    title: `Módulo Pós-Graduação ${i}`,
+                    imageUrl: `Imagens/PGPG/modulo${i}.jpeg`, // Certifique-se de que a pasta PGPG exista dentro de Imagens
+                    pageUrl: `PGPG/posgradpacientegrave${i}.html` // Exemplo de URL de página para cada módulo
+                });
+            }
+
+            // Array de objetos para os 40 módulos do Método Plantão, incluindo títulos, URLs de imagem e URLs de página.
+            const metodoPlantaoModulesData = [];
+            for (let i = 1; i <= 40; i++) {
+                metodoPlantaoModulesData.push({
+                    title: `Módulo Plantão ${i}`,
+                    imageUrl: `Imagens/MPST/modulo${i}.jpeg`, // Certifique-se de que a pasta MPST exista dentro de Imagens
+                    pageUrl: `MPST/metodoplantaosempretranquilo${i}.html` // Exemplo de URL de página para cada módulo
+                });
+            }
+
+
+            // --- Funções para Geração e População de Cards ---
+
+            /**
+             * Gera o HTML para um card de módulo de curso.
+             * @param {object} moduleData - Objeto contendo { title: string, imageUrl: string, pageUrl: string }.
+             * @param {string} themeColorClass - Classe Tailwind para a cor do tema (e.g., 'bg-red-600', 'bg-purple-700', 'bg-green-700').
+             * @param {string} badgeMainText - Texto principal do badge (e.g., 'SALA VERMELHA').
+             * @param {string} badgeSubText - Subtexto do badge (e.g., 'SEMPRE TRANQUILA').
+             * @returns {string} HTML do card.
+             */
+            const generateCourseModuleCard = (moduleData, themeColorClass, badgeMainText, badgeSubText) => {
+                const { title: fullTitle, imageUrl, pageUrl } = moduleData; // Desestrutura pageUrl
+
+                // Define as classes para o card, incluindo a proporção de aspecto 3:4
+                const cardClasses = "block cursor-pointer relative w-full aspect-[3/4] rounded-lg shadow-xl flex flex-col overflow-hidden group";
+
+                // Conteúdo HTML para o badge no canto superior esquerdo
+                const badgeHtml = `
+                    <div class="absolute top-3 left-3 ${themeColorClass} text-xs font-semibold px-2 py-1 rounded-sm flex items-center bg-opacity-75 z-20">
+                        <span class="text-white">${badgeMainText}</span>
+                        ${badgeSubText ? `<span class="ml-1 text-gray-300 text-[8px]">${badgeSubText}</span>` : ''}
+                    </div>
+                `;
+
+                // HTML para a imagem de fundo e o overlay de gradiente para legibilidade
+                // O onerror agora usa um placeholder genérico sem cor de tema específica,
+                // para não depender da cor do tema do card, caso a imagem falhe.
+                const backgroundAndOverlayHtml = `
+                    <img src="${imageUrl}" alt="${fullTitle}" class="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/400x533/21262d/ffffff?text=Extras';">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 z-10"></div>
+                `;
+                
+                // O conteúdo do card agora incluirá apenas a imagem de fundo, o overlay e o badge.
+                const contentHtml = `
+                    ${backgroundAndOverlayHtml}
+                    ${badgeHtml}
+                `;
+                
+                return `
+                    <a href="${pageUrl}" class="${cardClasses}"> <!-- Usando pageUrl aqui para o link -->
+                        ${contentHtml}
+                    </a>
+                `;
+            };
+
+
+            // Função para popular a seção "Sala Vermelha Sempre Tranquila"
+            const populateSalaVermelhaContent = () => {
+                const salaVermelhaGrid = document.getElementById('sala-vermelha-modules-grid');
+                if (salaVermelhaGrid) {
+                    salaVermelhaGrid.innerHTML = ''; // Limpa o conteúdo existente
+                    salaVermelhaModulesData.forEach((moduleData) => {
+                        salaVermelhaGrid.innerHTML += generateCourseModuleCard(moduleData, 'bg-red-600', 'SALA VERMELHA', 'SEMPRE TRANQUILA');
+                    });
+                }
+            };
+
+            // Função para popular a seção "Pós-Graduação em Paciente Grave"
+            const populatePosGraduacaoContent = () => {
+                const posGraduacaoGrid = document.getElementById('pos-graduacao-modules-grid');
+                if (posGraduacaoGrid) {
+                    posGraduacaoGrid.innerHTML = ''; // Limpa o conteúdo existente
+                    posGraduacaoModulesData.forEach((moduleData) => {
+                        posGraduacaoGrid.innerHTML += generateCourseModuleCard(moduleData, 'bg-purple-700', 'PÓS-GRADUAÇÃO', 'PACIENTE GRAVE');
+                    });
+                }
+            };
+
+            // Função para popular a seção "Método Plantão Sempre Tranquilo"
+            const populateMetodoPlantaoContent = () => {
+                const metodoPlantaoGrid = document.getElementById('metodo-plantao-modules-grid');
+                if (metodoPlantaoGrid) {
+                    metodoPlantaoGrid.innerHTML = ''; // Limpa o conteúdo existente
+                    metodoPlantaoModulesData.forEach((moduleData) => {
+                        metodoPlantaoGrid.innerHTML += generateCourseModuleCard(moduleData, 'bg-green-700', 'MÉTODO PLANTÃO', 'SEMPRE TRANQUILO');
+                    });
+                }
+            };
+
+
+            // --- Lógica de Troca de Abas ---
+
+            // Função para mostrar o conteúdo da aba específica
+            const showTab = (tabId) => {
+                // Remove a classe 'active' de todos os links de abas
+                tabLinks.forEach(link => {
+                    link.classList.remove('bg-blue-600', 'text-white', 'font-medium');
+                    link.classList.add('text-gray-400', 'hover:text-white', 'hover:bg-gray-800');
+                });
+
+                // Oculta todas as seções de conteúdo
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+
+                // Adiciona a classe 'active' ao link da aba clicada
+                const activeTabLink = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+                if (activeTabLink) {
+                    activeTabLink.classList.add('bg-blue-600', 'text-white', 'font-medium');
+                    activeTabLink.classList.remove('text-gray-400', 'hover:text-white', 'hover:bg-gray-800');
+                }
+
+                // Mostra a seção de conteúdo correspondente e popula seus cards
+                const activeContentSection = document.getElementById(tabId);
+                if (activeContentSection) {
+                    activeContentSection.classList.add('active');
+                }
+
+                // Popula o conteúdo da aba ativa
+                if (tabId === 'sala-vermelha') {
+                    populateSalaVermelhaContent();
+                } else if (tabId === 'pos-graduacao') {
+                    populatePosGraduacaoContent();
+                } else if (tabId === 'metodo-plantao') {
+                    populateMetodoPlantaoContent();
+                }
+                // 'inicio' não precisa de populadores dinâmicos se o conteúdo for estático
+            };
+
+            // Adiciona ouvintes de evento de clique a cada link de aba
+            tabLinks.forEach(link => {
+                link.addEventListener('click', (event) => {
+                    event.preventDefault(); // Previne o comportamento padrão do link
+                    const tabId = link.dataset.tab; // Obtém o ID da aba do atributo data-tab
+                    showTab(tabId);
+                });
+            });
+
+            // Inicialmente, mostra o conteúdo da aba "Início"
+            showTab('inicio'); 
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronto-Socorro Dominando a Dermato</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Azul para destaque */
+            border: 2px solid #63b3ed; /* Borda para visibilidade */
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Estilos para os menus suspensos de sub-módulos */
+        .sub-module-details {
+            background-color: #2d3748;
+            border-radius: 0.375rem; /* rounded-lg */
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+        .sub-module-summary {
+            padding: 0.75rem 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .sub-module-summary:hover {
+            background-color: #4a5568;
+        }
+        .sub-module-summary::-webkit-details-marker {
+            display: none; /* Esconde o marcador padrão */
+        }
+        .sub-module-summary .icon {
+            transition: transform 0.2s ease-in-out;
+        }
+        .sub-module-details[open] > .sub-module-summary .icon {
+            transform: rotate(90deg); /* Gira o ícone quando aberto */
+        }
+        .lessons-list-container {
+            padding: 0.5rem;
+            border-top: 1px solid #4a5568;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Pronto-Socorro - Dominando a Dermato</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções dos módulos principais serão preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-t-lg"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <div class="p-4 bg-gray-800">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula</h2>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas (agora com sub-módulos) -->
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <div id="lessonsContainer" class="space-y-2">
+                <!-- Aulas e sub-módulos serão injetados aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const modulesData = [
+            {
+                main_id: 'module_01', main_title: 'Módulo 01 - Como Começar',
+                sub_modules: [
+                    { title: 'Como Começar', items: [
+                        { link: 'https://drive.google.com/file/d/1VYU3R7OBt_tAELJ7B004sb7n0LSW4lfP/view?usp=sharing', title: 'Aula 01 - Quando Indicar Sala de Emergência?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1qKpjYdM6h3ljuxNMaXAjPaX1PFWW9Ok2/view?usp=sharing', title: 'Aula 02 - Normas Reguladoras do Sistema de Urgência e Emergência', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1DidHrrE9lbLGeurNZHoKjP3uwOSPf6YX/view?usp=sharing', title: 'Aula 03 - Atestado Médico no Pronto-Socorro', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1hPVvTSCu-eQeKSjGb71Zw9F6HFx4Hvqc/view?usp=sharing', title: 'Aula 04 - Atestado de Óbito: Como Preencher?', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1rE4ZKRfIAhKrbtnvuJtYPeDNm9MMBvbS/view?usp=sharing', title: 'Aula 05 - Conceitos Essenciais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1bTqLdHxkl8ErbLes5sU0u_XLxnAdfAyt/view?usp=sharing', title: 'Aula 06 - Escolhendo o Teste Apropriado', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1ofKN3CgfYyO1hG96eSr3dsCjWqHwe8tD/view?usp=sharing', title: 'Aula 07 - Armadilhas e Mensagens Finais', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_02', main_title: 'Módulo 02 - Reconheço, Faço Tratamento Sintomático, Investigação Inicial e Encaminho',
+                sub_modules: [
+                    { title: 'Diagnóstico Diferencial das Lesões Elementares', items: [
+                        { link: 'https://drive.google.com/file/d/11uYZBKDalX_86ihwtjmVwMwwjs3j7iOT/view?usp=sharing', title: 'Aula 01 - Diagnóstico Diferencial das Lesões Elementares', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1n-5zRUhi2X2feDpRxAhzyaWus5n7BH0D/view?usp=sharing', title: 'Aula 02 - Eritêmato-Descamativas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1nc_P5OSvUyuZWmwvZdsiS3cit4gokfin/view?usp=sharing', title: 'Aula 03 - Manchas Pigmentares', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/10ZBJ6NVf2rsmqi9_pDyNoplDEmF1h9Y4/view?usp=sharing', title: 'Aula 04 - Urticas e Bolhas', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1na_av0l2z9sWPQFvNQBgepZrsp7bMGaN/view?usp=sharing', title: 'Aula 05 - Púrpuras', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/16-loKx-MocSZZ6v2matWPtnXoHIZXcv6/view?usp=sharing', title: 'Aula 06 - Pústulas, Vegetações, Fístulas, Nódulos', type: 'video' }
+                    ]},
+                    { title: 'Por Topografia', items: [
+                        { link: 'https://drive.google.com/file/d/18MHHxxuMNF228azwygi7U7wdZXDuKQVi/view?usp=sharing', title: 'Aula 01 - Lesões Genitais e Orais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1KFxe1mapiduTeb10J9J8jU7qqDYOpolp/view?usp=sharing', title: 'Aula 02 - Úlceras Genitais', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1FymmHcdM9QXwihb1JGUbVH0Rf4bGLX7U/view?usp=sharing', title: 'Aula 03 - Lesões Ungueais e Palmo-Plantares', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_03', main_title: 'Módulo 03 - O Que é Comum no PS e Eu Consigo Resolver?',
+                sub_modules: [
+                    { title: 'Infecções Bacterianas', items: [
+                        { link: 'https://drive.google.com/file/d/1_DxN40sVShPvDXj-yRJqhhHxy6Q1aqfD/view?usp=sharing', title: 'Aula 01 - Infecções Bacterianas Leves I (Impetigo, Impetigo Bolhoso. Impetiginização, Ectima)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Svq5hNWsgvz68TGDIJx745_EPLHeAMN9/view?usp=sharing', title: 'Aula 02 - Infecções Bacterianas Leves II (Foliculite, Furúnculo)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1lxtt4LchaW5ZZ039-K0mqXES7RFnGBul/view?usp=sharing', title: 'Aula 03 - Infecções Bacterianas Graves I (Celulite, Erisipela, Carbúnculo)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1YmzWvLjyABx4MRqffl3xE5zBS1k7wmn1/view?usp=sharing', title: 'Aula 04 - Infecções Bacterianas Graves II (Síndrome da Pele Escaldada Estafilocócica, Infecção de Pé Diabético, Fasceíte Necrotizante)', type: 'video' }
+                    ]},
+                    { title: 'Infecções Virais', items: [
+                        { link: 'https://drive.google.com/file/d/1sl5XgoIGIF_sjpxscRdlMiQWelpotlqD/view?usp=sharing', title: 'Aula 01 - Herpes (Herpes Simples, Herpes Zoster)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1yX41Mx7nI1iWxGJWbvkRu9_629kI7BQc/view?usp=sharing', title: 'Aula 02 - Exantemas Virais Agudos (Sarampo, Rubéola, Mononucleose, Exantema Súbito, Varicela, Enterovírus, Dengue, Zika, Chicungunya, Covid-19)', type: 'video' }
+                    ]},
+                    { title: 'Infestações', items: [
+                        { link: 'https://drive.google.com/file/d/1zPExTkXXN5SA3yw26EJ4ifkvmsJN2Yu8/view?usp=sharing', title: 'Aula 01 - Pediculose', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/19hOowSn-fPBFq4yVtGY7h9Pk-RgsJfYH/view?usp=sharing', title: 'Aula 02 - Escabiose', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1cQ4yEY6Niq3gNnnoJnxI2DBpUZZXrAvG/view?usp=sharing', title: 'Aula 03 - Outras Infestações (Miíase, Larva Migrans, Tungíase)', type: 'video' }
+                    ]},
+                    { title: 'Fitofotodermatose', items: [
+                        { link: 'https://drive.google.com/file/d/1jNyQ2QJpKFX9rob5A00gQKd1VyKQosSF/view?usp=sharing', title: 'Aula 01 - Fitofotodermatose', type: 'video' }
+                    ]},
+                    { title: 'Prurido: Manejo no PS', items: [
+                        { link: 'https://drive.google.com/file/d/1wqYT33ClEyvQMnVtojr8wEiSlTBvCUzH/view?usp=sharing', title: 'Aula 01 - Prurido: Manejo no PS', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_04', main_title: 'Módulo 04 - Farmacodermias, Eritrodermia e Hidradenite Supurativa',
+                sub_modules: [
+                    { title: 'Aulas', items: [
+                        { link: 'https://drive.google.com/file/d/1YaLjIILTQjUunC5DV3sTqpX4CUedgzux/view?usp=sharing', title: 'Aula 01 - Farmacodermias Leves (Prurido, Exantema, Urticária, Vasculite, Erupção Fixa, Erupção Acneiforme, Eritema Multiforme)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1owW3j5zRgoM0wPBIGqLhvlcB4F0Ximan/view?usp=sharing', title: 'Aula 02 - Farmacodermias Graves (DRESS, PEGA, Anafilaxia)', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/15KSFojuQEvo9GKEnNP6-yjh1_UOXuKES/view?usp=sharing', title: 'Aula 03 - SSJ/NET', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1PW4T62XZQjzRkG1sRO_8LkQC4HAuxuiM/view?usp=sharing', title: 'Aula 04 - Eritrodermia', type: 'video' },
+                        { link: 'https://drive.google.com/file/d/1Ur1pihT2C2Nzoz-f5lso5IZYNqgiz_ih/view?usp=sharing', title: 'Aula 05 - Hidradenite Supurativa', type: 'video' }
+                    ]}
+                ]
+            },
+            {
+                main_id: 'module_05', main_title: 'Módulo 05 - Banco de Imagens',
+                sub_modules: []
+            },
+            {
+                main_id: 'module_06', main_title: 'Módulo 06 - E-Book PS: Dominando a Dermato',
+                sub_modules: [
+                    { title: 'E-Book', items: [
+                        { link: 'https://drive.google.com/file/d/1-NSFE2XMpSvbwu5M0UqxoiU4Vzc7MReg/view?usp=drive_link', title: 'E-Book PS - Dominando a Dermato', type: 'ebook' }
+                    ]}
+                ]
+            }
+        ];
+
+        // Processa os dados para adicionar IDs e ícones
+        function processModulesData(data) {
+            return data.map(mainModule => ({
+                ...mainModule,
+                sub_modules: mainModule.sub_modules.map(subModule => ({
+                    ...subModule,
+                    items: subModule.items.map(item => ({
+                        ...item,
+                        id: extractIdFromGoogleDriveLink(item.link) || item.link
+                    }))
+                }))
+            }));
+        }
+
+        const processedModulesData = processModulesData(modulesData);
+
+        function loadContent(itemId, itemTitle, itemLink) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && itemLink) {
+                // Adiciona /preview para links do Google Drive para tentar incorporar
+                const previewLink = itemLink.replace(/view\?usp=sharing|edit\?usp=drive_link.*|view\?usp=drive_link/, 'preview');
+                contentPlayer.src = previewLink;
+            } else {
+                contentPlayer.src = '';
+            }
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            selectedItemId = itemId;
+            const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+        }
+
+        function renderMainModuleContent(mainModuleId) {
+            const lessonsContainer = document.getElementById('lessonsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+            const contentPlayer = document.getElementById('contentPlayer');
+
+            if (!lessonsContainer || !lessonTitleElement || !contentPlayer) return;
+
+            const mainModule = processedModulesData.find(m => m.main_id === mainModuleId);
+
+            if (!mainModule) {
+                console.error(`Módulo com ID ${mainModuleId} não encontrado.`);
+                lessonsContainer.innerHTML = '<p>Módulo não encontrado.</p>';
+                return;
+            }
+
+            let sidebarHtml = '';
+            let firstItem = null;
+
+            if(mainModule.sub_modules.length === 0) {
+                 sidebarHtml = '<p class="text-gray-400">Nenhuma aula disponível para este módulo ainda.</p>';
+            } else {
+                mainModule.sub_modules.forEach((subModule, index) => {
+                    let itemsHtml = '';
+                    subModule.items.forEach(item => {
+                        if (!firstItem) {
+                            firstItem = item;
+                        }
+                        const iconClass = item.type === 'ebook' ? 'fas fa-book-open' : 'fas fa-play-circle';
+                        itemsHtml += `
+                            <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px] mt-2"
+                                 onclick="loadContent('${item.id}', '${item.title}', '${item.link}')" data-id="${item.id}">
+                                <div class="item-thumbnail-placeholder">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${item.title}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    const isOpen = index === 0 ? 'open' : '';
+
+                    sidebarHtml += `
+                        <details class="sub-module-details" ${isOpen}>
+                            <summary class="sub-module-summary">
+                                <span>${subModule.title}</span>
+                                <i class="fas fa-chevron-right icon"></i>
+                            </summary>
+                            <div class="lessons-list-container">
+                                ${itemsHtml}
+                            </div>
+                        </details>
+                    `;
+                });
+            }
+
+            lessonsContainer.innerHTML = sidebarHtml;
+
+            if (firstItem) {
+                loadContent(firstItem.id, firstItem.title, firstItem.link);
+            } else {
+                contentPlayer.src = '';
+                lessonTitleElement.textContent = 'Selecione uma aula';
+                if (selectedItemId) {
+                    const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                    if (prevSelected) prevSelected.classList.remove('selected-lesson');
+                }
+                selectedItemId = null;
+            }
+        }
+
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Limpa opções existentes para o caso de reinicialização
+            moduleSelector.innerHTML = '';
+
+            processedModulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.main_id;
+                option.textContent = module.main_title;
+                moduleSelector.appendChild(option);
+            });
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderMainModuleContent(event.target.value);
+            });
+
+            if (processedModulesData.length > 0) {
+                moduleSelector.value = processedModulesData[3].main_id;
+                renderMainModuleContent(processedModulesData[3].main_id);
+            }
+        }
+
+        // Inicializa a plataforma quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

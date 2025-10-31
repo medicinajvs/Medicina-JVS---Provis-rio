@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Destaque para item selecionado */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* CORREÇÃO: Força o elemento a ficar oculto, evitando sobreposição de layout */
+        .hidden { 
+            display: none !important; 
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Cabeçalho da Aplicação -->
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg flex-shrink-0">
+        <div class="flex items-center space-x-4">
+            <button id="backButton" class="hidden bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </button>
+            <h1 id="mainTitle" class="text-xl font-bold text-white">Emergências Cardiológicas</h1>
+        </div>
+    </header>
+
+    <!-- Container principal que alterna as "páginas" -->
+    <div id="pageContainer" class="flex-grow">
+        <!-- Página de Seleção de Módulos -->
+        <div id="moduleSelectionPage" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- Página de Seleção de Submódulos -->
+        <div id="submoduleSelectionPage" class="hidden p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- PÁGINA DE CONTEÚDO (AULAS) -->
+        <main id="contentPage" class="hidden h-full p-4 lg:grid lg:grid-cols-3 lg:gap-x-4">
+            <!-- Coluna Esquerda: Player, Título e Materiais -->
+            <section class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0">
+                    <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-4 bg-gray-800 border-b border-t border-gray-700 flex-shrink-0">
+                    <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+                </div>
+                <div class="p-4 overflow-y-auto flex-grow">
+                     <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                     <div id="materialsContainer" class="space-y-3"></div>
+                </div>
+            </section>
+            <!-- Coluna Direita: Lista de Aulas -->
+            <aside class="mt-4 lg:mt-0 lg:col-span-1 bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col overflow-y-auto hide-scrollbar max-h-[calc(100vh-128px)]">
+                <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+                <div id="videosContainer" class="space-y-3"></div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        // --- Estrutura de Dados ---
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // ESTRUTURA DE DADOS COMPLETA DO CURSO COM LINKS REAIS
+        const modulesData = [
+            // Módulo 01: Taquiarritmias
+            {
+                id: 'module_01_taquiarritmias', title: 'Módulo 01 - Taquiarritmias', icon: 'fas fa-heart-pulse',
+                submodules: [
+                    { id: 'sub_taq_intro', title: 'Introdução', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kowa_wZaobn6RcEmglu-jwWb4l8LKwmV/view?usp=sharing'), title: 'Aula 01 - Introdução', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_taq_mecanismos', title: 'Mecanismos das Taquiarritmias', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cf9eT7WPyDyTp-8jweX_zybjQVqVR5MB/view?usp=sharing'), title: 'Aula 01 - Mecanismos das Taquiarritmias', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_taq_abordagem', title: 'Abordagem Inicial', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1l2LgT61QxUNDkTotH3D4X0yg75HeZt_n/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_taq_conduta', title: 'Conduta nas Taquiarritmias Instáveis e Estáveis', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lGWFblINUX23J04DzmjJC4Y-Wr2mOhXo/view?usp=sharing'), title: 'Aula 01 - Conduta na Taquicardia Regular de QRS Estreito', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i6L0Z3z6fIK1Sl7gzu3UPG8OTWkMYXGs/view?usp=sharing'), title: 'Aula 02 - Conduta na Taquicardia Regular de QRS Largo', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mVAN5KgD1U6hTBj-AXGe58VrNCHK5EFW/view?usp=sharing'), title: 'Aula 03 - Conduta na Taquicardia Irregular de QRS Estreito', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jridh7UoKEofdVR2yQWjVaT3GPGtrbgi/view?usp=sharing'), title: 'Aula 04 - Conduta na Taquicardia Irregular de QRS Largo', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_taq_diagnosticos', title: 'Diagnósticos Diferenciais das Taquiarritmias', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kygYl2mWoLZzKeMD_WQleBlZQz0Wy8ak/view?usp=sharing'), title: 'Aula 01 - Diagnóstico Diferencial das Taquiarritmias', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_taq_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hB5-DJbC7O6kAxk6zoSpCKHAMxm9qv33/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iTvA3-954kEXrlJq9e1aAOn0BqWeAmQe/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1h4jQfQHfczYUwzUVMuJIWLBAMANni8HW/view?usp=sharing'), title: 'Aula 03 - Caso Clínico II', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iWiRK7H2cUrWGmTNKLkt2iJye4gomxsq/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iSK4EKj2DLkvU8qrsSx1CDwVal48KdPY/view?usp=sharing'), title: 'Aula 05 - Caso Clínico III', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bq-NzBSuQETHor0DMQkIs1njezihB7Hq/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hcrb7-X22yxwIiGhQ2ebnrsrfp3126Y1/view?usp=sharing'), title: 'Aula 07 - Caso Clínico IV', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1g9v-LQetLdyhBscJsrKx0RKItMRY8sIi/view?usp=sharing'), title: 'Aula 08 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iPo9KFPhbKKbiy3qInCKuZ3__dilBuyn/view?usp=sharing'), title: 'Aula 09 - Caso Clínico V', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1m991j48AwAWn0Vi3sAeXNkeFqy57GtgA/view?usp=sharing'), title: 'Aula 10 - Caso Clínico V: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kyQiOcSbJY5LAOWRINg6twRNJW0GFAeI/view?usp=sharing'), title: 'Aula 11 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 02: Emergências Hipertensivas
+            {
+                id: 'module_02_emergencias_hipertensivas', title: 'Módulo 02 - Emergências Hipertensivas', icon: 'fas fa-gauge-high',
+                submodules: [
+                    { id: 'sub_eh_classificacao', title: 'Classificação: Emergências x Urgências', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dpJ-5hYTiJaRku47hgtFw7RSYbzVVfhp/view?usp=sharing'), title: 'Aula 01 - Definição e Fisiopatologia', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_eh_abordagem', title: 'Abordagem Inicial', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jBw-gRXaY41O-iHyXNp6wGMtK38kC4s-/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial do Paciente', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_eh_tratamento', title: 'Tratamento da Emergências e Urgências', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bqH_0xjB832NrpC4Hu_xuag-1yINpl6l/view?usp=sharing'), title: 'Aula 01 - Situações Especiais', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_eh_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1l4V7n-RlRJQU0_nKWQRYaT9OG3rOC4m_/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hQjoHC6YZz5UqYbTZgNYK5Lf6fROeSsw/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k3emDZSwERn3ONaNwHa1zwTrSBY5wjwU/view?usp=sharing'), title: 'Aula 03 - Caso Clínico II', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lIx7sJrrnVKtzEtvIfr9TCrDlhVUkfVx/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e_YFR385SOHCysaT1JCG408i7Xw-LE_W/view?usp=sharing'), title: 'Aula 05 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k4h_YJIsQdJBVi8tO2CuL7KGW67l4kmh/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hVetgXAAimAWd7aURBMnNqEYo8SGKqam/view?usp=sharing'), title: 'Aula 07 - Caso Clínico IV', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aopegkc62HGo3lbVV-gecSrjccifEpyT/view?usp=sharing'), title: 'Aula 08 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kxwpKwY3iSu-QzAg-UC-EIF32hZu5Cu6/view?usp=sharing'), title: 'Aula 09 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k-zqO0vKFL522Hxx7KjKsoS-A6C1rWPO/view?usp=sharing'), title: 'Aula 10 - Caso Clínico V: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1m4OlpVXMkCkjrKUPmNVUQrLFMW0Ce0ag/view?usp=sharing'), title: 'Aula 11 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 03: Síncope
+            {
+                id: 'module_03_sincope', title: 'Módulo 03 - Síncope', icon: 'fas fa-dizzy',
+                submodules: [
+                    { id: 'sub_sincope_diagnostico', title: 'Diagnóstico Diferencial Síncope', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i2_APUuuTV6Kywn8oIKc35J-g1eba6Fx/view?usp=sharing'), title: 'Aula 01 - Definição e Fisiopatologia', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_sincope_marcadores', title: 'Identificação dos Marcadores de Gravidade', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cCqGZ-Tw5rKD9jPXjKX2LMmH1D_tpC6p/view?usp=sharing'), title: 'Aula 01 - Estratificação de Risco', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_sincope_internar', title: 'Qual Paciente Deve Internar Para Prosseguir Investigação', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cpftcrRZ3i_ootHO-haVbp0vHH5HTWOs/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial do Paciente', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_sincope_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jl_oirkXU9lQbXdbjtY31zowSm5LO7qY/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cCTJb49kbtd6v5xGHl7J4odhsNZBWW4b/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kFd591CGQ2I6mDsnsAyBBuHyYmfOELo6/view?usp=sharing'), title: 'Aula 03 - Caso Clínico II', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1al5eiQ2Xh9Gt0xYg0YpYoTPFh1DMtaIM/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cP6ylZihQD9Z4wEqQLeRg0tC_3JwEan-/view?usp=sharing'), title: 'Aula 05 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dTlpNcFTlX5m6s_zxYntsj5ti_KQq8ce/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hOfsHR0ibclMhjrR1faTtRcRQ526sRba/view?usp=sharing'), title: 'Aula 07 - Caso Clínico IV', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bQX-ZryzYszt5VNS-3XqeIRxnIxjowwZ/view?usp=sharing'), title: 'Aula 08 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dd0ijf2a5dXciuRhiy4xyQNFH7k08mLQ/view?usp=sharing'), title: 'Aula 09 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1imrh2_KWcHyrW79W1DlerDMK6fwX_W3O/view?usp=sharing'), title: 'Aula 10 - Caso Clínico V: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1keP995lJEcylKrAa7PZysnxFOABT0NHq/view?usp=sharing'), title: 'Aula 11 - Caso Clínico VI', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hLtP6HqzSuJ9xxxAqMAMw2WXmv1JCjYW/view?usp=sharing'), title: 'Aula 12 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 04: Bradiarritmias
+            {
+                id: 'module_04_bradiarritmias', title: 'Módulo 04 - Bradiarritmias', icon: 'fas fa-heart-crack',
+                submodules: [
+                    { id: 'sub_bradi_intro', title: 'Introdução', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1blFv6vOhPZLQaFzg4Ea3BRw6d--3BS-D/view?usp=sharing'), title: 'Aula 01 - Introdução', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_bradi_classificacao', title: 'Classificação das Bradiarritmias', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hnWO8_Hz--QzFDwevhOYQsuK-eaFP9-V/view?usp=sharing'), title: 'Aula 01 - Classificação das Bradiarritmias', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_bradi_abordagem', title: 'Abordagem Inicial das Bradiarritmias Estáveis e Instáveis', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iz82wVRHThdxQgoroDupe6fZUh0Kznyy/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial das Bradiarritmias', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_bradi_marcapassos', title: 'Marca-Passos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cxOlB7I_9gaWMJaLDwA_1yRXwveh0cIi/view?usp=sharing'), title: 'Aula 01 - Inserção de Marca-Passo Transvenoso', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1d1fm1CMhSaWJM0Ym55ybbyMTLdYCwNsu/view?usp=sharing'), title: 'Aula 02 - Como Ajustar o Marca-Passo Provisório Transvenoso', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dcsz4FtK3xjvU91s3f2loBeb8-lyyW-5/view?usp=sharing'), title: 'Aula 03 - Conduta na Bradiarritmia Estável', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_bradi_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fVsz9yw-vVfnc-eGBdEw4KAEH1SC-O3K/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eEYMui5t9nrNWt6I-OMcRl2UAodF5tnS/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1j_KsE--Bp-LvBjpqixUgaD60O6tywvud/view?usp=sharing'), title: 'Aula 03 - Caso Clínico II', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1elNg2-UjcNo6cTkhIdsGtVTEbI8fZjx_/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ksYH-fg7CDsqHhBjwciziZK8wjWPzDOQ/view?usp=sharing'), title: 'Aula 05 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aZPLpFDvfoGkRk7SJ2_23SkKe33mrqQ9/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mrtFm4knllBRtJjNEAf_wqmgB3rD_V2Y/view?usp=sharing'), title: 'Aula 07 - Caso Clínico IV', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ksZv8ivygZ1v-lcRRxHScilTqyYc_Gdt/view?usp=sharing'), title: 'Aula 08 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iAe_9FXQr6qWeq5xcNN8Ay1ztd0h8EaQ/view?usp=sharing'), title: 'Aula 09 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gclD1C-wXXaR-jG7so-WyhvuAuj-P6XG/view?usp=sharing'), title: 'Aula 10 - Caso Clínico V: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lyOqGF5WeZ6kPsNXXkS7ubhTog9EqvGJ/view?usp=sharing'), title: 'Aula 11 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 05: Insuficiência Cardíaca Descompensada
+            {
+                id: 'module_05_insuficiencia_cardiaca', title: 'Módulo 05 - Insuficiência Cardíaca Descompensada', icon: 'fas fa-lungs-virus',
+                submodules: [
+                    { id: 'sub_ic_intro', title: 'Introdução', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ahnXvtPkKuPk7YK45_FWtHddnWNM0fe5/view?usp=sharing'), title: 'Aula 01 - Introdução', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_ic_fisiopatologia', title: 'Fisiopatologia da IC Descompensada', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iR4sEY6Y5taqfuelxapjlTC3JlQLedeW/view?usp=sharing'), title: 'Aula 01 - Fisiopatologia', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_ic_perfis', title: 'Perfis Hemodinâmicos', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gecJqdjbpWH3Dh9maqO7NjNA0EVcuS3V/view?usp=sharing'), title: 'Aula 01 - Perfil Hemodinâmico', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_ic_abordagem', title: 'Abordagem Terapêutica', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hYNkwCZxsV6jOPxGWK7tE2hzJZakoy7v/view?usp=sharing'), title: 'Aula 01 - Avaliação Inicial', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ctA3FH2eme4ek64U5B-GSOOluKDdS_BF/view?usp=sharing'), title: 'Aula 02 - Abordagem Terapêutica', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_ic_monitorizacao', title: 'Monitorização do Paciente com IC Descompensada', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fgISquYMVMHkutHKWkEfUsiT0dS0FbE-/view?usp=sharing'), title: 'Aula 01 - Monitorização Hemodinâmica', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_ic_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eSAqyGPhxLr8CGg4YDrU2Kdo9DBfKW9_/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1adsjxBeUSnzlJe8ro8s7Ijia7FZg1b7v/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dNF1NgNUsVKzmAvwsgIs0E3NORdin6ZK/view?usp=sharing'), title: 'Aula 03 - Caso Clínico II', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hJzkQdeQVIpu7Qz_RC1XnUsnSIsXID_X/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1b2n8qEz6Ezm4LC2JS1jrqE8SY8OfuuGZ/view?usp=sharing'), title: 'Aula 05 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1j3HbCcZzwdDyozxmlq7Zmm6Wrj643nBu/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: 'video_placeholder_5_6_7', title: 'Aula 07 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dJZX_o7xR5IpS5MwePNq47NGOzzftpgc/view?usp=sharing'), title: 'Aula 08 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bRKH8hqiM7FoLZRmHJxUTCjKNx-tMjPq/view?usp=sharing'), title: 'Aula 09 - Caso Clínico V: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lT4CexBI42KaCENC3aojIVkVP0wF5wmt/view?usp=sharing'), title: 'Aula 10 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 06: Dor Torácica
+            {
+                id: 'module_06_dor_toracica', title: 'Módulo 06 - Dor Torácica', icon: 'fas fa-person-burst',
+                submodules: [
+                    { id: 'sub_dt_abordagem', title: 'Abordagem Inicial do Paciente com Dor Torácica', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1c5xshk_tcEE43gw1LZiErUkAn7q7GjkU/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial do Paciente com Dor Torácica', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_dt_diagnostico', title: 'Diagnóstico Diferencial da Dor Torácica', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ekaq9FgfNQw7NypL_6I1hrjdJ7HACben/view?usp=sharing'), title: 'Aula 01 - Diagnóstico Diferencial da Dor Torácica na Sala de Emergência', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_dt_pericardite', title: 'Pericardite/Miocardite', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i3kQRhl7r8n1mxI0z0-xCsAkQ5CFu7ka/view?usp=sharing'), title: 'Aula 01 - Pericardite e Miocardite: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iB11VadpW0IoiXB-03HnNDVqbADt8r9P/view?usp=sharing'), title: 'Aula 02 - Pericardite e Miocardite: Parte II', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_dt_disseccao', title: 'Dissecção Aórtica e Tamponamento Cardíaco', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gFiXGamCa1N7QTkCE_sa22S93FApqpcv/view?usp=sharing'), title: 'Aula 01 - Dissecção Aórtica e Tamponamento Cardíaco', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_dt_tep', title: 'Tromboembolismo Pulmonar', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fcTXx0dW2oOiqGkICUChaC4xdpj088zE/view?usp=sharing'), title: 'Aula 01 - Tromboembolismo Pulmonar: Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kNWKHrNsQbhNru84fTcFeNFHg8HP36aS/view?usp=sharing'), title: 'Aula 02 - Tromboembolismo Pulmonar: Parte II', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_dt_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1j5Iv2FW-JqrcxmrZ-2-cCPSdNN6UoPPP/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1j2WJymPV1nq4GLY0a1cVIN-AXg63Qd5x/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão - Parte I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lbk5c8CSs1lCC6b9EzvhPWfMtVMpGsaj/view?usp=sharing'), title: 'Aula 03 - Caso Clínico I: Discussão - Parte II', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1avixNo5gHrmJkPwdXhVdSplwTmsoOAM3/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dctXlLrsSbmlFZcRncZoUNKfT5LreZA1/view?usp=sharing'), title: 'Aula 05 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jbSPN3jIWd8CRAcZG6RmE7ck_HvO93Za/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hsekvOz5uUXn-jq_UgFWHEZpXER6y-N4/view?usp=sharing'), title: 'Aula 07 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1b_THE92425V-d0UhPXJ-sSSn5M8colVu/view?usp=sharing'), title: 'Aula 08 - Caso Clínico IV', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gWpopEeIjVs1UztE_lAzk9cgnyQDpX8U/view?usp=sharing'), title: 'Aula 09 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hUCPoIjDaid6_H-WQJCbqMMLNk0wjGXi/view?usp=sharing'), title: 'Aula 10 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cIwqto7IYkkO-080GVUWrXoBVlRSIJWM/view?usp=sharing'), title: 'Aula 11 - Caso Clínico V: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cYWg9I_TH0MjMqe1zCndA8_zoAKkjxAL/view?usp=sharing'), title: 'Aula 12 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 07: Síndrome Coronariana Aguda
+            {
+                id: 'module_07_sindrome_coronariana', title: 'Módulo 07 - Síndrome Coronariana Aguda', icon: 'fas fa-heartbeat',
+                submodules: [
+                    { id: 'sub_sca_intro', title: 'Introdução', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jUS1wVVWqLs2B5PHaBolDskCuDUEf9Ia/view?usp=sharing'), title: 'Aula 01 - Introdução', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_sca_abordagem', title: 'Abordagem Inicial do Paciente com SCA', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gZXXhT_dCCG5S2qN3okKMTI7n6It0OYv/view?usp=sharing'), title: 'Aula 01 - Abordagem Inicial', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_sca_tratamento', title: 'Tratamento Medicamentoso da SCA e Indicações de Cateterismo na SCA', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e2gSFRjOkbcxzpvJ5eOzSjngD4aSTr_q/view?usp=sharing'), title: 'Aula 01 - Abordagem do IAMSSST', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lla8UQxih6SAOIRteQbke-Q_OJ7nnNtC/view?usp=sharing'), title: 'Aula 02 - Condutas na Emergência', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_sca_diagnostico', title: 'Diagnóstico Diferencial do Supra ST', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1g4j2GuVq84Lmh2XCHNvbYndHZhG1ySAq/view?usp=sharing'), title: 'Aula 01 - Abordagem do IAMCSST', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_sca_casos', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kA8dXgQEOLVXDHtGvwPiqSddJcnCxW3Y/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mXh9cREAv1obdYZnl1XqaDC5514YlpWE/view?usp=sharing'), title: 'Aula 02 - Caso Clínico I: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ekPLPfc2m4u2edKukUhMHGlf44m540sk/view?usp=sharing'), title: 'Aula 03 - Caso Clínico II', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i4j4Moi9C40XpDlMpZFOWnSOdNJMhS4i/view?usp=sharing'), title: 'Aula 04 - Caso Clínico II: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lQKCSCEWlDvcL_vbyr4sM_9kiPKSYVGI/view?usp=sharing'), title: 'Aula 05 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mQRbKkIn4vB_ZFpERPnh8ildek15DlqC/view?usp=sharing'), title: 'Aula 06 - Caso Clínico III: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mp8b-CpkAWYRyP3vrppy0zgC6sD6xzCK/view?usp=sharing'), title: 'Aula 07 - Caso Clínico IV', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fhtlxWOrRLRVpbvNfV3Y-Uyskk9qTP79/view?usp=sharing'), title: 'Aula 08 - Caso Clínico IV: Discussão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hCgLtii1cLzN0DzzBChKC1sIW4phBXzW/view?usp=sharing'), title: 'Aula 09 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 08: Abordagem do Paciente em Parada Cardiorrespiratória
+            {
+                id: 'module_08_parada_cardiorrespiratoria', title: 'Módulo 08 - Abordagem do Paciente em Parada Cardiorrespiratória', icon: 'fas fa-bed-pulse',
+                submodules: [
+                    { id: 'sub_pcr_intro', title: 'Introdução', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dKIswNlSPyIARIWRP91dCD-hBydh7UPG/view?usp=sharing'), title: 'Aula 01 - Introdução', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_pcr_bls', title: 'BLS', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mgcJCpNQBhkUG0vlIK4HV2fkUwCh6VHZ/view?usp=sharing'), title: 'Aula 01 - Suporte Básico de Vida (BLS)', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_pcr_acls', title: 'ACLS', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bI74nZ24-mkdj0fEUNFZdmnB0bsSkpIy/view?usp=sharing'), title: 'Aula 01 - Suporte Avançado de Vida (ACLS)', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_pcr_pos', title: 'Cuidados Pós-PCR', videos: [{ id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lVz7DZxWUx-YZVhja3hXrgPCXlU6MQYa/view?usp=sharing'), title: 'Aula 01 - Cuidados Pós-PCR', icon: 'fas fa-video' }], materials: [] },
+                    { id: 'sub_pcr_pratico', title: 'Módulo Prático', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eYMiADgAFkIvqEFIaN4dV0NTW4u3VFDI/view?usp=sharing'), title: 'Aula 01 - Simulação: Compressão Torácica', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1aoThF0m675mNg74cNajMT-Ay9vFU0_ls/view?usp=sharing'), title: 'Aula 02 - Simulação: Via Aérea', icon: 'fas fa-video' },
+                        { id: 'video_placeholder_8_5_3', title: 'Aula 03 - Simulação: Caso Clínico I', icon: 'fas fa-video' }, { id: 'video_placeholder_8_5_4', title: 'Aula 04 - Simulação: Caso Clínico II', icon: 'fas fa-video' },
+                        { id: 'video_placeholder_8_5_5', title: 'Aula 05 - Simulação: Caso Clínico III', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i6QdxSbYbzihoi040S-oI84qE_PhUytm/view?usp=sharing'), title: 'Aula 06 - Aula Ao Vivo: Resolução de Questões', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 09: Bônus
+            {
+                id: 'module_09_bonus', title: 'Módulo 09 - Bônus', icon: 'fas fa-star',
+                submodules: [
+                    { id: 'sub_bonus_materiais', title: 'Materiais de Estudo', videos: [], materials: [
+                        { title: 'Cardio-Oncologia', link: 'https://drive.google.com/file/d/1nYSLGMx6rgAfBgjee9EXAzmFIOOrzo0x/view?usp=sharing', icon: 'fas fa-file-pdf' }, 
+                        { title: 'Diretriz - Antiplaquetários', link: 'https://drive.google.com/file/d/1ncOA6Z0DawZYdbzHEUZ9ob5m4kauew8W/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Diretriz - Atualização', link: 'https://drive.google.com/file/d/1nZhhp4SFs3qwQch1EmiwQE4XttwMwLt1/view?usp=sharing', icon: 'fas fa-file-pdf' }, 
+                        { title: 'Diretriz - IC: Sprint TEC 2022', link: 'https://drive.google.com/file/d/1ne6MmfyPH2Zz7TAJBqZwI2l91YUhv-_6/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Diretriz - Miocardites 2022', link: 'https://drive.google.com/file/d/1n6VfkyEbRQ57cBz10yrSFBYznUgp6t7M/view?usp=sharing', icon: 'fas fa-file-pdf' }, 
+                        { title: 'Hipertensão Arterial', link: 'https://drive.google.com/file/d/1nNRR-TIbdmH4SEUx_HvS41PaPMlXf7Vy/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Prevenção Cardiovascular', link: 'https://drive.google.com/file/d/1nFMKqH3BacIJ-3a0cGXAnr8rNcQ15JFs/view?usp=sharing', icon: 'fas fa-file-pdf' }, 
+                        { title: 'Resumo - Covid 19 e Coração', link: 'https://drive.google.com/file/d/1na3PdNyDnxMpFX2BBCgo3d8z2-rntHm4/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Sprint IC 2021', link: 'https://drive.google.com/file/d/1ndIFhE7j61FUwlC7BL-wa2CLWQi3K4_V/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Sprint IC 2021', link: 'https://drive.google.com/file/d/1nhsFb5gFCuYRjUgrFjoJLzqAlaFpNFXd/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Sprint TEC 2021 - Imagem', link: 'https://drive.google.com/file/d/1nyN8frtr_b0RScU4EM54VuwzaRZI1G7M/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'Tromboembolismo', link: 'https://drive.google.com/file/d/1nkXKyGN3Gf5rsK7KUC6YA3btU3Fpjlti/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                    ] },
+                    { id: 'sub_bonus_revisao', title: 'Revisão da Diretriz', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iUCiGfjm2pfCpiuraGZ3rsFChfZD7daj/view?usp=sharing'), title: 'Aula 01 - Revisão da Diretriz: Anticoagulantes e Antiplaquetários na Cardiologia', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ala8pE_qUSjNGUchyVRaebTa0NjCYr3a/view?usp=sharing'), title: 'Aula 02 - Revisão da Diretriz: Cardiopatia na Gravidez', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iLPTS6rKnePHuxppFKIB4hXiUZ3nNw8k/view?usp=sharing'), title: 'Aula 03 - Revisão da Diretriz: Emergências Hipertensivas', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iob6JxxadCL0PRt6pUKqnbG_bqVHZ9Po/view?usp=sharing'), title: 'Aula 04 - Revisão da Diretriz: Prevenção Cardiovascular', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lDwY2dvNr8Ei6yBA99Vt492EyUJbt_e_/view?usp=sharing'), title: 'Aula 05 - Revisão da Diretriz: Reabilitação Cardiovascular', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eyZtTRtc5_S6PxnwFl6vFmT0uS2Xexl9/view?usp=sharing'), title: 'Aula 06 - Revisão da Diretriz: Ressuscitação Cardiopulmonar', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kp4STfsvGZCKHZ28URCzBUy8v53cnZtO/view?usp=sharing'), title: 'Aula 07 - Revisão da Diretriz: Revisão de Cardio-Oncologia', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e9D6K34J6ANlg79zPySeDZQ1JWiTl2BR/view?usp=sharing'), title: 'Aula 08 - Revisão da Diretriz: Hipertensão Arterial - Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kKik8736r-8PHBO2j6JkFphFE9Mll1eT/view?usp=sharing'), title: 'Aula 09 - Revisão da Diretriz: Hipertensão Arterial - Parte II', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ehqL_fC_YMvX81mkve5Mg9eDpXtS8keG/view?usp=sharing'), title: 'Aula 10 - Revisão da Diretriz: Novidades da Diretriz de Valvopatias - SBC 2020: Sprint TEC 2021', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mVk9RswXEB76MyfZF2TGUz95AB99m9Hi/view?usp=sharing'), title: 'Aula 11 - Revisão da Diretriz: Resumo da Diretriz de Miocardites da SBC 2022', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hY5tUQ2zLed0edrSGpQ7rUleyHJhg4tJ/view?usp=sharing'), title: 'Aula 12 - Revisão da Diretriz: Resumo da Diretriz de Tromboembolismo Venoso da SBC 2022', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mCU470zA4m6Wyvodpk2M7aiBtQGg-sNY/view?usp=sharing'), title: 'Aula 13 - Revisão da Diretriz: Resumo da Atualização da Diretriz Perioperatória da SBC 2022', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_bonus_file', title: 'O Filé', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ee90hnLOl84Czmmoq0l18mVuLNoC95R7/view?usp=sharing'), title: 'Aula 01 - O Filé do ACC 2021: Um Resumo dos Principais Trabalhos', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kVQYlONSAaKA2YkTMwFWF4hTvtFhBa1M/view?usp=sharing'), title: 'Aula 02 - O Filé do ESC 2021: Os Principais Artigos Resumidos', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fsqgPNJq17jN0ReVe3sdltXDDXrLI5sC/view?usp=sharing'), title: 'Aula 03 - O Filé do ACC 2022: Os Principais Estudos Comentados', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dwd9nozOBnxh8w724g1kcuKca3q27uCC/view?usp=sharing'), title: 'Aula 04 - O Filé do ESC 2022', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1b5yMFOHtOwvVTSXIgaP7JhnQ4WMWFaDK/view?usp=sharing'), title: 'Aula 05 - O Filé do AHA 2022', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kQ-9hZHJ-VJdJgSp7XTVUPn4ufaEjAr6/view?usp=sharing'), title: 'Aula 06 - O Filé do ACC 2023', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lpHAM_JfPbl7owSXfKQUg5LXb5Kqe6ux/view?usp=sharing'), title: 'Aula 07 - O Filé do ESC 2023: Parte I', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fq1WbyOzDBiuQR1JSvlY5cgF5hQf6yRH/view?usp=sharing'), title: 'Aula 08 - O Filé do ESC 2023: Parte II', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lAUDi1-KbJXF0MGK5_Pu0s4Ug80o8WBi/view?usp=sharing'), title: 'Aula 09 - O Filé do ACC 2024', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_bonus_lives', title: 'Lives', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1d7oTqyRRH72koB8XIJE7dphyBCuef9hT/view?usp=sharing'), title: 'Aula 01 - Hipertensão Arterial Resistente: Live TEC 2020', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fiui_81wojFzyt7E6RVSj2tBhYnjrVz9/view?usp=sharing'), title: 'Aula 02 - Live Diretrizes: SCASSST - Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1d87gkE54ARn5jRMsDrEl2jhDSvmzmSVV/view?usp=sharing'), title: 'Aula 03 - Live Diretrizes: SCASSST - Parte II', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bGyJqnxxHCRDb4lZrabipJ8kPIHcpIzT/view?usp=sharing'), title: 'Aula 04 - Dominando o Infarto', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_bonus_workshop', title: 'I Workshop Emergências Cardiológicas', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dN_-MmaPZrLtRgpJY5lQDjBCH9nnb36V/view?usp=sharing'), title: 'Aula 01 - Como Abordar uma Taquiarritmia Instável', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ci-YBdtOAJ5T37KNT1H0vMB7NJB_Bu91/view?usp=sharing'), title: 'Aula 02 - Diagnóstico Diferencial do Supra de ST', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Cw0eSST7anL51HIEib9GCbIG_8KxTXRC/view?usp=sharing'), title: 'Aula 03 - Tratamento Inicial do Edema Agudo de Pulmão', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1zCHFZZGX-5MXCcNgAKIvc2LIAgMV6IZ6/view?usp=sharing'), title: 'Aula 04 - Emergências Hipertensivas', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Pwl-0LxkWk1O4_2_qtkzvy2-PQG1MTH5/view?usp=sharing'), title: 'Aula 05 - Abordagem Inicial ao Paciente em PCR', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            },
+            // Módulo 10: Extras
+            {
+                id: 'module_10_extras', title: 'Módulo 10 - Extras', icon: 'fas fa-plus-circle',
+                submodules: [
+                    { id: 'sub_extras_materiais', title: 'Materiais de Estudo', videos: [], materials: [
+                        { title: 'E-book - Algoritmos', link: 'https://drive.google.com/file/d/1o-9P0NyJor-0PRMc0ROnJFl5IkcyT9T_/view?usp=sharing', icon: 'fas fa-file-pdf' }, 
+                        { title: 'E-book - Drogas: Emergências Cardiológicas', link: 'https://drive.google.com/file/d/1oLpSBNWPeUDWEUZ2YScqzU3E5KDzHQ11/view?usp=sharing', icon: 'fas fa-file-pdf' },
+                        { title: 'E-book - IC e HAS', link: 'https://drive.google.com/file/d/1o2ZAvr-3sXwz8RAVQk8Y46bnf6C-0j9R/view?usp=sharing', icon: 'fas fa-file-pdf' }, 
+                        { title: 'E-book I - Dor Torácica', link: 'https://drive.google.com/file/d/1o3Pus3jnuBmYhR_uqlkfCprJVTrlxBZ1/view?usp=sharing', icon: 'fas fa-file-pdf' }
+                    ] },
+                    { id: 'sub_extras_atualizacoes', title: 'Atualizações', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jFVxQReJ2xBP06jmGY_yOQkVajDQuGb8/view?usp=sharing'), title: 'Aula 01 - Como Usar Atropina nas Bradiarritmias', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dibFOMLY-Y0nNCgTUmVwh0fK4nIA88ED/view?usp=sharing'), title: 'Aula 02 - Como Calcular a Taxa de Infusão e Dose de Medicamentos em Infusão', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gXimz0D91VNGWowPQK1lewFVxh2LZypu/view?usp=sharing'), title: 'Aula 03 - Posso Usar Morfina no Infarto? Atualização - Diretriz ESC 2023', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fufWuIOAXggYL6MtdZ2qTLm7duahK3XF/view?usp=sharing'), title: 'Aula 04 - Resumo Diretriz: Síndrome Coronariana Aguda - ESC 2023', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_extras_plantao', title: 'Plantão Noturno', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dpuLuYoC4AKEAgZlc47SUk7gskG3Rfzy/view?usp=sharing'), title: 'Aula 01 - D1 Plantão Noturno: Noite Fora do Ritmo', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bxlhIf_GeukINwxPaKVV0DyY7FR02_Le/view?usp=sharing'), title: 'Aula 02 - D2 Plantão Noturno: Tenho Dor no Peito... - Parte I', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eHnUt2ES1eu3jFvbCMFv3GSCoPhXRYOk/view?usp=sharing'), title: 'Aula 03 - D2 Plantão Noturno: Tenho Dor no Peito... - Parte II', icon: 'fas fa-video' }, 
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jJdMYOAqoZNHs_78BJw70Uhq_9jX04sf/view?usp=sharing'), title: 'Aula 04 - D3 Plantão Noturno: Tenho Falta de Ar e Minha Pressão Está Subindo', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_extras_casos_geral', title: 'Casos Clínicos', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kfeiQfPKOcBQwu7i061Mu3Qzcmrrrf-p/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1hr1OpZYNLF9hhbytAdayQdt_n7ex7gZJ/view?usp=sharing'), title: 'Aula 02 - Caso Clínico II', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1doWXTDR0NFiBB5YiSZbBmZmpq4b7N3-c/view?usp=sharing'), title: 'Aula 03 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dDLD6lvGMTD1flqVAZfEdzJPsPlzU02x/view?usp=sharing'), title: 'Aula 04 - Caso Clínico IV', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e-D8u_ZAkrlQ5v6MQtcH6gL5PZsOEQ6R/view?usp=sharing'), title: 'Aula 05 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ic8Ev1xwHgwSek06PZRDEdlWIQ3gL6Uh/view?usp=sharing'), title: 'Aula 06 - Caso Clínico VI', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fMpNsJ1Mxvk26n8pmyu6t3PChRBw0Mu8/view?usp=sharing'), title: 'Aula 07 - Caso Clínico VII', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1c_9UdzjjTNLXGdl6q85oK2ZPb4hBK0BX/view?usp=sharing'), title: 'Aula 08 - Caso Clínico VIII', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1fK-ZUjoXCyghgDUg12_6Xg4iNflQSO6z/view?usp=sharing'), title: 'Aula 09 - Caso Clínico IX', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dWz77HP-h5ASXNpjvQyx-CITz3jPDkLY/view?usp=sharing'), title: 'Aula 10 - Caso Clínico X', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dNr8MANH4rq_0WfGACoapEYHyD4DbZ4P/view?usp=sharing'), title: 'Aula 11 - Caso Clínico XI', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k6Ecz3mYedoqj66q47f2N3aqTSfNbJO0/view?usp=sharing'), title: 'Aula 12 - Caso Clínico XII', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1eQi4E1hKgAhy7D17mwwobcLwcVqdwagi/view?usp=sharing'), title: 'Aula 13 - Caso Clínico XIII', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kh3xnaj6fztSA3vdL186nsfn7eMqpJsT/view?usp=sharing'), title: 'Aula 14 - Caso Clínico XIV', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iKaYJt-laSoVkHRvBx7T4dBADLVsoIyb/view?usp=sharing'), title: 'Aula 15 - Caso Clínico XV', icon: 'fas fa-video' }
+                    ], materials: [] },
+                    { id: 'sub_extras_casos_arritmias', title: 'Arritmias (Casos Clínicos)', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kVqvqKiLEnnc0Sn9ZrAqBfJjw6sqcNPx/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1h6pScF7_AIfq9iMXxN2ffOh-1PsvGrGr/view?usp=sharing'), title: 'Aula 02 - Caso Clínico II', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1i92O6qxJu_x3z_GVsgObiXpr3yGTuDtF/view?usp=sharing'), title: 'Aula 03 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1da0YcfEpB-qlYmmmg1GlXSTtv5FpYsxN/view?usp=sharing'), title: 'Aula 04 - Caso Clínico IV', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bH6Ua0OekaizkscFVKMQ27kl1bVMVTrV/view?usp=sharing'), title: 'Aula 05 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dT_q6pxurg67CBZLBu52ivZA2BLgpRQX/view?usp=sharing'), title: 'Aula 06 - Caso Clínico VI', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1auXHymEVcCAR26H2LEwQb3-fLWvf_6eU/view?usp=sharing'), title: 'Aula 07 - Caso Clínico VII', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e_N5bYaZ6RPcD817WAHn3dF1IyW5G3c6/view?usp=sharing'), title: 'Aula 08 - Caso Clínico VIII', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gfibrZREAQBPdQy2h3Z2yAFubXJfrU_U/view?usp=sharing'), title: 'Aula 09 - Caso Clínico IX', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1e4pdTUbfuyFL_c0D7Qo3cADxTl9BS6Wx/view?usp=sharing'), title: 'Aula 10 - Caso Clínico X', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1gpufoAl74xsYakT8IgeTUuRZP8eNG2Mj/view?usp=sharing'), title: 'Aula 11 - Caso Clínico XI', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1c1zpi7uqMqJtkgtscpEz2zJpQIsLGGP9/view?usp=sharing'), title: 'Aula 12 - Caso Clínico XII', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1jQKc1vbD-VbrMKN_mCy1_xZZpQGOQ0Zs/view?usp=sharing'), title: 'Aula 13 - Caso Clínico XIII', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ibBmtYmtXs0O-kgiRl_VlS5jwVtZg8Vq/view?usp=sharing'), title: 'Aula 14 - Caso Clínico XIV', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kTv26f-X73R4okUvWG3xKaJrhJJhJMXM/view?usp=sharing'), title: 'Aula 15 - Caso Clínico XV', icon: 'fas fa-video' }
+                    ], materials: [] },
+                     { id: 'sub_extras_casos_ic', title: 'Insuficiência Cardíaca (Casos Clínicos)', videos: [
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1euwWiawBCAg9MyzQk0gAL9EJY5AZowKg/view?usp=sharing'), title: 'Aula 01 - Caso Clínico I', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1ekNPe5JtQu99pXbw2_jMHSoNjLZowMUk/view?usp=sharing'), title: 'Aula 02 - Caso Clínico II', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kl6GhE1WFucUfsdOQLXKA9trM4N_3mEe/view?usp=sharing'), title: 'Aula 03 - Caso Clínico III', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iZ2-v6Bgb9ekcjZrRcxbBs-DKq-ccbsq/view?usp=sharing'), title: 'Aula 04 - Caso Clínico IV', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1l564-iusqrwlZ6D1dARoYIaaY7MAAcXf/view?usp=sharing'), title: 'Aula 05 - Caso Clínico V', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1mfseviabkPkHcYHANIqYWcRo3d7uMKjT/view?usp=sharing'), title: 'Aula 06 - Caso Clínico VI', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lweIo2y8s-kgPNddi96o6O25KGxIrZLE/view?usp=sharing'), title: 'Aula 07 - Caso Clínico VII', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1dlZBMmPK6pbOk7uvh5c7Wj0bhJdLLGB8/view?usp=sharing'), title: 'Aula 08 - Caso Clínico VIII', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1lRc_1C2I6Yl6HoWliGdJV55sn4L6-HU6/view?usp=sharing'), title: 'Aula 09 - Caso Clínico IX', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1iGslCXnQDup93P9rqf6AjGVci9eIpx2X/view?usp=sharing'), title: 'Aula 10 - Caso Clínico X', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1m-e44_gcnPm7t-XDSbwQO5wOPkgqmPxn/view?usp=sharing'), title: 'Aula 11 - Caso Clínico XI', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1bGeW3WCEl90kkFkmJC1kElbfNLGacLIO/view?usp=sharing'), title: 'Aula 12 - Caso Clínico XII', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1k28qADfieSm3d1N4fK6BfNGIFsDlmTAw/view?usp=sharing'), title: 'Aula 13 - Caso Clínico XIII', icon: 'fas fa-video' }, { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1b06E4SQ3hs0pYM_GY3eg49yhHQNqd0BB/view?usp=sharing'), title: 'Aula 14 - Caso Clínico XIV', icon: 'fas fa-video' },
+                        { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1kAJpa3BUeD8l7U2hqaZSv_LppmGO1K5y/view?usp=sharing'), title: 'Aula 15 - Caso Clínico XV', icon: 'fas fa-video' }
+                    ], materials: [] }
+                ]
+            }
+        ];
+
+        // --- Funções de Navegação e Renderização ---
+
+        function navigateTo(pageId) {
+            document.getElementById('moduleSelectionPage').classList.add('hidden');
+            document.getElementById('submoduleSelectionPage').classList.add('hidden');
+            document.getElementById('contentPage').classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        function showModuleSelectionPage() {
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            modulesData.forEach(module => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showSubmoduleSelectionPage('${module.id}')">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <i class="${module.icon} text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${module.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${module.submodules.length} submódulos</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = 'Emergências Cardiológicas';
+            document.getElementById('backButton').classList.add('hidden');
+            navigateTo('moduleSelectionPage');
+        }
+
+        function showSubmoduleSelectionPage(moduleId) {
+            currentModuleId = moduleId;
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            const container = document.getElementById('submoduleSelectionPage');
+            container.innerHTML = '';
+            module.submodules.forEach(submodule => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showContentPage('${moduleId}', '${submodule.id}')">
+                         <div class="flex items-center space-x-4 mb-4">
+                            <i class="fas fa-folder-open text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${submodule.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${submodule.videos.length} aulas e ${submodule.materials.length} materiais.</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = module.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            backButton.onclick = showModuleSelectionPage;
+            navigateTo('submoduleSelectionPage');
+        }
+        
+        function showContentPage(moduleId, submoduleId) {
+            currentModuleId = moduleId;
+            const module = modulesData.find(m => m.id === moduleId);
+            const submodule = module?.submodules.find(s => s.id === submoduleId);
+            if (!submodule) return;
+
+            renderContent(submodule);
+            
+            document.getElementById('mainTitle').textContent = submodule.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            backButton.onclick = () => showSubmoduleSelectionPage(moduleId);
+            navigateTo('contentPage');
+        }
+
+        function renderContent(submodule) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            videosContainer.innerHTML = '';
+            materialsContainer.innerHTML = '';
+
+            let firstItem = null;
+            submodule.videos.forEach(item => {
+                if (!firstItem) firstItem = { type: 'video', data: item };
+                videosContainer.innerHTML += createItemHtml('video', item);
+            });
+            submodule.materials.forEach(item => {
+                if (!firstItem) firstItem = { type: 'material', data: item };
+                materialsContainer.innerHTML += createItemHtml('material', item);
+            });
+
+            if (submodule.videos.length === 0 && submodule.materials.length > 0) {
+                 videosContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma aula neste submódulo.</p>';
+            }
+            if (submodule.materials.length === 0) {
+                 materialsContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhum material de estudo para este item.</p>';
+            }
+
+            if (firstItem) {
+                if (firstItem.type === 'video') {
+                    loadVideo(firstItem.data.id, firstItem.data.title);
+                } else {
+                    loadMaterial(firstItem.data.link, firstItem.data.title);
+                }
+            } else {
+                updatePlayerAndSelection(null, '', 'Nenhum item disponível');
+            }
+        }
+
+        function createItemHtml(type, item) {
+            const onclickAction = type === 'video' 
+                ? `loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')`
+                : `loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')`;
+            const dataId = type === 'video' ? item.id : item.link;
+            return `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                     onclick="${onclickAction}" data-id="${dataId}">
+                    <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                        <p class="text-xs text-gray-400">${item.description || ''}</p>
+                    </div>
+                </div>`;
+        }
+
+        function loadVideo(videoId, lessonTitle) {
+            const isPlaceholder = !videoId || videoId.startsWith('video_placeholder');
+            const playerSrc = isPlaceholder ? '' : `https://drive.google.com/file/d/${videoId}/preview`;
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : lessonTitle;
+            updatePlayerAndSelection(videoId, playerSrc, displayTitle);
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const isPlaceholder = !link || link === '#';
+            const playerSrc = isPlaceholder ? '' : link.replace(/\/view\?usp=.*/, '/preview');
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : materialTitle;
+            updatePlayerAndSelection(link, playerSrc, displayTitle);
+        }
+
+        function updatePlayerAndSelection(itemId, playerSrc, title) {
+            document.getElementById('contentPlayer').src = playerSrc;
+            document.getElementById('lessonTitle').textContent = title;
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+            if (itemId) {
+                 const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+                if (currentSelected) currentSelected.classList.add('selected-lesson');
+            }
+            selectedItemId = itemId;
+        }
+
+        // --- Inicialização ---
+        window.onload = showModuleSelectionPage;
+    </script>
+</body>
+</html>

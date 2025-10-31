@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula selecionada */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Estilos para o menu suspenso de materiais */
+        details {
+            background-color: #2d3748; /* bg-gray-700 */
+            border-radius: 0.375rem; /* rounded-md */
+            overflow: hidden;
+            margin-bottom: 0.75rem; /* space-y-3 */
+        }
+
+        summary {
+            padding: 0.5rem 0.75rem; /* p-2 */
+            padding-left: 2rem; /* Adiciona espaço para o ícone do dropdown */
+            cursor: pointer;
+            font-weight: 600; /* font-semibold */
+            color: #e2e8f0; /* text-white */
+            list-style: none; /* Remove a seta padrão do summary */
+            position: relative;
+        }
+
+        summary::-webkit-details-marker {
+            display: none; /* Esconde a seta padrão no Webkit */
+        }
+
+        summary::before {
+            content: '\25B6'; /* Triângulo para a direita */
+            position: absolute;
+            left: 0.75rem; /* Ajustado para mover o ícone mais para a esquerda */
+            top: 50%;
+            transform: translateY(-50%); /* Centraliza verticalmente */
+            transition: transform 0.2s;
+            color: #a0aec0; /* gray-400 */
+        }
+
+        details[open] summary::before {
+            transform: translateY(-50%) rotate(90deg); /* Gira o triângulo para baixo quando aberto */
+        }
+
+        .material-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* Usando gap em vez de space-x para melhor compatibilidade */
+            background-color: #4a5568; /* bg-gray-600 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.5rem; /* p-2 */
+            margin-top: 0.5rem; /* mt-2 for items within details */
+            cursor: pointer;
+            transition-colors: 0.2s;
+            margin-left: 1rem; /* Adiciona um pequeno recuo para os itens do sub-módulo */
+        }
+
+        .material-item:hover {
+            background-color: #2d3748; /* hover:bg-gray-700 */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Clínica Médica Ambulatorial - 4ª Edição</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+        <!-- Ícones de usuário e notificações foram removidos daqui -->
+    </header>
+
+    <!-- A barra de navegação que estava aqui foi removida -->
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <!-- Alterado p-4 para py-2 px-4 para reduzir o preenchimento vertical -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+
+            <!-- Materiais de Estudo Movidos para abaixo do título da aula -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+
+            <!-- Materiais de Estudo foram movidos, então esta seção é removida daqui -->
+        </aside>
+    </main>
+
+    <!-- A barra de navegação inferior foi removida completamente. -->
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        /**
+         * Função para estruturar a lista de materiais, agrupando itens com títulos semelhantes
+         * (ex: "Título" e "Título - Anotação" ou "Título - Bônus") em categorias suspensas.
+         * Mesmo materiais únicos serão agrupados em uma categoria para manter a consistência.
+         * @param {Array<string>} rawMaterialLinks - Array de URLs dos materiais.
+         * @param {Array<string>} rawMaterialTitles - Array de títulos dos materiais.
+         * @returns {Array<Object>} - A estrutura de materiais agrupada, onde cada grupo é uma categoria.
+         */
+        function structureMaterials(rawMaterialLinks, rawMaterialTitles) {
+            const materialGroups = new Map(); // Map: baseTitle -> Array of {title, description, icon, link}
+
+            // Sufixos comuns para identificar materiais relacionados que devem ser agrupados
+            const suffixesToClean = [
+                ' - Anotação',
+                ' - II', // Para "Fibrilação Atrial - II"
+                ' - Bônus',
+                ': Parte I',
+                ': Parte II',
+                ': Básica',
+                ': Avançada',
+                ': Como Avaliar?',
+                ': Suspeita e Investigação',
+                ': Diagnóstico e Manejo',
+                ': Diagnóstico Etiológico e Manejo',
+                ': Sintomas, Etiologias e Reposição',
+                ': Como Diagnosticar, Seguir e Manejar',
+                ': Rastreio, Diagnóstico e Tratamento',
+                ': Insulinização Inicial e Seus Ajustes',
+                ': Investigações e Diagnóstico', // Adicionado para Diarreia Crônica
+                ': Investigação e Manejo', // Adicionado para Dispepsia, DRGE
+                ': Diagnóstico e Seguimento', // Adicionado para Cirrose Hepática
+                ': Seguimento e Manejo', // Adicionado para Doença Renal Crônica
+                ', Cistite e Pielonefrite', // Adicionado para Urina Tipo I
+                ': Como Investigar e Manejar', // Adicionado para Nefrolitíase, Lombalgia
+                ': Abordagem, Investigação e Manejo', // Adicionado para Tontura
+                ': Diagnóstico Etiológico e Manejo', // Adicionado para Lombalgia
+            ];
+
+            rawMaterialTitles.forEach((fullTitle, index) => {
+                let baseTitle = fullTitle;
+                // Cria uma "chave" de agrupamento removendo os sufixos conhecidos
+                for (const suffix of suffixesToClean) {
+                    if (baseTitle.endsWith(suffix)) {
+                        baseTitle = baseTitle.substring(0, baseTitle.length - suffix.length).trim();
+                    }
+                }
+
+                const materialObj = {
+                    title: fullTitle,
+                    description: 'Material de apoio.', // Descrição padrão, pode ser personalizada se houver dados
+                    icon: 'fas fa-file-pdf', // Ícone padrão, pode ser personalizado
+                    link: rawMaterialLinks[index]
+                };
+
+                if (!materialGroups.has(baseTitle)) {
+                    materialGroups.set(baseTitle, []);
+                }
+                materialGroups.get(baseTitle).push(materialObj);
+            });
+
+            const finalStructuredMaterials = [];
+            materialGroups.forEach((items, title) => {
+                // Ordena os itens dentro de cada grupo para consistência (ex: principal antes da anotação/bônus)
+                items.sort((a, b) => {
+                    const aIsAnnotation = a.title.includes(' - Anotação');
+                    const bIsAnnotation = b.title.includes(' - Anotação');
+                    const aIsBonus = a.title.includes('Bônus');
+                    const bIsBonus = b.title.includes('Bônus');
+                    const aIsII = a.title.includes(' - II');
+                    const bIsII = b.title.includes(' - II');
+
+                    // Prioriza o material base, depois anotações, depois bônus, depois II
+                    if (!aIsAnnotation && !aIsBonus && !aIsII && (bIsAnnotation || bIsBonus || bIsII)) return -1;
+                    if ((aIsAnnotation || aIsBonus || aIsII) && (!bIsAnnotation && !bIsBonus && !bIsII)) return 1;
+                    if (aIsAnnotation && !bIsAnnotation) return 1;
+                    if (!aIsAnnotation && bIsAnnotation) return -1;
+                    if (aIsBonus && !bIsBonus) return 1;
+                    if (!aIsBonus && bIsBonus) return -1;
+                    if (aIsII && !bIsII) return 1;
+                    if (!aIsII && bIsII) return -1;
+                    return a.title.localeCompare(b.title); // Ordem alfabética como fallback
+                });
+
+                // Adiciona cada grupo como uma categoria (menu suspenso)
+                finalStructuredMaterials.push({
+                    title: title, // Usa o título base como o título da categoria
+                    type: 'category',
+                    items: items
+                });
+            });
+
+            return finalStructuredMaterials;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // --- DEFINIÇÃO DOS LINKS ORIGINAIS ---
+        // Cardiologia
+        const cardiologiaAulas = [
+            'https://drive.google.com/file/d/1E8Z4edS1Kc-SlKEoVNltuU1rrDW0FqiP/view?usp=sharing',
+            'https://drive.google.com/file/d/1pPIeNqkq-gAfeBqkAyBW51onpkouwXOU/view?usp=sharing',
+            'https://drive.google.com/file/d/14e_Y5dd2lAk8rBeZKtIsxOFqdcnZVWPH/view?usp=sharing',
+            'https://drive.google.com/file/d/1GM8zJuUFi15put6vWMTiLLNvtZcGQ5LP/view?usp=sharing',
+            'https://drive.google.com/file/d/1uBCNPI3r-6JU5JUqU5yTPN-l9AF9M5j7/view?usp=sharing',
+            'https://drive.google.com/file/d/1IKJU4RNjTUIPIj4pthy5ubhtZnT74sYN/view?usp=sharing',
+            'https://drive.google.com/file/d/1u4NCUcF79mxyuBCuOJ0NeARIA74VTVWR/view?usp=sharing',
+            'https://drive.google.com/file/d/1J8RrJUh6b6kRZ11cDIHaSFv29h0tsply/view?usp=sharing'
+        ];
+        const cardiologiaMateriais = [
+            'https://drive.google.com/file/d/17CSHVO1-qJesT_nHhpnblk_tbJZXzWvl/view?usp=sharing',
+            'https://drive.google.com/file/d/1wovR2HUqyEVwCifjRG0-sRG6Bztohujs/view?usp=sharing',
+            'https://drive.google.com/file/d/15dkFagyj1rVT6W3ivarN_hlmkrhJ9u5e/view?usp=sharing',
+            'https://drive.google.com/file/d/1r71WZksCKw5Cj0bPm1o5WWHCJb4hAUnh/view?usp=sharing',
+            'https://drive.google.com/file/d/1okccWJ9S61AT1ilsMwM9BUFDDWzS_mMu/view?usp=sharing',
+            'https://drive.google.com/file/d/1t1pJhqYiUYoeP6S3GnX_CevngV1e6IrR/view?usp=sharing',
+            'https://drive.google.com/file/d/1scnTAifO62Wask0dCDGdlxsJc-aHqrek/view?usp=sharing',
+            'https://drive.google.com/file/d/1yp1k58x4YlaD_Blxk_L0kAJJ0FoolwqN/view?usp=sharing'
+        ];
+
+        // Endocrinologia e Gastroenterologia
+        const endocrinoGastroAulas = [
+            'https://drive.google.com/file/d/194DxjaQ7aVDKOkmQLDtMB8xJQYxYxFCg/view?usp=sharing',
+            'https://drive.google.com/file/d/1b8Ii6JYvjc8Fq62Ak4bsosPtopUvhV3T/view?usp=sharing',
+            'https://drive.google.com/file/d/1wvr8E6GRzUV-23D9zPPQ01q_BsipOyOQ/view?usp=sharing',
+            'https://drive.google.com/file/d/1nzJSMzjDeuEdhDe8MqDkpAL1s5DY-dQ9/view?usp=sharing',
+            'https://drive.google.com/file/d/1Wd_yxVo5CoUXySzFL7RBcTFocTKOEo7o/view?usp=sharing',
+            'https://drive.google.com/file/d/18ndrS707VzispxUnuaG_HJzq2amN7ufu/view?usp=sharing',
+            'https://drive.google.com/file/d/1wdByVl_kLfX9MIYV6gf6pcVuhyp50Po7/view?usp=sharing',
+            'https://drive.google.com/file/d/166raTN327ppJNKMQEaRLmuGmjpziodML/view?usp=sharing'
+        ];
+        const endocrinoGastroMateriais = [
+            'https://drive.google.com/file/d/14RaQehI0dCdSLYn2MUkTDuWK2Py6_p6a/view?usp=sharing',
+            'https://drive.google.com/file/d/1Hpk1hH0iJDARYZZHFDiXwSBQG-XFljnd/view?usp=sharing',
+            'https://docs.google.com/presentation/d/1YLzrOE7c-r8OeNiCXborsDFFcmOEraK6/edit?usp=sharing&ouid=116952115189052058854&rtpof=true&sd=true',
+            'https://drive.google.com/file/d/1OLBfAC8yBeVe83IEdFchN_xeKLfYCG0O/view?usp=sharing',
+            'https://drive.google.com/file/d/1-8Wua7pNKaz2lVWY-PpbKZyKSn_g8ICH/view?usp=sharing',
+            'https://drive.google.com/file/d/1tzmos64xI3qV0A1kgvDQGcjQxcIqpJKE/view?usp=sharing',
+            'https://drive.google.com/file/d/1fKqpNWN5s_i4IxpSqOYiKaJ66aCjkhqd/view?usp=sharing'
+        ];
+
+        // Hematologia
+        const hematologiaAulas = [
+            'https://drive.google.com/file/d/1jphaQvapzf7OlbmtwVazKWbyimJdLKHa/view?usp=sharing',
+            'https://drive.google.com/file/d/10cCLepXw8USHHPz2jAfImMZJ5wnQaFp0/view?usp=sharing',
+            'https://drive.google.com/file/d/1LLCHZzp0s_GDb8ImEK7LfDcDiB7oWpM-/view?usp=sharing',
+            'https://drive.google.com/file/d/1m3phrdwVLaK9d06t89rH-72t6dBexvW2/view?usp=sharing',
+            'https://drive.google.com/file/d/1WDTTQpVLqZxQ6WX3Elv4uAtgPOrNwNEF/view?usp=sharing'
+        ];
+        const hematologiaMateriais = [
+            'https://drive.google.com/file/d/1-3MjirIxS4JcO2BDWF3fXXpMLU_SmVuZ/view?usp=sharing',
+            'https://drive.google.com/file/d/1vx3aCw4OHKagDBBO_BqDNh5NT0Ha04eo/view?usp=sharing',
+            'https://drive.google.com/file/d/1mtF4gAm5PF1WPhZTp47yIpYuiACy7bEp/view?usp=sharing',
+            'https://drive.google.com/file/d/15YnSfKMxukphlGiniT-TrGXVDhlOLjei/view?usp=sharing',
+            'https://drive.google.com/file/d/1XpFEWdZVX3-FAuajixs7QGsmwRRxvCp3/view?usp=sharing'
+        ];
+
+        // Metabólico
+        const metabolicoAulas = [
+            'https://drive.google.com/file/d/1d4UbvdkmqEKmr1_WU_w9l2BD9oJQUOei/view?usp=sharing',
+            'https://drive.google.com/file/d/1MzLI_Lzoad49QkP8m77Sigg0pdY8RqOs/view?usp=sharing',
+            'https://drive.google.com/file/d/1ahDr_HEqo6EhqlJUauFjvMtCUVzALrLk/view?usp=sharing',
+            'https://drive.google.com/file/d/1Y4Y2rYvVZyutaekP949HlROpiIuGyG49/view?usp=sharing',
+            'https://drive.google.com/file/d/1gB69z17RD7UjJStPPRQyjE4n6CBggxmj/view?usp=sharing',
+            'https://drive.google.com/file/d/1WnFo1s38B0BFu1JzFrkzn7DCE6KRSeeN/view?usp=sharing'
+        ];
+        const metabolicoMateriais = [
+            'https://drive.google.com/file/d/1i1awIKVmnWxxJ_yhnYRs5mwx7o7ac71O/view?usp=sharing',
+            'https://drive.google.com/file/d/19LZ-mqB7BhgblVsILFAhrOBxLsZTd0Kb/view?usp=sharing',
+            'https://drive.google.com/file/d/1J7wQ0yvJvbOZ0EqtkDa5UauFY43KKBAv/view?usp=sharing',
+            'https://drive.google.com/file/d/1UmZ4V0oCs_Hc3NULVm6yaDN4Zrr-J3sV/view?usp=sharing',
+            'https://drive.google.com/file/d/1RgGKuPS59n_REFuQvkOGUpw9moYL2oK2/view?usp=sharing',
+            'https://drive.google.com/file/d/1HUkJ9fcfIz5ywIxhjUC5bvpBpnSLx9TU/view?usp=sharing'
+        ];
+
+        // Nefrologia
+        const nefrologiaAulas = [
+            'https://drive.google.com/file/d/1QKgnl6vo7mCfyx27TrEP3CYiY_t4oRpJ/view?usp=sharing',
+            'https://drive.google.com/file/d/1Hm_c0AkjrHi7rTGLz1Tsw8S4MOjOPzFv/view?usp=sharing',
+            'https://drive.google.com/file/d/1dL_ACMaJDHYmVYV70qXy_a-Zb0TbIlRf/view?usp=sharing'
+        ];
+        const nefrologiaMateriais = [
+            'https://drive.google.com/file/d/1pk7h4q8LO3OD06nOFnoEjK3dUm1UrSm6/view?usp=sharing',
+            'https://drive.google.com/file/d/16bvLYFGuPN8w2HO5OL55dunxJ0vboKev/view?usp=sharing',
+            'https://drive.google.com/file/d/1gl3dMTMHJUEA6TQjYXtWMyYk1uCtOJN0/view?usp=sharing'
+        ];
+
+        // Neurologia
+        const neurologiaAulas = [
+            'https://drive.google.com/file/d/1LGUkGvnbCAbk03ia-SMOE5S-X2gUgXJK/view?usp=sharing',
+            'https://drive.google.com/file/d/1XEuS0j7PISumDuRgxEtpjmMRv91meVb4/view?usp=sharing',
+            'https://drive.google.com/file/d/1UJBVzWDin0NQm7TLOG-Q7SFEmvfTq7zl/view?usp=sharing'
+        ];
+        const neurologiaMateriais = [
+            'https://drive.google.com/file/d/1uSxJtuUH6L_mI-VInAghlFho2mhdQLu8/view?usp=sharing',
+            'https://drive.google.com/file/d/1uJ_lHOUgbOHT9Ow6NeTit8uQf9zM4rFo/view?usp=sharing',
+            'https://drive.google.com/file/d/145JuyCJUJX-Y71lEp6gXR9lUzzUPw1_q/view?usp=sharing'
+        ];
+
+        // Pneumologia
+        const pneumologiaAulas = [
+            'https://drive.google.com/file/d/1xU9PkU5yHm3fkzWXh2-qyJmPj9hC1B6Q/view?usp=sharing',
+            'https://drive.google.com/file/d/1zxblfJVJxN8SrDbHVUzpVzIR1vTKkjgx/view?usp=sharing',
+            'https://drive.google.com/file/d/1D5U0cXRXirQvvfQO4-3Wi9RBZ5c0Ngj5/view?usp=sharing'
+        ];
+        const pneumologiaMateriais = [
+            'https://drive.google.com/file/d/1zXfH6bk7LNJY_E8gy2tb_ABdq9y8w-oR/view?usp=sharing',
+            'https://drive.google.com/file/d/1Ejv4kBG68r6W53dWPUDTam0h-T9mrkkA/view?usp=sharing',
+            'https://drive.google.com/file/d/1fikExZBjudoAbMQet6O25fuuSpugdDfu/view?usp=sharing'
+        ];
+
+        // Reumatologia
+        const reumatologiaAulas = [
+            'https://drive.google.com/file/d/1mwGSXVdh9qHz42s5cDay9stIGjcHaw_c/view?usp=sharing',
+            'https://drive.google.com/file/d/1F3tWFvKBb7mD907mfSDRb2wxXBuYCfna/view?usp=sharing',
+            'https://drive.google.com/file/d/15sdeMhu5LdwL4gioDuTxrpxnWLpQYvXk/view?usp=sharing',
+            'https://drive.google.com/file/d/12vDtNGFj0j3Es0XdlmMMdNnQWbQxEVqh/view?usp=sharing',
+            'https://drive.google.com/file/d/17vD_9kBhFMQf7cHEOCrLJq8qd-vjartc/view?usp=sharing'
+        ];
+        const reumatologiaMateriais = [
+            'https://drive.google.com/file/d/18Uj7WWVNK-ofzGc6DfHDnZEIe2KJPVbT/view?usp=sharing',
+            'https://drive.google.com/file/d/1uv1oYbeTXTSz7HMPoUXd0g4FPsALe2gw/view?usp=sharing',
+            'https://drive.google.com/file/d/1bwPCi1ZW4ewocvVOzelWimu_aeiWUMna/view?usp=sharing',
+            'https://drive.google.com/file/d/1xyY6FMdq8tx9XBqvkyOaytRubN1E4lSC/view?usp=sharing',
+            'https://drive.google.com/file/d/1vcXieAshfgzaAfwYd64qqLHzgQm7CXCC/view?usp=sharing'
+        ];
+
+        // Gerais
+        const geraisAulas = [
+            'https://drive.google.com/file/d/1J2KqZnK9rScOqnaz9CVyRvcihyLv_l1j/view?usp=sharing',
+            'https://drive.google.com/file/d/1ZAao3dBjzvRMOF6AlKWkmlITGvq6r1hl/view?usp=sharing',
+            'https://drive.google.com/file/d/1UDy-EiCx8rP5HIY0jZP0dJHIhUKlKKnKL/view?usp=sharing',
+            'https://drive.google.com/file/d/1SponA8j4G3zvx1oRge4AGD-jLgk3UJyY/view?usp=sharing',
+            'https://drive.google.com/file/d/1Kkb2k13x9ZscqfYYbyW7NAyRywbkYk_3/view?usp=sharing',
+            'https://drive.google.com/file/d/1g9GqziNoHW39VfH-a6AcekkbCOVcM1ok/view?usp=sharing',
+            'https://drive.google.com/file/d/1YkLkLSo_2COl7ZcXRPVorSSpu0XuKiJn/view?usp=sharing',
+            'https://drive.google.com/file/d/1RQbxvBDrZNAPUkFvaBf1U3HW15ZJKYSH/view?usp=sharing',
+            'https://drive.google.com/file/d/1AUDFcQPlWM8_RLthuJAGRusdA8gFYDKz/view?usp=sharing',
+            'https://drive.google.com/file/d/1uR3ZlxaFTAIB87AdAdCcvInZkoewDgA5/view?usp=sharing',
+            'https://drive.google.com/file/d/1C4SREUQnEQpbYztWoNUwzfXkSNto2E85/view?usp=sharing'
+        ];
+        const geraisMateriais = [
+            'https://drive.google.com/file/d/1Yy-9hgsOBTIEXSzhsjngIhhdCxK2yqCr/view?usp=sharing',
+            'https://drive.google.com/file/d/1y_zxsj0BHtnl0jeDMvNUsWsDaj8hJOf0/view?usp=sharing',
+            'https://drive.google.com/file/d/1i_DSw4uYhKfGRXty41dMV7KYc2Swx5Wt/view?usp=sharing',
+            'https://drive.google.com/file/d/1PRrRzgRpEKGItk9O43OUY7HKw8et-2oe/view?usp=sharing',
+            'https://drive.google.com/file/d/1ySw2AAPFFWjWQjLj5bYXMjZ_dHIWnFNG/view?usp=sharing',
+            'https://drive.google.com/file/d/1eM8t8iy6p49ffSR-YVHU4MvBbzfcwNVA/view?usp=sharing',
+            'https://drive.google.com/file/d/1cgLn7g9dB6TAoduGVINSMX16qUfC6MW0/view?usp=sharing',
+            'https://drive.google.com/file/d/1YLOVFP919D7eNi-olpdc-7ozgq5rkqN9/view?usp=sharing',
+            'https://drive.google.com/file/d/1VQlpUXkOMIjZsAwvwBdQ9m3p0EDqI106/view?usp=sharing',
+            'https://drive.google.com/file/d/1a8mtflzbeWDGZLvqy7PNa-1xYw9C2GAn/view?usp=sharing',
+            'https://drive.google.com/file/d/1lTLf4zBe3X_KcJjsPLuuIDkSetYg-eKr/view?usp=sharing'
+        ];
+
+        // --- NOVOS TÍTULOS DE AULAS E MATERIAIS ---
+
+        // Cardiologia
+        const newCardiologiaVideoTitles = [
+            'Aula 01 - Fibrilação Atrial',
+            'Aula 02 - Fibrilação Atrial: Atualizações da ESC 2024',
+            'Aula 03 - Doença Arterial Coronariana: Suspeita e Investigação',
+            'Aula 04 - Doença Arterial Coronariana: Manejo Medicamentoso',
+            'Aula 05 - Doença Coronariana Crônica: ANOCA/INOCA',
+            'Aula 06 - Insuficiência Cardíaca: Suspeita e Investigação',
+            'Aula 07 - Insuficiência Cardíaca: Manejo da ICFEr e da ICFEp',
+            'Aula 08 - Interpretação do Ecocardiograma'
+        ];
+        const newCardiologiaMaterialTitles = [
+            'Aula - Fibrilação Atrial',
+            'Aula - Fibrilação Atrial - II',
+            'Doenças Coronariana Crônica',
+            'Doenças Coronariana Crônica - Bônus',
+            'Insuficiência Cardíaca - Suspeita e Investigação',
+            'Insuficiência Cardíaca - Manejo Clínico',
+            'Interpretação do Ecocardiograma',
+            'Manole - DAC: Parte I'
+        ];
+
+        // Endocrinologia e Gastroenterologia
+        const newEndocrinoGastroVideoTitles = [
+            'Aula 01 - Hipotireoidismo: Diagnóstico e Manejo',
+            'Aula 02 - Tireotoxicose: Diagnóstico e Manejo',
+            'Aula 03 - Osteoporose Pós-Menopausa: Parte I',
+            'Aula 04 - Osteoporose Pós-Menopausa: Parte II',
+            'Aula 05 - Diarreia Crônica: Investigação e Diagnóstico',
+            'Aula 06 - Dispepsia: Investigação e Manejo',
+            'Aula 07 - DRGE: Investigação e Manejo',
+            'Aula 08 - Cirrose Hepática: Diagnóstico e Seguimento'
+        ];
+        const newEndocrinoGastroMaterialTitles = [
+            'Hipotireoidismo',
+            'Tireotoxicose e Hipertireoidismo',
+            'Osteoporose Pós-Menopausa',
+            'Diarreia Crônica - Investigação e Diagnóstico',
+            'Dispepsia - Investigação e Manejo',
+            'DRGE - Investigação e Manejo',
+            'Cirrose Hepática - Diagnóstico e Seguimento'
+        ];
+
+        // Hematologia
+        const newHematologiaVideoTitles = [
+            'Aula 01 - Tromboses Venosas: Investigação, Seguimento e Manejo',
+            'Aula 02 - Anemias: Organizando a Investigação',
+            'Aula 03 - Plaquetopenia: Investigação e Manejo',
+            'Aula 04 - Abordagem de Linfonodomegalias',
+            'Aula 05 - Deficiência de B12: Sintomas, Etiologias e Reposição'
+        ];
+        const newHematologiaMaterialTitles = [
+            'Trombose - Diagnóstico, Investigação e Manejo',
+            'Anemias - Organizando a Investigação',
+            'Plaquetopenia',
+            'Abordagem de Linfonodomegalias',
+            'Deficiência de B12 - Sintomas: Etiologias e Reposição'
+        ];
+
+        // Metabólico
+        const newMetabolicoVideoTitles = [
+            'Aula 01 - HAS: Rastreio, Diagnóstico e Tratamento',
+            'Aula 02 - Diabetes Mellitus: Rastreio, Diagnóstico e Tratamento',
+            'Aula 03 - Obesidade',
+            'Aula 04 - Doença Hepática com Disfunção Metabólica: Como Diagnosticar, Seguir e Manejar',
+            'Aula 05 - Seguimento do Paciente Metabólico e o Papel de Estatina e AAS na Prevenção Primária',
+            'Aula 06 - Insulinização Inicial e Seus Ajustes'
+        ];
+        const newMetabolicoMaterialTitles = [
+            'Descomplicando a Hipertensão Arterial',
+            'DM - Rastreio: Diagnóstico e Tratamento Oral',
+            'Obesidade',
+            'Doença Hepática com Disfunção Metabólica',
+            'Paciente Metabólico',
+            'DM - Insulinização e Ajustes'
+        ];
+
+        // Nefrologia
+        const newNefrologiaVideoTitles = [
+            'Aula 01 - Doença Renal Crônica: Seguimento e Manejo',
+            'Aula 02 - Urina Tipo I, Cistite e Pielonefrite',
+            'Aula 03 - Nefrolitíase: Como Investigar e Manejar'
+        ];
+        const newNefrologiaMaterialTitles = [
+            'Doença Renal Crônica',
+            'Urina Tipo 1',
+            'Nefrolitíase'
+        ];
+
+        // Neurologia
+        const newNeurologiaVideoTitles = [
+            'Aula 01 - Tontura: Abordagem, Investigação e Manejo',
+            'Aula 02 - Cefaleia Tensional: Diagnóstico e Manejo',
+            'Aula 03 - Enxaqueca: Diagnóstico e Manejo'
+        ];
+        const newNeurologiaMaterialTitles = [
+            'Cefaleia do Tipo Enxaqueca',
+            'Cefaleia do Tipo Tensional',
+            'Tontura - Abordagem: Investigação e Manejo'
+        ];
+
+        // Pneumologia
+        const newPneumologiaVideoTitles = [
+            'Aula 01 - Asma',
+            'Aula 02 - DPOC',
+            'Aula 03 - Prova de Função Pulmonar'
+        ];
+        const newPneumologiaMaterialTitles = [
+            'Asma',
+            'DPOC',
+            'Prova de Função Pulmonar'
+        ];
+
+        // Reumatologia
+        const newReumatologiaVideoTitles = [
+            'Aula 01 - Osteoartrite: Diagnóstico e Manejo',
+            'Aula 02 - Gota: Diagnóstico e Manejo',
+            'Aula 03 - Artrites: Como Suspeitar e Iniciar Avaliação de Autoimunidades',
+            'Aula 04 - Fibromialgia',
+            'Aula 05 - Lombalgia: Diagnóstico Etiológico e Manejo'
+        ];
+        const newReumatologiaMaterialTitles = [
+            'Osteoartrite',
+            'Gota',
+            'Artrites',
+            'Fibromialgia',
+            'Aula - Lombalgia'
+        ];
+
+        // Gerais
+        const newGeraisVideoTitles = [
+            'Aula 01 - Dor Crônica: Ajustando o Manejo de Acordo com a Patogenia',
+            'Aula 02 - Rinite Alérgica',
+            'Aula 03 - Ansiedade na Prática Clínica',
+            'Aula 04 - Depressão na Prática Clínica',
+            'Aula 05 - Comunicação de Más Notícias',
+            'Aula 06 - Diretivas Antecipadas de Vontade',
+            'Aula 07 - Check-up Baseado em Evidências',
+            'Aula 08 - Raciocínio Clínico',
+            'Aula 09 - Distúrbios do Sono e Manejo Terapêutico',
+            'Aula 10 - Abordagem Inicial dos Distúrbios do Sono e Interpretação de Polissonografia',
+            'Aula 11 - Entrevista Motivacional'
+        ];
+        const newGeraisMaterialTitles = [
+            'Dor Crônica',
+            'Rinite',
+            'Ansiedade na Prática Clínica',
+            'Depressão na Prática Clínica',
+            'Comunicação de Más Notícias',
+            'Diretrizes',
+            'Check-up Baseado em Evidências',
+            'Raciocínio Clínico',
+            'Distúrbios do Sono e Manejo Terapêutico',
+            'Abordagem Inicial dos Distúrbios do Sono e Interpretação de Polissonografia',
+            'Entrevista Motivacional'
+        ];
+
+
+        // Limpa os módulos existentes e adiciona os novos/atualizados
+        modulesData.length = 0; // Limpa o array modulesData para adicionar apenas os novos/atualizados
+
+        // Adiciona os módulos com os títulos atualizados
+        modulesData.push({
+            id: 'module_cardiologia',
+            title: 'Módulo - Cardiologia',
+            path: 'Início / Cardiologia',
+            videos: cardiologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newCardiologiaVideoTitles[i],
+                description: 'Descrição da aula de Cardiologia.',
+                icon: 'fas fa-heartbeat'
+            })),
+            materials: structureMaterials(cardiologiaMateriais, newCardiologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_endocrinologia_gastroenterologia',
+            title: 'Módulo - Endocrinologia e Gastroenterologia',
+            path: 'Início / Endocrinologia e Gastroenterologia',
+            videos: endocrinoGastroAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newEndocrinoGastroVideoTitles[i],
+                description: 'Descrição da aula de Endocrinologia e Gastroenterologia.',
+                icon: 'fas fa-lungs' // Ícone pode ser ajustado para algo mais genérico ou específico
+            })),
+            materials: structureMaterials(endocrinoGastroMateriais, newEndocrinoGastroMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_hematologia',
+            title: 'Módulo - Hematologia',
+            path: 'Início / Hematologia',
+            videos: hematologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newHematologiaVideoTitles[i],
+                description: 'Descrição da aula de Hematologia.',
+                icon: 'fas fa-tint'
+            })),
+            materials: structureMaterials(hematologiaMateriais, newHematologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_metabolico',
+            title: 'Módulo - Metabólico',
+            path: 'Início / Metabólico',
+            videos: metabolicoAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newMetabolicoVideoTitles[i],
+                description: 'Descrição da aula de Metabólico.',
+                icon: 'fas fa-balance-scale' // Ícone pode ser ajustado
+            })),
+            materials: structureMaterials(metabolicoMateriais, newMetabolicoMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_nefrologia',
+            title: 'Módulo - Nefrologia',
+            path: 'Início / Nefrologia',
+            videos: nefrologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newNefrologiaVideoTitles[i],
+                description: 'Descrição da aula de Nefrologia.',
+                icon: 'fas fa-kidney'
+            })),
+            materials: structureMaterials(nefrologiaMateriais, newNefrologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_neurologia',
+            title: 'Módulo - Neurologia',
+            path: 'Início / Neurologia',
+            videos: neurologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newNeurologiaVideoTitles[i],
+                description: 'Descrição da aula de Neurologia.',
+                icon: 'fas fa-brain'
+            })),
+            materials: structureMaterials(neurologiaMateriais, newNeurologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_pneumologia',
+            title: 'Módulo - Pneumologia',
+            path: 'Início / Pneumologia',
+            videos: pneumologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newPneumologiaVideoTitles[i],
+                description: 'Descrição da aula de Pneumologia.',
+                icon: 'fas fa-lungs'
+            })),
+            materials: structureMaterials(pneumologiaMateriais, newPneumologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_reumatologia',
+            title: 'Módulo - Reumatologia',
+            path: 'Início / Reumatologia',
+            videos: reumatologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newReumatologiaVideoTitles[i],
+                description: 'Descrição da aula de Reumatologia.',
+                icon: 'fas fa-bone' // Ícone pode ser ajustado
+            })),
+            materials: structureMaterials(reumatologiaMateriais, newReumatologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_gerais',
+            title: 'Módulo - Gerais',
+            path: 'Início / Gerais',
+            videos: geraisAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newGeraisVideoTitles[i],
+                description: 'Descrição da aula geral.',
+                icon: 'fas fa-book-medical'
+            })),
+            materials: structureMaterials(geraisMateriais, newGeraisMaterialTitles)
+        });
+
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement) return;
+
+            // Encontra o módulo selecionado
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstItemId = null;
+            let firstItemTitle = null;
+            let firstItemType = null;
+
+            // Renderiza os vídeos
+            module.videos.forEach(item => {
+                const itemDescription = item.description || '';
+                // Captura o ID e título do primeiro item para carregamento inicial (prioriza o primeiro vídeo do módulo)
+                if (firstItemId === null) {
+                    firstItemId = item.id;
+                    firstItemTitle = item.title;
+                    firstItemType = 'video';
+                }
+
+                videosHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Renderiza os materiais
+            module.materials.forEach(item => {
+                const itemDescription = item.description || '';
+                if (item.type === 'category') {
+                    // Renderiza um sub-módulo (dropdown)
+                    materialsHtml += `
+                        <details>
+                            <summary>${item.title}</summary>
+                            <div class="px-4 py-2 space-y-2">
+                                ${item.items.map(subItem => {
+                                    // subItem dentro de uma categoria de material sempre será um item direto, não uma categoria aninhada
+                                    return `
+                                        <div class="material-item"
+                                                onclick="loadMaterial('${subItem.link}', '${subItem.title.replace(/'/g, "\\'")}')" data-id="${subItem.link}">
+                                            <div class="item-thumbnail-placeholder">
+                                                <i class="${subItem.icon}"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-white">${subItem.title}</p>
+                                                <p class="text-xs text-gray-400">${subItem.description || ''}</p>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </details>
+                    `;
+                } else {
+                    // Renderiza um material comum (se não for parte de uma categoria)
+                    if (firstItemId === null && module.videos.length === 0) {
+                        firstItemId = item.link; /* Usar o link como ID para materiais para seleção */
+                        firstItemTitle = item.title;
+                        firstItemType = 'material';
+                    }
+
+                    materialsHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                             onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            videosContainer.innerHTML = videosHtml;
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstItemId && firstItemTitle && firstItemType) {
+                if (firstItemType === 'video') {
+                    loadVideo(firstItemId, firstItemTitle);
+                } else if (firstItemType === 'material') {
+                    loadMaterial(firstItemId, firstItemTitle);
+                }
+            } else {
+                // Limpa o player e o título se o módulo não tiver conteúdo
+                document.getElementById('contentPlayer').src = '';
+                document.getElementById('lessonTitle').textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+        }
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Clear existing options before populating
+            moduleSelector.innerHTML = '';
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[0].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[0].id);
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

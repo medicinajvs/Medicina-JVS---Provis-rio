@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura para imitar a imagem */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para a aula selecionada */
+        .selected-lesson {
+            background-color: #4299e1; /* Um azul mais claro para destaque */
+            border: 2px solid #63b3ed; /* Borda para maior visibilidade */
+        }
+        /* Estilo para o contêiner do ícone/miniatura, garantindo tamanho uniforme */
+        .item-thumbnail-placeholder {
+            width: 80px; /* Largura da miniatura */
+            height: 45px; /* Altura da miniatura (proporção 16:9 para 80px de largura) */
+            background-color: #4a5568; /* Cor de fundo semelhante ao thumbnail original */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0; /* Impede que o item de miniatura encolha */
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem; /* Tamanho do ícone */
+            color: #CBD5E0; /* Cor do ícone */
+        }
+
+        /* Estilos para o menu suspenso de materiais */
+        details {
+            background-color: #2d3748; /* bg-gray-700 */
+            border-radius: 0.375rem; /* rounded-md */
+            overflow: hidden;
+            margin-bottom: 0.75rem; /* space-y-3 */
+        }
+
+        summary {
+            padding: 0.5rem 0.75rem; /* p-2 */
+            padding-left: 2rem; /* Adiciona espaço para o ícone do dropdown */
+            cursor: pointer;
+            font-weight: 600; /* font-semibold */
+            color: #e2e8f0; /* text-white */
+            list-style: none; /* Remove a seta padrão do summary */
+            position: relative;
+        }
+
+        summary::-webkit-details-marker {
+            display: none; /* Esconde a seta padrão no Webkit */
+        }
+
+        summary::before {
+            content: '\25B6'; /* Triângulo para a direita */
+            position: absolute;
+            left: 0.75rem; /* Ajustado para mover o ícone mais para a esquerda */
+            top: 50%;
+            transform: translateY(-50%); /* Centraliza verticalmente */
+            transition: transform 0.2s;
+            color: #a0aec0; /* gray-400 */
+        }
+
+        details[open] summary::before {
+            transform: translateY(-50%) rotate(90deg); /* Gira o triângulo para baixo quando aberto */
+        }
+
+        .material-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* Usando gap em vez de space-x para melhor compatibilidade */
+            background-color: #4a5568; /* bg-gray-600 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.5rem; /* p-2 */
+            margin-top: 0.5rem; /* mt-2 for items within details */
+            cursor: pointer;
+            transition-colors: 0.2s;
+            margin-left: 1rem; /* Adiciona um pequeno recuo para os itens do sub-módulo */
+        }
+
+        .material-item:hover {
+            background-color: #2d3748; /* hover:bg-gray-700 */
+        }
+
+        /* Classes para ocultar a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Para navegadores baseados em Webkit (Chrome, Safari) */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* Para Internet Explorer e Edge */
+            scrollbar-width: none;  /* Para Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <!-- Logo ou Título -->
+            <h1 class="text-xl font-bold text-white">Curso de Clínica Médica Ambulatorial - 3ª Edição: Turma II</h1>
+            <!-- Dropdown para seleção de módulos -->
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+        </div>
+        <!-- Ícones de usuário e notificações foram removidos daqui -->
+    </header>
+
+    <!-- A barra de navegação que estava aqui foi removida -->
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Área do Player de Vídeo/Material (iframe para Google Drive) -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- 16:9 Aspect Ratio -->
+                <!-- O ID 'contentPlayer' permite que o JavaScript manipule este iframe para vídeos e materiais -->
+                <iframe id="contentPlayer"
+                        src=""
+                        class="absolute inset-0 w-full h-full rounded-md"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <!-- Seção para o título da aula/material e espaçamento -->
+            <!-- Alterado p-4 para py-2 px-4 para reduzir o preenchimento vertical -->
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+
+            <!-- Materiais de Estudo Movidos para abaixo do título da aula -->
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Conteúdo dos materiais será injetado aqui pelo JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Conteúdo Relacionado -->
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Conteúdo dos vídeos será injetado aqui pelo JavaScript -->
+            </div>
+
+            <!-- Materiais de Estudo foram movidos, então esta seção é removida daqui -->
+        </aside>
+    </main>
+
+    <!-- A barra de navegação inferior foi removida completamente. -->
+
+    <script>
+        // Variável para armazenar o ID do item (aula ou material) atualmente selecionado
+        let selectedItemId = null;
+
+        // Função auxiliar para extrair o ID do vídeo ou material do link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        /**
+         * Função para estruturar a lista de materiais, agrupando "Material" e "Material - Anotação" em categorias.
+         * @param {Array<string>} rawMaterialLinks - Array de URLs dos materiais.
+         * @param {Array<string>} rawMaterialTitles - Array de títulos dos materiais.
+         * @returns {Array<Object>} - A estrutura de materiais agrupada.
+         */
+        function structureMaterials(rawMaterialLinks, rawMaterialTitles) {
+            const structured = [];
+            const processedIndices = new Set();
+
+            for (let i = 0; i < rawMaterialTitles.length; i++) {
+                if (processedIndices.has(i)) {
+                    continue; // Pula se já foi processado como parte de um par
+                }
+
+                const currentTitle = rawMaterialTitles[i];
+                const currentLink = rawMaterialLinks[i];
+                
+                let foundPair = false;
+
+                // Tenta encontrar um título correspondente com o sufixo " - Anotação"
+                const annotationSuffix = ' - Anotação';
+                // Verifica se o título atual NÃO termina com " - Anotação" (para ser o título base)
+                if (!currentTitle.endsWith(annotationSuffix)) {
+                    const potentialAnnotationTitle = currentTitle + annotationSuffix;
+                    // Procura a anotação a partir do próximo índice para garantir que é um par direto
+                    const annotationIndex = rawMaterialTitles.indexOf(potentialAnnotationTitle, i + 1); 
+
+                    if (annotationIndex !== -1) {
+                        // Encontrou um par: título base e título de anotação
+                        structured.push({
+                            title: currentTitle, // Usa o título base como o título da categoria
+                            type: 'category',
+                            items: [
+                                { title: currentTitle, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: currentLink },
+                                { title: potentialAnnotationTitle, description: 'Material de apoio.', icon: 'fas fa-file-pdf', link: rawMaterialLinks[annotationIndex] }
+                            ]
+                        });
+                        processedIndices.add(i);
+                        processedIndices.add(annotationIndex);
+                        foundPair = true;
+                    }
+                }
+                
+                // Se não foi encontrado um par, ou se o item atual já é uma anotação que não foi agrupada (improvável com dados ordenados, mas para robustez)
+                if (!foundPair && !processedIndices.has(i)) {
+                    structured.push({
+                        title: currentTitle,
+                        description: 'Material de apoio.', // Descrição padrão
+                        icon: 'fas fa-file-pdf', // Ícone padrão
+                        link: currentLink
+                    });
+                    processedIndices.add(i);
+                }
+            }
+            return structured;
+        }
+
+        // Dados dos módulos, aulas (vídeos) e materiais de estudo
+        const modulesData = [];
+
+        // --- DEFINIÇÃO DOS LINKS ORIGINAIS ---
+        // Raciocínio Clínico
+        const raciocinioClinicoAulas = [
+            'https://drive.google.com/file/d/1jZur6ZaOB2UPJ4pO36miEdT7ZeSmFw_J/view?usp=sharing',
+            'https://drive.google.com/file/d/1OvnN-JKGwWzNOK4Yzb3vqwvfJ17TsNlg/view?usp=sharing',
+            'https://drive.google.com/file/d/1P0rkcjHZPITyRxnh0B5IHbya5o1Gl9BM/view?usp=sharing',
+            'https://drive.google.com/file/d/1GlZRP2dry8JeLMQ5vSmHjCgjZik4zTE2/view?usp=sharing',
+            'https://drive.google.com/file/d/10grVqSj5uo8kBcURHVKtFGT2myjLBGBH/view?usp=sharing',
+            'https://drive.google.com/file/d/1zcHgYCbKlIIiizj5ujXuNhNOPmZg_2Kv/view?usp=sharing',
+            'https://drive.google.com/file/d/1Z9nZlZi05z44UXdaH7r8Se363gL80E5s/view?usp=sharing',
+            'https://drive.google.com/file/d/1yEqqfgWs2bfC0ZKRXlc6voybJOo4f77c/view?usp=sharing',
+            'https://drive.google.com/file/d/15eCZqPw8VWCg0R2-8WoFHQK_R3dazLJY/view?usp=sharing',
+            'https://drive.google.com/file/d/1dGnrfib0T9x31O0yWDMbG842wYyMHqJK/view?usp=sharing'
+        ];
+        const raciocinioClinicoMateriais = [
+            'https://drive.google.com/file/d/1Z67jMsCC7R1y4bdosfY8XndJWhdmJ2_C/view?usp=sharing',
+            'https://drive.google.com/file/d/1_hN62Y-YHXmkq4qzsf5uIFQpx8_OqzwF/view?usp=sharing',
+            'https://drive.google.com/file/d/1jYCJceTH4oYWqszyQqqpR4YsXKs_jsLk/view?usp=sharing',
+            'https://drive.google.com/file/d/1OmLwAlg6U4YAVS--ExTmYR9K8z0-TE8g/view?usp=sharing',
+            'https://drive.google.com/file/d/1A1B5eT0StG71gV3XhwK-jxVmRuqJBUMb/view?usp=sharing',
+            'https://drive.google.com/file/d/1VpZgDcEkUePnGbY4QkbG5RMNI-HIaVFb/view?usp=sharing',
+            'https://drive.google.com/file/d/1jPvqycPTewg1MUE4V_ezgPBSiGC8MaUw/view?usp=sharing',
+            'https://drive.google.com/file/d/12Qjg9XoIGCJpH2kMeRhM1uTeRplb570V/view?usp=sharing',
+            'https://drive.google.com/file/d/1eHDYEDoJ0fO6SjWTI_91XFi9ncUzMYtu/view?usp=sharing',
+            'https://drive.google.com/file/d/1TVkNDNk-ajKHEvvuWucmCsSBMPmEP-4F/view?usp=sharing',
+            'https://drive.google.com/file/d/1ZfO8KyoBmpE7RHdhn9FAAjNJ7JOB6ia1/view?usp=sharing',
+            'https://drive.google.com/file/d/1vj_7luQ1SNA922-GkUiXW2HnZGpLDnrc/view?usp=sharing',
+            'https://drive.google.com/file/d/1qs0cHrInsulZboajcJFxyuht5aKxT0cI/view?usp=sharing',
+            'https://drive.google.com/file/d/1HCgMmfazErQLX9Mq5TWQgN7_8bVJ3AoR/view?usp=sharing',
+            'https://drive.google.com/file/d/1rDKI36sEzbbWgyUWRVGKDXCeCaF1IzRk/view?usp=sharing',
+            'https://drive.google.com/file/d/1PnQ5i_b7Dz2UM-AB_3jDltHfZFsFP0Fz/view?usp=sharing',
+            'https://drive.google.com/file/d/1Ds1y5hRLdYpREUKtexXMj8zJCf4nwIs3/view?usp=sharing',
+            'https://drive.google.com/file/d/1Nx2kf-SiNCOe8srit2A9EvOz92hYoTRh/view?usp=sharing'
+        ];
+
+        // A Pessoa com Diabetes Mellitus
+        const diabetesMellitusAulas = [
+            'https://drive.google.com/file/d/1Mhfw6gE_3yjzsVwAODhtehn-CZFw8jRM/view?usp=sharing',
+            'https://drive.google.com/file/d/1IhaAuzyHFqb09o8tWwHBczCz66xPo90y/view?usp=sharing',
+            'https://drive.google.com/file/d/186P_hWcmtiLysahLx6gxkrYFg0tCSmiz/view?usp=sharing',
+            'https://drive.google.com/file/d/1iS0XAFsLpaiNHN_sjfe5EunIyz7LOK7z/view?usp=sharing',
+            'https://drive.google.com/file/d/1gFDrn2pGE-f7BuiHDSeBTk-90q5YEC1I/view?usp=sharing',
+            'https://drive.google.com/file/d/1_QPehc0CIrftkQ6Gt9jYch5CudWhK3Ha/view?usp=sharing',
+            'https://drive.google.com/file/d/1m3Vd5N9jA-mWTTbN3l7JMA3rEWVg4DeZ/view?usp=sharing',
+            'https://drive.google.com/file/d/1rGv5cNEbxixMP0bsVCJHbaFpe65Kwd7-/view?usp=sharing',
+            'https://drive.google.com/file/d/1nHIAPbsLx-DwAMAAnavNGbL5s2BrQXeZ/view?usp=sharing',
+            'https://drive.google.com/file/d/1sUovS0kQnj3mEYE-T9z9ImIT2DySQBd2/view?usp=sharing',
+            'https://drive.google.com/file/d/1dN1BsqP4z_6QyY-iwKZk8ZR8KzBCr5jx/view?usp=sharing'
+        ];
+        const diabetesMellitusMateriais = [
+            'https://drive.google.com/file/d/1telTsqZHFr6SjLqELA3P8sprTvXBDy90/view?usp=sharing',
+            'https://drive.google.com/file/d/1ZXgn_Ncq8kqTnUMhJkaCNbbSnfq2o5mB/view?usp=sharing',
+            'https://drive.google.com/file/d/1Qe9cWpfJ5n5y2j6ovwYBskxtVIp8VFRd/view?usp=sharing',
+            'https://drive.google.com/file/d/1sPHTTZtFGdH0Rdyzxcb_LmVej5faOQxZ/view?usp=sharing',
+            'https://drive.google.com/file/d/1nOufbu7wmfx5lOMxfTUOkpdRpO5wlM2f/view?usp=sharing',
+            'https://drive.google.com/file/d/1yGgJH7TBH4ChxiLikiiQ_fb97Gg-ejeD/view?usp=sharing',
+            'https://drive.google.com/file/d/1L3Jn8QRVBsX_ES1av2_OKg6xwoFDkUIT/view?usp=drive_link',
+            'https://drive.google.com/file/d/1vUTBgnFoS-JcgWPYCQ1gxEGcYIJFlrDO/view?usp=drive_link',
+            'https://drive.google.com/file/d/1JgV9BDW0-lJbJDQ71aRNFsEbYn7jhXYc/view?usp=sharing',
+            'https://drive.google.com/file/d/1VycOBLLTEEKZ9L2JoW7EmsBhK2BLcBaP/view?usp=sharing',
+            'https://drive.google.com/file/d/1f8bxBtmQW4oq1GjLdEbS7h6U8vEhSApt/view?usp=sharing',
+            'https://drive.google.com/file/d/1ypuFzdeQ-wvRtoc_k181Ftws2BTD3zyp/view?usp=sharing',
+            'https://drive.google.com/file/d/1lbuvK74yUIhZIILl8a2aJg_0ae9XkG7r/view?usp=sharing',
+            'https://drive.google.com/file/d/1Ai4pmfXDU0u5XEoX1ayhPD7vgcm8H6fC/view?usp=sharing'
+        ];
+
+        // A Pessoa com Hipertensão Arterial
+        const hipertensaoArterialAulas = [
+            'https://drive.google.com/file/d/1XuWB2DxJy7JXeyjquYkL3itU2As9pVlD/view?usp=sharing',
+            'https://drive.google.com/file/d/1iSLNajhTSmRPkizuljUbo1kzE6m6ukr8/view?usp=sharing',
+            'https://drive.google.com/file/d/1elN0y7mNNqnoYJjUgrqBLi8jFwULtXyi/view?usp=sharing',
+            'https://drive.google.com/file/d/1EuM_clA_2GT0znC5LTOayQE5GAGU3etR/view?usp=sharing',
+            'https://drive.google.com/file/d/17J0xrenzlBY4UEOf8jzaDXoCgF5_0h4p/view?usp=sharing',
+            'https://drive.google.com/file/d/1H4VxejkYSEbGw_ZzeXDBCDbYYwUbKCzO/view?usp=sharing',
+            'https://drive.google.com/file/d/1nV_kiTJTxixNmP7in5MvS9x33FONZJYW/view?usp=sharing'
+        ];
+        const hipertensaoArterialMateriais = [
+            'https://drive.google.com/file/d/1CUXMco9fHpm3SmDWHCx5hcCf5JRg8nJt/view?usp=sharing',
+            'https://drive.google.com/file/d/1iePQBKquvwtp-2-WgrDMwGi5hgKBLY6E/view?usp=sharing',
+            'https://drive.google.com/file/d/12O1qRN4mdVG-LW2nM4GTyUrsKNAavN9L/view?usp=sharing',
+            'https://drive.google.com/file/d/1VFyMXL2n5qvVp2dw1gwNuS8oUOoxvdzf/view?usp=sharing',
+            'https://drive.google.com/file/d/1qHWLgTcsxEaAYgdvwtLaIfaYets5e-bq/view?usp=sharing',
+            'https://drive.google.com/file/d/1hZbaiSuh3YUash3XDD16mYw-wAZhGQ7Q/view?usp=sharing',
+            'https://drive.google.com/file/d/1yQxhX-g4bKkhqFWe8-VcX8xyzF7Jvq3Z/view?usp=sharing',
+            'https://drive.google.com/file/d/1Lay72e9SmQ9pi9HrnHgm1lDx1YFCsTQx/view?usp=sharing',
+            'https://drive.google.com/file/d/1Fynn89-vw-qjB0kQNZ-gvc5eKtLp0iYV/view?usp=sharing',
+            'https://drive.google.com/file/d/1qySPfs-orSVgSJLvvf6HfDwc4xCY1akV/view?usp=sharing'
+        ];
+
+        // Doenças Osteomusculares
+        const doencasOsteomuscularesAulas = [
+            'https://drive.google.com/file/d/1tNRDcsVluYdz5K7De43YcCaRd3KxOfRp/view?usp=sharing',
+            'https://drive.google.com/file/d/1SeD3FnO22i3yrJ6q2nbxUMEC4o_6xS_d/view?usp=sharing',
+            'https://drive.google.com/file/d/182wpIR0XV8YyrYF8SmGwA9xyHkqlwTGA/view?usp=sharing',
+            'https://drive.google.com/file/d/1RoTcLP9z0aCZxiqcKQ1mMsTFcEsncoXg/view?usp=sharing',
+            'https://drive.google.com/file/d/13eq057NGhQkKv_eblpyZ1kF4bySNkiX8/view?usp=sharing',
+            'https://drive.google.com/file/d/1yHbxgKABMppFojC3-JJtaX5-TNk0rPSJ/view?usp=sharing',
+            'https://drive.google.com/file/d/1euFKfzN2IwXvbE-lfGgxdQcq4xCpieA_/view?usp=sharing',
+            'https://drive.google.com/file/d/1NIFYmeQryrNlDUXZQLaDKb5Od4oca-Wj/view?usp=sharing',
+            'https://drive.google.com/file/d/1YYSoTwfqgUwd-4DnB8ikcTW5pA5xp-QU/view?usp=sharing'
+        ];
+        const doencasOsteomuscularesMateriais = [
+            'https://drive.google.com/file/d/1wPpQeqHKh5xrawo3KQH0UwpvQsBGMRDG/view?usp=sharing',
+            'https://drive.google.com/file/d/16joBPA2Ww3ltTX-0RJW-TBlebsPJ9AYJ/view?usp=sharing',
+            'https://drive.google.com/file/d/1dU-_Xj7FspWyZDcMuu59ydU57QBB5Fr_/view?usp=sharing',
+            'https://drive.google.com/file/d/1wEsL6xktuIXqvTvGzpDwU_7vYeuBxjYG/view?usp=sharing',
+            'https://drive.google.com/file/d/1y-LIZcSZl8Y_yDzsYl_pYjMDOQEnn8FU/view?usp=sharing',
+            'https://drive.google.com/file/d/1nsO3xCPlyYfZyqQyinJbEE6nBlyV-J42/view?usp=sharing',
+            'https://drive.google.com/file/d/1Bf9fNu8YW0A6yMLnLUWuq-b6qg8By6g2/view?usp=sharing',
+            'https://drive.google.com/file/d/1GxSIcD630THSvjL2Cytqcu9T6_vmGU9r/view?usp=sharing',
+            'https://drive.google.com/file/d/1x_YUNvGHoPEsV4HdFe0aZ8jGUAEUdleB/view?usp=sharing',
+            'https://drive.google.com/file/d/17-R7OKQe3GtMwBwxXpho7ArdEH4hnV1e/view?usp=sharing',
+            'https://drive.google.com/file/d/1Jnx4VaLYoboYHLuUjB-yXQM-q7-KeQPB/view?usp=sharing',
+            'https://drive.google.com/file/d/1Fooo2-Y27il5cjbMzD-BaFS06uFos4BF/view?usp=sharing',
+            'https://drive.google.com/file/d/1th9ljo3PCabbfBNwl4zZtJdsNPyTUONq/view?usp=sharing',
+            'https://drive.google.com/file/d/1DCu_JMRkYqVXQp45Vq7XDmIsDE8LcqVX/view?usp=sharing',
+            'https://drive.google.com/file/d/1mVSHIpPQzWeHG7yzhT7ss7LRZXtUiHZq/view?usp=sharing',
+            'https://drive.google.com/file/d/15V7shNZSv0xxwCiBtg6pGsW6nScVBBrk/view?usp=sharing',
+            'https://drive.google.com/file/d/1GcAOv5C8rOwDWH0dB_PGt_4yNBHMU9GL/view?usp=sharing',
+            'https://drive.google.com/file/d/1NBGHawKvH3jyi7YitfrddN2mv4Cuol9C/view?usp=sharing'
+        ];
+
+        // Doença Tireoidiana
+        const doencaTireoidianaAulas = [
+            'https://drive.google.com/file/d/11eUaB2NpAxOanQQMhtWr1Sax_mQKieyO/view?usp=sharing',
+            'https://drive.google.com/file/d/1svTKTsS8zL_NqkhJOUD_qG4UV9SjsfTE/view?usp=sharing',
+            'https://drive.google.com/file/d/1wOP1pVI2IcUZH3VPpPoRPEYzKSs4VOV2/view?usp=sharing',
+            'https://drive.google.com/file/d/1Wl5vCDvASzn_av6Gp6lQkJmZKhawWTyN/view?usp=sharing',
+            'https://drive.google.com/file/d/17sLV3MrkHKi52KzHHvFBR3yJpBCbDg1J/view?usp=sharing'
+        ];
+        const doencaTireoidianaMateriais = [
+            'https://drive.google.com/file/d/1I-0O5rQcK-dawC6DXcefaZhFB3G_KEPJ/view?usp=sharing',
+            'https://drive.google.com/file/d/1Lo4QsBXLMnH6hJQ0w8Yx9Yjq-Xe8Dy3q/view?usp=sharing',
+            'https://drive.google.com/file/d/10-FJMJmyg4ALTNm825EtpW21cP786s9L/view?usp=sharing',
+            'https://drive.google.com/file/d/1Sj5u7ZRqkjLAAjCu13Fi-5dsSOy6-iWe/view?usp=sharing',
+            'https://drive.google.com/file/d/1eLBWDSbbrVtyG54wxWMwj1GSBbmHNNuV/view?usp=sharing',
+            'https://drive.google.com/file/d/1RupT3wuULgA7WyQsjJ-AQcNL8w27srwt/view?usp=sharing',
+            'https://drive.google.com/file/d/1mIErNHhkt-fF5TMrNMSO8iJ_h01uzZTS/view?usp=sharing',
+            'https://drive.google.com/file/d/1eWd9WKSs6lbFGlJnD4ci3KmTFcchZLtb/view?usp=sharing'
+        ];
+
+        // Saúde do Idoso
+        const saudeIdosoAulas = [
+            'https://drive.google.com/file/d/1bigzwAmZB69F9KrRFIkXJbSNjCkxceSD/view?usp=sharing',
+            'https://drive.google.com/file/d/1SCBRj6ZEEsGgpcqW2H2DPhg2I0r5yFHl/view?usp=sharing',
+            'https://drive.google.com/file/d/1vSOthvQigHeBvrYICVP2zTzaj0nHvqAN/view?usp=sharing',
+            'https://drive.google.com/file/d/15vYQ0lw6dtuDTk31JsPhxiiMIwcXJeYP/view?usp=sharing',
+            'https://drive.google.com/file/d/1M8PgUEoo5cRB2IflprCrKtnGwTUL9nAd/view?usp=sharing',
+            'https://drive.google.com/file/d/1BLS7xJAueILd2WLPWcJTu7TlOs2HHKCK/view?usp=sharing'
+        ];
+        const saudeIdosoMateriais = [
+            'https://drive.google.com/file/d/1asSwM8xokOJE_yJ43_f0VPFPjFG0Mwge/view?usp=sharing',
+            'https://drive.google.com/file/d/1gb3pgAJYZ-7i9kEcvsSq5efA41CITe82/view?usp=sharing',
+            'https://drive.google.com/file/d/1vCpFIDuI4tCqBbzrLy8146a8UsXllKCg/view?usp=sharing',
+            'https://drive.google.com/file/d/1PQIZwf77ul-w-gvxyNqKlokjjTR3VFKy/view?usp=sharing',
+            'https://drive.google.com/file/d/1ZnRcjHZ7u255htf2ieFhnNy9ALceaNvF/view?usp=sharing',
+            'https://drive.google.com/file/d/1bBBVFLIzl3Tn6I6wvGrKCx8-PHrYRQHH/view?usp=sharing',
+            'https://drive.google.com/file/d/1xMv8kYQZHTdJ8HThbEUXJcLLTSVG5hLi/view?usp=sharing',
+            'https://drive.google.com/file/d/1lWxIjAtR9ZEB4vmyxHHsnzOb94bS-Qkd/view?usp=sharing',
+            'https://drive.google.com/file/d/1P2jPAjYRLla-5Mz9SBq-eTKzyoPrgQmc/view?usp=sharing',
+            'https://drive.google.com/file/d/1TpU0-ztuKp8uokrudf0Y__UDxiom16pE/view?usp=sharing',
+            'https://drive.google.com/file/d/1CCbk3PY43s95Cln62XdaZJPJhDtz8WbO/view?usp=sharing',
+            'https://drive.google.com/file/d/1lsNQlXQdioOlX2f7H2GFprMYzY3xVSea/view?usp=sharing'
+        ];
+
+        // Distúrbios Ventilatórios
+        const disturbiosVentilatoriosAulas = [
+            'https://drive.google.com/file/d/1AUeskd_Ht4m4922rCys6Bnnjl64s5wYg/view?usp=sharing',
+            'https://drive.google.com/file/d/13EkREBCHC8YMO5sCL45Tct_1xrmUkv--/view?usp=sharing',
+            'https://drive.google.com/file/d/1-U-fEVuJVw_F0v2LFI1oN6WuAMDRkIi7/view?usp=sharing',
+            'https://drive.google.com/file/d/1SOQH5SRuMdAeBOfiPTYXJAzD5vSDuNlV/view?usp=sharing',
+            'https://drive.google.com/file/d/1OdxHVA5XI_gcnJZW6o1GNKQ1yF5cGgoK/view?usp=sharing',
+            'https://drive.google.com/file/d/1b3od4rAjoVCaKBr1QFqdezBisDd6eYZt/view?usp=sharing'
+        ];
+        const disturbiosVentilatoriosMateriais = [
+            'https://drive.google.com/file/d/1LpJVgHy2zymRV-2GsFBedvbRtst0w9e-/view?usp=sharing',
+            'https://drive.google.com/file/d/14zLft9zEA0rEK4BBD4UHVjUsim2RqoE4/view?usp=sharing',
+            'https://drive.google.com/file/d/1T2kPv7nO3NFPMkqJ6gD7FVhlGmButILi/view?usp=sharing',
+            'https://drive.google.com/file/d/13zOX9DTqT386pTeXg9r5VsrVZ2Cv_SDi/view?usp=sharing',
+            'https://drive.google.com/file/d/1reHR2nlCQ9UVC1znLwJT573KkoVhiE1Z/view?usp=sharing',
+            'https://drive.google.com/file/d/1TQkNu-urJ4dkmhOOm1yreqgNtcQMlF7H/view?usp=sharing',
+            'https://drive.google.com/file/d/11zjf7WSUPiRYJnKIXow1re1OOgllXYjM/view?usp=sharing',
+            'https://drive.google.com/file/d/1RIqCxE3DMnE_Ka5g1S59w9D-_fM7vuU9/view?usp=sharing',
+            'https://drive.google.com/file/d/1oau4lXQ5rnbZRXtDLpzRkUTk3fp6rn6n/view?usp=sharing',
+            'https://drive.google.com/file/d/18iqTyHpptdbsfT1h_tbYmUdR93BxjRuu/view?usp=sharing'
+        ];
+
+        // Doenças Cardiovasculares
+        const doencasCardiovascularesAulas = [
+            'https://drive.google.com/file/d/1yziSP_FPW-ErO_1XQPJ5-gQ2qWPH-sVh/view?usp=sharing',
+            'https://drive.google.com/file/d/1Gb8QbpHL1et73YezYYqjCvvoGjTYTwkB/view?usp=sharing',
+            'https://drive.google.com/file/d/1sedEIahwopMnTUpbuMFGbii7yv_1yOX2/view?usp=sharing',
+            'https://drive.google.com/file/d/1ZPf8a-JTjL0RYWIpkpSRKQg2CqsYC_or/view?usp=sharing',
+            'https://drive.google.com/file/d/1Y16Hba2kRFWTUkS2aXZRNBBuBnKrDGQO/view?usp=sharing',
+            'https://drive.google.com/file/d/1CtaiabRdydaIhpMzbpxMijtMkex_nrq_/view?usp=sharing',
+            'https://drive.google.com/file/d/1mSEj_ZzuGU57QKmfsy44PuNnpnrsXPer/view?usp=sharing',
+            'https://drive.google.com/file/d/1ipAiZHn-cazjgl4AzhA9jtuMoOAmiVNB/view?usp=sharing',
+            'https://drive.google.com/file/d/1mCRsY87M3UglLMgmKXwD0rKIij-dZUIi/view?usp=sharing',
+            'https://drive.google.com/file/d/1DIA_m-7VuSSjasmipa8txuSz4Uwvghex/view?usp=sharing'
+        ];
+        const doencasCardiovascularesMateriais = [
+            'https://drive.google.com/file/d/1RirIJXCQSZgThMIN2P015_o44fnGGUxK/view?usp=sharing',
+            'https://drive.google.com/file/d/1AQcatTTSjUmg1RfyTJuliDLqEfL9px2-/view?usp=sharing',
+            'https://drive.google.com/file/d/1EUXx4L5MMOKTm-kBFDsGBvYrv72MAyIk/view?usp=sharing',
+            'https://drive.google.com/file/d/1nG4v8GEQgHQnXWM6iyyYumTjMCw7bicH/view?usp=sharing',
+            'https://drive.google.com/file/d/1CfIeO2fQ9tzxKefKeOkJJ-t-WcyXloom/view?usp=sharing',
+            'https://drive.google.com/file/d/1WBnqUDssIuse7lHD3Q5Qt3SBsmDXFZEa/view?usp=sharing',
+            'https://drive.google.com/file/d/1j3Orx_K854ZbpB19WT1lYrVidi0g5JIo/view?usp=sharing',
+            'https://drive.google.com/file/d/1hsz5GocghnwkDM9aNSEwfJ4JCotuS_Fj/view?usp=sharing',
+            'https://drive.google.com/file/d/1t8FOAJdGrtFLnkYLkeBt9wRfZVoK4SFh/view?usp=sharing',
+            'https://drive.google.com/file/d/1OqbUqNkiWtr1GJ3RBwkYebUQ5piFjtYu/view?usp=sharing',
+            'https://drive.google.com/file/d/1Ma2TmpG-rqG10X5EiM-8NTRn_5zxmBpq/view?usp=sharing',
+            'https://drive.google.com/file/d/1YpC8Pg_FMvHHVLbIJgl8ioRwogWtHmnk/view?usp=sharing',
+            'https://drive.google.com/file/d/1qIbbDlejnJCEWYrcRJBad5_OEe_EAo8b/view?usp=sharing',
+            'https://drive.google.com/file/d/1UmDtZOu1LPj0zHbRQ5H-fnFJ9oVcc3i0/view?usp=sharing',
+            'https://drive.google.com/file/d/1s0YTvP2m89h2b1V6mGBQPtXf1C_i7zC4/view?usp=drive_link',
+            'https://drive.google.com/file/d/1XhQ1NPsNdw7UayMA-G68VJWa-LP3kcEC/view?usp=drive_link',
+            'https://drive.google.com/file/d/1FBXS43pyK9PIQOpnkJOp7dj_rnCzby9M/view?usp=sharing',
+            'https://drive.google.com/file/d/1lKDrNluGjDNjJKER4GwGY-AJJwFp-y9C/view?usp=sharing',
+            'https://drive.google.com/file/d/1BorHCN75TDyJdTtu30pZP6fHdr7ZWfpH/view?usp=drive_link'
+        ];
+
+        // Síndromes Hematológicas
+        const sindromesHematologicasAulas = [
+            'https://drive.google.com/file/d/1_InO2lqT6zxBWffqb2vaDbSsaqki7WS2/view?usp=sharing',
+            'https://drive.google.com/file/d/1iHL14sBUR3sCGPCg0co99Ou3kTlLVzND/view?usp=sharing',
+            'https://drive.google.com/file/d/1pPZceCkb780byuOTaH_6oNFijy0pfnZO/view?usp=sharing',
+            'https://drive.google.com/file/d/1OVDyGZvKQPV9YN7ukLlJeffFrmqvZuIP/view?usp=sharing',
+            'https://drive.google.com/file/d/1GWzXEbtZ7eqyOwEHC1X-qcg5HVb7QGOt/view?usp=sharing'
+        ];
+        const sindromesHematologicasMateriais = [
+            'https://drive.google.com/file/d/1B8vD-Z1Ll6vRreHpXYt9fx-RXmUAXkeb/view?usp=sharing',
+            'https://drive.google.com/file/d/1kDZwdjXOktywjCo0VtjVcbguWqsGzg1b/view?usp=sharing',
+            'https://drive.google.com/file/d/1v1DmosCFMKvtD23eeajQaKbAxn6bJG-z/view?usp=sharing',
+            'https://drive.google.com/file/d/1zyQaeahpoY-wH1soNTEP2RYgwuSQDpQB/view?usp=sharing',
+            'https://drive.google.com/file/d/1iuak4Kk-4W77vDb9eMlL5dv53-dd2EkZ/view?usp=sharing',
+            'https://drive.google.com/file/d/11EtiRdmyf6kCLdaqqooWbrbamOWYIm20/view?usp=sharing',
+            'https://drive.google.com/file/d/1G3pKwSlUPsG66tF7lgDe0_jlGOVsytKa/view?usp=sharing',
+            'https://drive.google.com/file/d/1uRcuo9VFKmv4ipgfuEzEp0RZD3wK9WFP/view?usp=sharing',
+            'https://drive.google.com/file/d/1snJ2Zrlj9Tod0erg_eJ-sPkEWSb-IxWc/view?usp=sharing',
+            'https://drive.google.com/file/d/1ygZPidzEiKQQ3J_xppcpirnQENnCVEWH/view?usp=sharing'
+        ];
+
+        // Saúde Mental
+        const saudeMentalAulas = [
+            'https://drive.google.com/file/d/18cwI8REqi3Un71IR0KMLVR85dedgnO0c/view?usp=sharing',
+            'https://drive.google.com/file/d/1LotVEQp93Hxm7LJuwVOu5VAuEkIENNNy/view?usp=sharing',
+            'https://drive.google.com/file/d/1D76l8_ofN-zvBKmpUzpUJS0RoH80yv3c/view?usp=sharing',
+            'https://drive.google.com/file/d/1HJ4EPmHMe5EuUYeBzWX5u__y5mibxFTE/view?usp=sharing',
+            'https://drive.google.com/file/d/1L2yyyl_fq-aNxlBOOfFQdUL4a94UChs5/view?usp=sharing'
+        ];
+        const saudeMentalMateriais = [
+            'https://drive.google.com/file/d/1AxFj88Bbyeux_1UA1TBPg8qlcftNf56M/view?usp=sharing',
+            'https://drive.google.com/file/d/12oKSJmQWS9fPFU3fKv47Nyp91-gmY6Dv/view?usp=sharing',
+            'https://drive.google.com/file/d/1NR9jzebQrZ56ff1Z14NOJlcAqXgUB8-n/view?usp=sharing',
+            'https://drive.google.com/file/d/1AP_ecgcQrCjp8a36woW6o6VQR_pYb7Ej/view?usp=sharing',
+            'https://drive.google.com/file/d/1sUUElwGbBWO6jA0_pq0-1TNU3ntWhwoE/view?usp=sharing',
+            'https://drive.google.com/file/d/1NcpA9Pwkhntbe6c6KkYVcz9WEPKtdaRN/view?usp=sharing',
+            'https://drive.google.com/file/d/1b9qFwD-w3rq6Kyxma6OIHRCaPpqFfHox/view?usp=sharing',
+            'https://drive.google.com/file/d/1OxFLumSB-13ccWUy5zQS7BmAWDcGsnQv/view?usp=sharing',
+            'https://drive.google.com/file/d/1nMEKX_QEf5xIgPX9Xo8vwPrnbxnhbn64/view?usp=sharing',
+            'https://drive.google.com/file/d/1AXaOFr8PkSfYqNqZv2vznnH8H7PG_Okd/view?usp=sharing'
+        ];
+
+        // Síndromes Gastrointestinais
+        const sindromesGastrointestinaisAulas = [
+            'https://drive.google.com/file/d/1lmbvSXhKbOWyTWp7Zscw7MxcGfNBDqJP/view?usp=sharing',
+            'https://drive.google.com/file/d/1GDvw5JFAX0yZVGF30f7gVwFL87LzmYRS/view?usp=sharing',
+            'https://drive.google.com/file/d/1bwqqsSOGsDmt_t0TWZb1SCYQsaQCYkWz/view?usp=sharing',
+            'https://drive.google.com/file/d/1RrITT8fEo2Gr8CuFNGTv_9pa701HvBbU/view?usp=sharing',
+            'https://drive.google.com/file/d/1uNtcsDxy96AgRpRXpg0oC1oZ48d8t1pm/view?usp=sharing',
+            'https://drive.google.com/file/d/13kkEfwNSupKhJY7EGJMwJWkefHJSoC7e/view?usp=sharing'
+        ];
+        const sindromesGastrointestinaisMateriais = [
+            'https://drive.google.com/file/d/1Qne8ecd20dwVfDn4AJ58k11zAt6vxYVx/view?usp=sharing',
+            'https://drive.google.com/file/d/1qfleeL6zeGKWqpGsVOxK4XcoGRYd9bgF/view?usp=sharing',
+            'https://drive.google.com/file/d/1SzxmKgavehiyRbjj26EaN_UN0cBvUGSD/view?usp=sharing',
+            'https://drive.google.com/file/d/1_UtrTgtxw1k8un2S3hBtk8bn_2Uk0jdp/view?usp=sharing',
+            'https://drive.google.com/file/d/1mnmDmurVRHmhWDTfheb1Eq3f69fCF-4X/view?usp=sharing',
+            'https://drive.google.com/file/d/1NZk71y8E7d7unzbSjlywKqJOvB7YqMmp/view?usp=sharing',
+            'https://drive.google.com/file/d/1hLbD0WJjvyd77CrKZlsvt6_AsocTYjI6/view?usp=sharing',
+            'https://drive.google.com/file/d/1uMJgDiOgYePqiifv_qP1jg85adU7DtDD/view?usp=sharing',
+            'https://drive.google.com/file/d/1Ynwu1P4QVndzqxWPh7uzLzn-9l9YmZmq/view?usp=sharing',
+            'https://drive.google.com/file/d/19z20Er4qoVSQhbmD83hQy7RwtDyDhnev/view?usp=sharing'
+        ];
+
+        // Doenças do Aparelho Geniturinário
+        const doencasGeniturinarioAulas = [
+            'https://drive.google.com/file/d/19mRfDSGIhCiotAqm_bnE7Cr9yNdOGQml/view?usp=sharing',
+            'https://drive.google.com/file/d/1J8V43jnT8Be7YaufHryIA423isNZ458B/view?usp=sharing',
+            'https://drive.google.com/file/d/1hjKnCa6FrxI9MbsWKVVHql1XsMBc79gg/view?usp=sharing',
+            'https://drive.google.com/file/d/1ZwxAqfsTpSi2jvdontvZHFmqsu5eAT6w/view?usp=sharing',
+            'https://drive.google.com/file/d/18XY2Abx2-1h-NHrYXqrJve2sMJssb6iX/view?usp=sharing',
+            'https://drive.google.com/file/d/1c9engSnFENNKdL-3ku8gVM4is2IZkCZ7/view?usp=sharing',
+            'https://drive.google.com/file/d/152A3ZuOu6GmPgVrlgsNCPaxc-47iwU02/view?usp=sharing'
+        ];
+        const doencasGeniturinarioMateriais = [
+            'https://drive.google.com/file/d/1lZ0XLrZz2oPSbAvyfQdoMooeWO85RLf3/view?usp=sharing',
+            'https://drive.google.com/file/d/1rhGTHoQmGwOZvGe4kGTRWgAZzEF7yvtj/view?usp=sharing',
+            'https://drive.google.com/file/d/176yn5ON9JTpHrm8lvflqUVxOIU10WvP7/view?usp=sharing',
+            'https://drive.google.com/file/d/1Qo_8nx7SbQTv2P6LHIuZCn9gc_uNidlW/view?usp=sharing',
+            'https://drive.google.com/file/d/1T_SzBSpcqZcgLhZevAdsxalQAk4gIMa2/view?usp=sharing',
+            'https://drive.google.com/file/d/1WdgLqwKNxCMny3dVjqg-Bqjabt6bLIFJ/view?usp=sharing',
+            'https://drive.google.com/file/d/1-GSu29yubo0G2J5FFj8HXl5vJtCjgjD4/view?usp=sharing',
+            'https://drive.google.com/file/d/1_8hZU-LYtXAKoyt9CBEnS0gnRcDX14gE/view?usp=sharing',
+            'https://drive.google.com/file/d/19jU0MWYOsSFJJtlvyWSm1BTmTqzQRs1W/view?usp=sharing',
+            'https://drive.google.com/file/d/1bY_nzpPAGIGMzo2FSVGkMtWl49LDIe_W/view?usp=sharing',
+            'https://drive.google.com/file/d/1JYNgGY06ZZpLeBU9Rx-eH1r3lViCEa6p/view?usp=sharing',
+            'https://drive.google.com/file/d/1ltaY4XJ_P3Aw1Vtwo-pUugelKgM3m6-g/view?usp=sharing',
+            'https://drive.google.com/file/d/16jmLbKmYPr-7DTQvev7pFOTYGAl8lf4N/view?usp=sharing',
+            'https://drive.google.com/file/d/1-n751hyc0goV8IDz877NAS53E5AZwsuA/view?usp=sharing'
+        ];
+
+        // Neurologia
+        const neurologiaAulas = [
+            'https://drive.google.com/file/d/1VKqb8wdb596cWkLlWclhZX3hOvUgs487/view?usp=sharing',
+            'https://drive.google.com/file/d/1nDzKGvlvR4HW5PbPKd1tgXCMAAsNtnBO/view?usp=sharing',
+            'https://drive.google.com/file/d/1BGu-hUEUSRdDUq5-ctPHbi9EhQLYjYNm/view?usp=sharing',
+            'https://drive.google.com/file/d/15DkZ6UxWffJlkYX4bDuppL432KDJ6fMO/view?usp=sharing',
+            'https://drive.google.com/file/d/1hIGaU0o6c_P7az-jAOKR9Q-BaQWGg8fl/view?usp=sharing',
+            'https://drive.google.com/file/d/1tV1fFPfPQVofhm4INy5WvCSicajgaFxs/view?usp=sharing'
+        ];
+        const neurologiaMateriais = [
+            'https://drive.google.com/file/d/1_KBF_Xa4xXt9ngmVmpqWmt9v2Ntzp06-/view?usp=sharing',
+            'https://drive.google.com/file/d/1S33t1HwXVRXoFcqe8ZG30LFhFn6lc0Vi/view?usp=sharing',
+            'https://drive.google.com/file/d/1oeLdTRhd3XXIWyQKGkxyvIJrU4IoJ_B9/view?usp=sharing',
+            'https://drive.google.com/file/d/1sZAdO_F4TGngc0Ia4sXC81NNZo8fpIP9/view?usp=sharing',
+            'https://drive.google.com/file/d/1dhKb4pQegyyqmDsfN0IMgmhDYbkid2K8/view?usp=sharing',
+            'https://drive.google.com/file/d/1DUfCbPQTE84y7cTK--W5A1VG4z_7uYzH/view?usp=sharing',
+            'https://drive.google.com/file/d/1GPJwwlQBnDCvPgGcWKxgxKUohcWNezzI/view?usp=sharing',
+            'https://drive.google.com/file/d/16RxbOGy5VxuNYMUpJBgKh_bMUK3wEEp9/view?usp=sharing',
+            'https://drive.google.com/file/d/1iLBWslCSNGpulmj3GvGVi5jSNDK_MEJX/view?usp=sharing',
+            'https://drive.google.com/file/d/1mLRVq0puKNJxI05wZtCZ9Kk_EeITIKUk/view?usp=sharing'
+        ];
+
+        // Infecções Prevalentes
+        const infeccoesPrevalentesAulas = [
+            'https://drive.google.com/file/d/1PuYNg7alozYUUY2tkUybMgTnjCIaNQwt/view?usp=sharing',
+            'https://drive.google.com/file/d/18PjDL8WvXLGv2Fa_-ns-q7NrhIA6IOD9/view?usp=sharing',
+            'https://drive.google.com/file/d/1KCpLOr9MzVgZARqKTakXxENe_aWqA24F/view?usp=sharing',
+            'https://drive.google.com/file/d/1NOymTUFKUbSEIbMFOUSwelzSkC6pDfHz/view?usp=sharing',
+            'https://drive.google.com/file/d/1hkt3tiLlG-jRZoTM8i4KuCs-NFp3Xw5D/view?usp=sharing',
+            'https://drive.google.com/file/d/1Ows3g3pkLEL9BbWXFsQ-uB4UguODmE6b/view?usp=sharing'
+        ];
+        const infeccoesPrevalentesMateriais = [
+            'https://drive.google.com/file/d/1s7V54jmYEATQUkD-VZbUNjMtn-3xsHqK/view?usp=sharing',
+            'https://drive.google.com/file/d/1YcxLSmam6W3xA8Hyx6-OnDjpB8W0Pimo/view?usp=sharing',
+            'https://drive.google.com/file/d/10MxjmroXlqEhlj5RHUtzoPQ-2xfnofGx/view?usp=sharing',
+            'https://drive.google.com/file/d/1hrilwo4GWYbCifq8eQRlq-dmtPtCwQxv/view?usp=sharing',
+            'https://drive.google.com/file/d/1txcy6uqlaBmSdv_yTTQH5NsSXQdlEr47/view?usp=sharing',
+            'https://drive.google.com/file/d/1-sIt-SCwhmod-7JO6YlO0zPasiGDH1d_/view?usp=sharing',
+            'https://drive.google.com/file/d/13E_XKqtWEcNHeWgwgBdlN1OOMmGaNSdC/view?usp=sharing',
+            'https://drive.google.com/file/d/1hyXDNwgtDIY5GXOAG84l9ZRXkwjhzfrU/view?usp=sharing',
+            'https://drive.google.com/file/d/1uyih3w5WC4eOowbtnb8n4AuHatGBm5gS/view?usp=sharing',
+            'https://drive.google.com/file/d/12tsec6UBdsFhxZTY_CwYCqLqbi1ABmfU/view?usp=sharing',
+            'https://drive.google.com/file/d/1lKkGrmbH7EgqGT_4Hw3lwv67sk5x30ps/view?usp=sharing',
+            'https://drive.google.com/file/d/1C6ccXEY1ve6sUTJkOORACwCqOtMjzXRT/view?usp=sharing'
+        ];
+
+        // Queixas Prevalentes
+        const queixasPrevalentesAulas = [
+            'https://drive.google.com/file/d/10n9qHo39Vp1vGAAPn-rFIrKSOXKv9oz5/view?usp=sharing',
+            'https://drive.google.com/file/d/1GlUGHIho_4pNj_UyR9JRgEr1ZmOyXWAm/view?usp=sharing',
+            'https://drive.google.com/file/d/1hgbNWE0RD4_a2HSOyaXOcAUCBBAftaT8/view?usp=sharing',
+            'https://drive.google.com/file/d/1HNjr3r7JKHINuXHQeS5Py27ZsjEQhzt4/view?usp=sharing'
+        ];
+        const queixasPrevalentesMateriais = [
+            'https://drive.google.com/file/d/1ZMmWHgT_Fqe8bxluLq2YYXSzIA2FDuk2/view?usp=sharing',
+            'https://drive.google.com/file/d/1EUxFnyTGlwV_gG_mlWgsYnEpIo9eTonF/view?usp=sharing',
+            'https://drive.google.com/file/d/15Pbugdt0yupnik98urzcPiOyOxLMDGzy/view?usp=sharing',
+            'https://drive.google.com/file/d/1q6BUMFnW4ZxXBkG0jfbpqXTBBIrMxnks/view?usp=sharing',
+            'https://drive.google.com/file/d/1UFBEyfupsQzYn0mv8uSOA8VKAXCsGZqI/view?usp=sharing',
+            'https://drive.google.com/file/d/1JX8movGwPeVnc37giArF3rwwYKpH5p_V/view?usp=sharing',
+            'https://drive.google.com/file/d/1KzJI02pQPLRrdBIRg_-AaDz2BKZ2Wii1/view?usp=drive_link',
+            'https://drive.google.com/file/d/1MLSCtt-RBSuMWuLsL0zmJw0hKhwmODmr/view?usp=drive_link'
+        ];
+
+        // Cuidados Paliativos
+        const cuidadosPaliativosAulas = [
+            'https://drive.google.com/file/d/1YmBL-uyRm7UahlXO3t2D4C4TMX3N7ma4/view?usp=sharing',
+            'https://drive.google.com/file/d/1pmGP-lzbMAuwiHDtt1eWdP3eQvsoQhfr/view?usp=sharing',
+            'https://drive.google.com/file/d/1gidrRgPBnfmvlof2v7s_y-bw8Bj26-EC/view?usp=sharing',
+            'https://drive.google.com/file/d/17oKexegRZBc00r-4vGQ9bLp-GSKmR41i/view?usp=sharing',
+            'https://drive.google.com/file/d/17JK1vlUZ9uVRTjk1v3bVlSii_ZuZHwqs/view?usp=sharing'
+        ];
+        const cuidadosPaliativosMateriais = [
+            'https://drive.google.com/file/d/1BPdOVF8cqSYDlnyYONU_Ks1ZZD1IKyLr/view?usp=sharing',
+            'https://drive.google.com/file/d/1dNvNwSqPCL8heL30qN-Ar-JlhC5l9APP/view?usp=sharing',
+            'https://drive.google.com/file/d/1zdjD0lVNFWgUfVVBnOELswYcg9E7Wpy9/view?usp=sharing',
+            'https://drive.google.com/file/d/1U5Ngc-B5awe2b9pUWwzM8EEIBh_TNAiN/view?usp=sharing',
+            'https://drive.google.com/file/d/1rikitp6vraMWY2KZZ-4Wx1iEUOsmRlvi/view?usp=sharing',
+            'https://drive.google.com/file/d/1KUqAqsmbUZVJPA2_9GQVTupRuj_70qPn/view?usp=sharing',
+            'https://drive.google.com/file/d/1mVJs9rIqv1WHHZb8o1ziRbutPQ2LanZn/view?usp=sharing',
+            'https://drive.google.com/file/d/1VkSjFdtr7FGtPD_U7rCUfrZ8tVvLV5_m/view?usp=sharing',
+            'https://drive.google.com/file/d/1HdDePNl8wgbkC4JLp797qQEkdJNxrsi7/view?usp=sharing',
+            'https://drive.google.com/file/d/1bTeBq_c55YhO8wr22GwRzI0TPPxpHArJ/view?usp=sharing'
+        ];
+
+        // Webinar
+        const webinarAulas = [
+            'https://drive.google.com/file/d/1pa1eMDJcksP9sP3B52k8vd87qHaFyRW4/view?usp=drive_link'
+        ];
+
+        // --- NOVOS TÍTULOS DE AULAS E MATERIAIS ---
+
+        // Introdução ao Raciocínio Clínico
+        const newRaciocinioClinicoVideoTitles = [
+            'Aula 01 - Raciocínio Clínico',
+            'Aula 02 - Como Envolver o Paciente em seu Cuidado: Parte I',
+            'Aula 03 - Como Envolver o Paciente em seu Cuidado: Parte II',
+            'Aula 04 - Desejo do Paciente de Ser Escutado',
+            'Aula 05 - Como Manter-se Atualizado',
+            'Aula 06 - Avaliação do Adulto Saudável: Organização da Consulta',
+            'Aula 07 - Avaliação do Adulto Saudável: Rastreamentos',
+            'Aula 08 - Avaliação do Adulto Saudável: Discussão Integrada de Casos',
+            'Aula 09 - Prevenção e Promoção Baseada em Evidência',
+            'Aula 10 - Imunizações: Indicações na Prática Clínica'
+        ];
+        const newRaciocinioClinicoMaterialTitles = [
+            'Raciocínio Clínico',
+            'Raciocínio Clínico - Anotação',
+            'Como Envolver o Paciente em seu Cuidado',
+            'Como Envolver o Paciente em seu Cuidado - Anotação',
+            'O Paciente e seu Desejo de ser Escutado',
+            'O Paciente e seu Desejo de ser Escutado - Anotação',
+            'Como Manter-se Atualizado',
+            'Como Manter-se Atualizado - Anotação',
+            'Avaliação - Adulto Saudável: Organização Geral da Consulta',
+            'Avaliação - Adulto Saudável: Organização Geral da Consulta - Anotação',
+            'Avaliação - Adulto Saudável: Rastreamentos',
+            'Avaliação - Adulto Saudável: Rastreamentos - Anotação',
+            'Avaliação - Adulto Saudável: Discussão Integrada de Casos',
+            'Avaliação - Adulto Saudável: Discussão Integrada de Casos - Anotação',
+            'Prevenção e Promoção da Saúde Baseada em Evidências',
+            'Prevenção e Promoção da Saúde Baseada em Evidências - Anotação',
+            'Imunizações na Prática Clínica',
+            'Imunizações na Prática Clínica - Anotação'
+        ];
+
+        // A Pessoa com Diabetes Mellitus
+        const newDiabetesMellitusVideoTitles = [
+            'Aula 01 - Rastreio e Diagnóstico',
+            'Aula 02 - Avaliação de Seguimento: Complicações Micro e Macrovasculares',
+            'Aula 03 - Vídeo Extra: Complicações Vasculares do Diabetes',
+            'Aula 04 - Tratamento Farmacológico do Diabetes Mellitus: Hipoglicemiantes Orais',
+            'Aula 05 - Insulinoterapia: Parte I',
+            'Aula 06 - Insulinoterapia: Parte II',
+            'Aula 07 - Manejo da Prática Insulinoterápica',
+            'Aula 08 - Vídeo Extra: Insulinoterapia',
+            'Aula 09 - Vídeo Extra: Exame do Pé',
+            'Aula 10 - Podcast: Tratamento Farmacológico para Diabetes, Antigas e Novas Drogas',
+            'Aula 11 - Podcast: Exercício Físico no Diabetes'
+        ];
+        const newDiabetesMellitusMaterialTitles = [
+            'Diabetes Mellitus - Rastreio e Diagnóstico',
+            'Diabetes Mellitus - Rastreio e Diagnóstico - Anotação',
+            'Avaliação de Seguimento',
+            'Avaliação de Seguimento - Anotação',
+            'Vídeo Extra - Complicações Vasculares no Diabetes',
+            'Vídeo Extra - Complicações Vasculares no Diabetes - Anotação',
+            'Tratamento Farmacológico do Diabetes Mellitus - Hipoglicemiantes',
+            'Tratamento Farmacológico do Diabetes Mellitus - Hipoglicemiantes - Anotação',
+            'Insulinoterapia - Parte I',
+            'Insulinoterapia - Parte I - Anotação',
+            'Insulinoterapia - Parte II',
+            'Insulinoterapia - Parte II - Anotação',
+            'Vídeo Extra - Insulinoterapia',
+            'Vídeo Extra - Insulinoterapia - Anotação'
+        ];
+
+        // A Pessoa com Hipertensão Arterial
+        const newHipertensaoArterialVideoTitles = [
+            'Aula 01 - Diagnóstico HAS',
+            'Aula 02 - Avaliação e Manejo do Risco Cardiovascular',
+            'Aula 03 - Tratamento Não-Farmacológico',
+            'Aula 04 - Tratamento Farmacológico',
+            'Aula 05 - Metas de Tratamento e Seguimento Ambulatorial do Paciente Hipertenso',
+            'Aula 06 - Vídeo Extra: Especificidades do Seguimento do Hipertenso',
+            'Aula 07 - Podcast: Exercício Físico na Hipertensão'
+        ];
+        const newHipertensaoArterialMaterialTitles = [
+            'Diagnóstico da HAS',
+            'Diagnóstico da HAS - Anotação',
+            'Risco Cardiovascular',
+            'Risco Cardiovascular - Anotação',
+            'Tratamento Não-Farmacológico',
+            'Tratamento Não-Farmacológico - Anotação',
+            'Tratamento Farmacológico',
+            'Tratamento Farmacológico - Anotação',
+            'HAS - Metas de Tratamento e Seguimento Ambulatorial',
+            'HAS - Metas de Tratamento e Seguimento Ambulatorial - Anotação'
+        ];
+
+        // Doenças Osteomusculares
+        const newDoencasOsteomuscularesVideoTitles = [
+            'Aula 01 - Abordagem da Dor Articular Axial',
+            'Aula 02 - Abordagem da Dor Articular Apendicular',
+            'Aula 03 - Ciatalgia Aguda',
+            'Aula 04 - Osteoartrite',
+            'Aula 05 - Gota',
+            'Aula 06 - Artrite Reumatoide',
+            'Aula 07 - Fibromialgia',
+            'Aula 08 - Quando Pensar em Lúpus? O Que Fazer na Suspeita?',
+            'Aula 09 - Vídeo Extra: Exame Osteoarticular'
+        ];
+        const newDoencasOsteomuscularesMaterialTitles = [
+            'Abordagem da Dor Axial',
+            'Abordagem da Dor Axial - Anotação',
+            'Abordagem da Dor Articular Apendicular',
+            'Abordagem da Dor Articular Apendicular - Anotação',
+            'Ciatalgia Aguda',
+            'Ciatalgia Aguda - Anotação',
+            'Osteoartrite',
+            'Osteoartrite - Anotação',
+            'Gota',
+            'Gota - Anotação',
+            'Artrite Reumatoide',
+            'Artrite Reumatoide - Anotação',
+            'Fibromialgia',
+            'Fibromialgia - Anotação',
+            'Quando Suspeitar de Lúpus',
+            'Quando Suspeitar de Lúpus - Anotação',
+            'Vídeo Extra - Avaliação Osteomuscular',
+            'Vídeo Extra - Avaliação Osteomuscular - Anotação'
+        ];
+
+        // Doença Tireoidiana
+        const newDoencaTireoidianaVideoTitles = [
+            'Aula 01 - Disfunções Tireoidianas',
+            'Aula 02 - Nódulo Tireoideano',
+            'Aula 03 - Obesidade',
+            'Aula 04 - Avaliação Inicial para Atividade Física',
+            'Aula 05 - Vídeo Extra: SAHOS'
+        ];
+        const newDoencaTireoidianaMaterialTitles = [
+            'Disfunções Tireoidianas',
+            'Disfunções Tireoidianas - Anotação',
+            'Nódulos Tireoidianos',
+            'Nódulos Tireoidianos - Anotação',
+            'Obesidade',
+            'Obesidade - Anotação',
+            'Avaliação Inicial Para Atividade Física',
+            'Avaliação Inicial Para Atividade Física - Anotação'
+        ];
+
+        // Saúde do Idoso
+        const newSaudeIdosoVideoTitles = [
+            'Aula 01 - Polifarmácia',
+            'Aula 02 - Particularidades no Cuidado do Idoso',
+            'Aula 03 - Osteoporose',
+            'Aula 04 - Vídeo Extra: Interpretação de DMO',
+            'Aula 05 - Declínio Cognitivo',
+            'Aula 06 - Vídeo Extra: Zumbido'
+        ];
+        const newSaudeIdosoMaterialTitles = [
+            'Polifarmácia',
+            'Polifarmácia - Anotação',
+            'Particularidades no Cuidado do Idoso',
+            'Particularidades no Cuidado do Idoso - Anotação',
+            'Osteoporose',
+            'Osteoporose - Anotação',
+            'Vídeo Extra - Densitometria Óssea',
+            'Vídeo Extra - Densitometria Óssea - Anotação',
+            'Declínio Cognitivo',
+            'Declínio Cognitivo - Anotação',
+            'Vídeo Extra - Zumbido',
+            'Vídeo Extra - Zumbido - Anotação'
+        ];
+
+        // Distúrbios Ventilatórios
+        const newDisturbiosVentilatoriosVideoTitles = [
+            'Aula 01 - Asma',
+            'Aula 02 - DPOC',
+            'Aula 03 - Prova de Função Pulmonar',
+            'Aula 04 - Cessação de Tabagismo',
+            'Aula 05 - Doenças Respiratórias Ocupacionais',
+            'Aula 06 - Podcast: Exercício Físico para Pessoas com Asma'
+        ];
+        const newDisturbiosVentilatoriosMaterialTitles = [
+            'Asma',
+            'Asma - Anotação',
+            'DPOC',
+            'DPOC - Anotação',
+            'Prova de Função Pulmonar',
+            'Prova de Função Pulmonar - Anotação',
+            'Tabagismo',
+            'Tabagismo - Anotação',
+            'Doenças Respiratórias Ocupacionais',
+            'Doenças Respiratórias Ocupacionais - Anotação'
+        ];
+
+        // Doenças Cardiovasculares
+        const newDoencasCardiovascularesVideoTitles = [
+            'Aula 01 - Fibrilação Atrial: Parte I',
+            'Aula 02 - Fibrilação Atrial: Parte II',
+            'Aula 03 - DAC Estável: Parte I',
+            'Aula 04 - DAC Estável: Parte II',
+            'Aula 05 - DAC Estável: Parte III',
+            'Aula 06 - Conceitos Básicos de Eletrocardiograma e Alterações Comuns',
+            'Aula 07 - Abordagem da Dor em MMII',
+            'Aula 08 - Vídeo Extra: Abordagem de Doença Arterial Obstrutiva Periférica',
+            'Aula 09 - Insuficiência Cardíaca',
+            'Aula 10 - Dislipidemia'
+        ];
+        const newDoencasCardiovascularesMaterialTitles = [
+            'Fibrilação Atrial - Parte I',
+            'Fibrilação Atrial - Parte I - Anotação',
+            'Fibrilação Atrial - Parte II',
+            'Fibrilação Atrial - Parte II - Anotação',
+            'Doença Arterial Coronariana Estável - Parte I',
+            'Doença Arterial Coronariana Estável - Parte I - Anotação',
+            'Doença Arterial Coronariana Estável - Parte II',
+            'Doença Arterial Coronariana Estável - Parte II - Anotação',
+            'Doença Arterial Coronariana Estável - Parte III',
+            'Doença Arterial Coronariana Estável - Parte III - Anotação',
+            'Eletrocardiograma',
+            'Eletrocardiograma - Anotação',
+            'Abordagem da Dor em MMII',
+            'Abordagem da Dor em MMII - Anotação',
+            'Vídeo Extra - Abordagem de Doença Arterial Obstrutiva Periférica',
+            'Vídeo Extra - Abordagem de Doença Arterial Obstrutiva Periférica - Anotação',
+            'Insuficiência Cardíaca',
+            'Insuficiência Cardíaca - Anotação',
+            'Dislipidemia' // Este último material não tem um par de anotação
+        ];
+
+        // Síndromes Hematológicas
+        const newSindromesHematologicasVideoTitles = [
+            'Aula 01 - Abordagem de Linfonodomegalias',
+            'Aula 02 - Citopenias',
+            'Aula 03 - TEV: Qual Anticoagulante, por Quanto Tempo, Quando Investigar Etiologia',
+            'Aula 04 - Anemias',
+            'Aula 05 - Vídeo Extra: Interpretação de Hemograma'
+        ];
+        const newSindromesHematologicasMaterialTitles = [
+            'Linfonodomegalias',
+            'Linfonodomegalias - Anotação',
+            'Citopenias',
+            'Citopenias - Anotação',
+            'TEV',
+            'TEV - Anotação',
+            'Anemias',
+            'Anemias - Anotação',
+            'Vídeo Extra - Interpretação do Hemograma Completo',
+            'Vídeo Extra - Interpretação do Hemograma Completo - Anotação'
+        ];
+
+        // Saúde Mental
+        const newSaudeMentalVideoTitles = [
+            'Aula 01 - Insônia',
+            'Aula 02 - Rastreio de Abuso de Substâncias',
+            'Aula 03 - Depressão',
+            'Aula 04 - Ansiedade',
+            'Aula 05 - Depressão e Ansiedade: Visão do Médico de Família'
+        ];
+        const newSaudeMentalMaterialTitles = [
+            'Insônia',
+            'Insônia - Anotação',
+            'Rastreamento - Abuso de Substâncias',
+            'Rastreamento - Abuso de Substâncias - Anotação', // Corrigido aqui
+            'Depressão',
+            'Depressão - Anotação',
+            'Ansiedade',
+            'Ansiedade - Anotação',
+            'Depressão e Ansiedade',
+            'Depressão e Ansiedade - Anotação'
+        ];
+
+        // Síndromes Gastrointestinais
+        const newSindromesGastrointestinaisVideoTitles = [
+            'Aula 01 - Abordagem da Diarreia Crônica',
+            'Aula 02 - Vídeo Extra: Abordagem de Dor Abdominal',
+            'Aula 03 - Dispepsia e Doença do Refluxo Gastroesofágico',
+            'Aula 04 - Abordagem de Alterações Laboratoriais Hepáticas',
+            'Aula 05 - Seguimento da Cirrose Hepática',
+            'Aula 06 - Abordagem de Distúrbios da Deglutição/Disfagia'
+        ];
+        const newSindromesGastrointestinaisMaterialTitles = [
+            'Diarreia Crônica',
+            'Diarreia Crônica - Anotação',
+            'Vídeo Extra - Dor Abdominal',
+            'Vídeo Extra - Dor Abdominal - Anotação',
+            'Dispepsia e Doença de Refluxo',
+            'Dispepsia e Doença de Refluxo - Anotação',
+            'Alterações Laboratoriais Hepáticas',
+            'Alterações Laboratoriais Hepáticas - Anotação',
+            'Cirrose Hepática',
+            'Cirrose Hepática - Anotação'
+        ];
+
+        // Doenças do Aparelho Geniturinário
+        const newDoencasGeniturinarioVideoTitles = [
+            'Aula 01 - Interpretação de Urina I',
+            'Aula 02 - Doença Renal Crônica Não-Dialítica',
+            'Aula 03 - Incontinência Urinária',
+            'Aula 04 - Abordagem Inicial da Sexualidade/Disfunções Sexuais/Amenorreia',
+            'Aula 05 - Litíase: Investigação e Terapêutica',
+            'Aula 06 - Glomerulopatias: Parte I',
+            'Aula 07 - Glomerulopatias: Parte II'
+        ];
+        const newDoencasGeniturinarioMaterialTitles = [
+            'Interpretação de Urina I',
+            'Interpretação de Urina I - Anotação',
+            'DRC',
+            'DRC - Anotação',
+            'Incontinência Urinária',
+            'Incontinência Urinária - Anotação',
+            'Disfunções da Sexualidade',
+            'Disfunções da Sexualidade - Anotação',
+            'Litíase Renal',
+            'Litíase Renal - Anotação',
+            'Glomerulopatia - Parte I',
+            'Glomerulopatia - Parte I - Anotação',
+            'Glomerulopatia - Parte II',
+            'Glomerulopatia - Parte II - Anotação'
+        ];
+
+        // Neurologia
+        const newNeurologiaVideoTitles = [
+            'Aula 01 - Tontura',
+            'Aula 02 - Vídeo Extra: Exame Neurológico',
+            'Aula 03 - Abordagem do Tremor',
+            'Aula 04 - Cefaleias Crônicas',
+            'Aula 05 - Abordagem da Fraqueza Neuromuscular',
+            'Aula 06 - Neuropatia Periférica: Quando Suspeitar e Como Investigar'
+        ];
+        const newNeurologiaMaterialTitles = [
+            'Tontura - Guilherme Pereira',
+            'Tontura - Guilherme Pereira - Anotação',
+            'Vídeo Extra - Exame Neurológico: Guilherme Pereira',
+            'Vídeo Extra - Exame Neurológico: Guilherme Pereira - Anotação',
+            'Abordagem do Tremor',
+            'Abordagem do Tremor - Anotação',
+            'Cefaleias Crônicas',
+            'Cefaleias Crônicas - Anotação',
+            'Neuropatia Periférica',
+            'Neuropatia Periférica - Anotação'
+        ];
+
+        // Infecções Prevalentes
+        const newInfeccoesPrevalentesVideoTitles = [
+            'Aula 01 - Sífilis: Interpretação da Sorologia',
+            'Aula 02 - Tuberculose',
+            'Aula 03 - Dermatofitose e Onicomicose',
+            'Aula 04 - Infecção do Trato Urinário',
+            'Aula 05 - Vulvovaginites: O Que o Médico Geral Internista Precisa Saber e Fazer',
+            'Aula 06 - Covid-19'
+        ];
+        const newInfeccoesPrevalentesMaterialTitles = [
+            'Sífilis - Interpretação da Sorologia',
+            'Sífilis - Interpretação da Sorologia - Anotação',
+            'Tuberculose',
+            'Tuberculose - Anotação',
+            'Dermatofitose e Onicomicose',
+            'Dermatofitose e Onicomicose - Anotação',
+            'Infecção do Trato Urinário',
+            'Infecção do Trato Urinário - Anotação',
+            'Vulvovaginites',
+            'Vulvovaginites - Anotação',
+            'Covid-19',
+            'Covid-19 - Anotação'
+        ];
+
+        // Queixas Prevalentes
+        const newQueixasPrevalentesVideoTitles = [
+            'Aula 01 - Dor',
+            'Aula 02 - Rinite Alérgica',
+            'Aula 03 - Prurido',
+            'Aula 04 - Interações Medicamentosas e Reações Adversas a Medicamentos: Como Avaliar?'
+        ];
+        const newQueixasPrevalentesMaterialTitles = [
+            'Dor',
+            'Dor - Anotação',
+            'Rinite Alérgica',
+            'Rinite Alérgica - Anotação',
+            'Prurido',
+            'Prurido - Anotação',
+            'Interações Medicamentosas e Reações Adversas a Medicamentos',
+            'Interações Medicamentosas e Reações Adversas a Medicamentos - Anotação'
+        ];
+
+        // Cuidados Paliativos
+        const newCuidadosPaliativosVideoTitles = [
+            'Aula 01 - Comunicação de Más Notícias',
+            'Aula 02 - Diretivas Antecipadas de Vontade',
+            'Aula 03 - Controle de Sintomas',
+            'Aula 04 - Avaliação de Prognóstico na Prática Ambulatorial',
+            'Aula 05 - Entrevista Familiar'
+        ];
+        const newCuidadosPaliativosMaterialTitles = [
+            'Comunicação de Más Notícias',
+            'Comunicação de Más Notícias - Anotação',
+            'Diretivas Antecipadas de Vontade',
+            'Diretivas Antecipadas de Vontade - Anotação',
+            'Controle de Sintomas',
+            'Controle de Sintomas - Anotação',
+            'Avaliação de Prognóstico na Prática Ambulatorial',
+            'Avaliação de Prognóstico na Prática Ambulatorial - Anotação',
+            'Entrevista Familiar',
+            'Entrevista Familiar - Anotação'
+        ];
+
+        // Webinar
+        const newWebinarVideoTitles = [
+            'Aula 01 - Webinar: Cuidados com o Paciente Renal Crônico Não-Dialítico'
+        ];
+
+
+        // Limpa os módulos existentes e adiciona os novos/atualizados
+        modulesData.length = 0; // Limpa o array modulesData para adicionar apenas os novos/atualizados
+
+        // Adiciona os módulos com os títulos atualizados
+        modulesData.push({
+            id: 'module_raciocinio_clinico',
+            title: 'Módulo - Introdução ao Raciocínio Clínico',
+            path: 'Início / Introdução ao Raciocínio Clínico',
+            videos: raciocinioClinicoAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newRaciocinioClinicoVideoTitles[i],
+                description: 'Descrição da aula de Raciocínio Clínico.',
+                icon: 'fas fa-brain'
+            })),
+            materials: structureMaterials(raciocinioClinicoMateriais, newRaciocinioClinicoMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_diabetes_mellitus',
+            title: 'Módulo - A Pessoa com Diabetes Mellitus',
+            path: 'Início / A Pessoa com Diabetes Mellitus',
+            videos: diabetesMellitusAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newDiabetesMellitusVideoTitles[i],
+                description: 'Descrição da aula sobre Diabetes Mellitus.',
+                icon: 'fas fa-syringe'
+            })),
+            materials: structureMaterials(diabetesMellitusMateriais, newDiabetesMellitusMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_hipertensao_arterial',
+            title: 'Módulo - A Pessoa com Hipertensão Arterial',
+            path: 'Início / A Pessoa com Hipertensão Arterial',
+            videos: hipertensaoArterialAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newHipertensaoArterialVideoTitles[i],
+                description: 'Descrição da aula sobre Hipertensão Arterial.',
+                icon: 'fas fa-heartbeat'
+            })),
+            materials: structureMaterials(hipertensaoArterialMateriais, newHipertensaoArterialMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_doencas_osteomusculares',
+            title: 'Módulo - Doenças Osteomusculares',
+            path: 'Início / Doenças Osteomusculares',
+            videos: doencasOsteomuscularesAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newDoencasOsteomuscularesVideoTitles[i],
+                description: 'Descrição da aula sobre Doenças Osteomusculares.',
+                icon: 'fas fa-bone'
+            })),
+            materials: structureMaterials(doencasOsteomuscularesMateriais, newDoencasOsteomuscularesMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_doenca_tireoidiana',
+            title: 'Módulo - Doença Tireoidiana',
+            path: 'Início / Doença Tireoidiana',
+            videos: doencaTireoidianaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newDoencaTireoidianaVideoTitles[i],
+                description: 'Descrição da aula sobre Doença Tireoidiana.',
+                icon: 'fas fa-medkit'
+            })),
+            materials: structureMaterials(doencaTireoidianaMateriais, newDoencaTireoidianaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_saude_idoso',
+            title: 'Módulo - Saúde do Idoso',
+            path: 'Início / Saúde do Idoso',
+            videos: saudeIdosoAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newSaudeIdosoVideoTitles[i],
+                description: 'Descrição da aula sobre Saúde do Idoso.',
+                icon: 'fas fa-wheelchair'
+            })),
+            materials: structureMaterials(saudeIdosoMateriais, newSaudeIdosoMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_disturbios_ventilatorios',
+            title: 'Módulo - Distúrbios Ventilatórios',
+            path: 'Início / Distúrbios Ventilatórios',
+            videos: disturbiosVentilatoriosAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newDisturbiosVentilatoriosVideoTitles[i],
+                description: 'Descrição da aula sobre Distúrbios Ventilatórios.',
+                icon: 'fas fa-lungs'
+            })),
+            materials: structureMaterials(disturbiosVentilatoriosMateriais, newDisturbiosVentilatoriosMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_doencas_cardiovasculares',
+            title: 'Módulo - Doenças Cardiovasculares',
+            path: 'Início / Doenças Cardiovasculares',
+            videos: doencasCardiovascularesAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newDoencasCardiovascularesVideoTitles[i],
+                description: 'Descrição da aula sobre Doenças Cardiovasculares.',
+                icon: 'fas fa-heartbeat'
+            })),
+            materials: structureMaterials(doencasCardiovascularesMateriais, newDoencasCardiovascularesMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_sindromes_hematologicas',
+            title: 'Módulo - Síndromes Hematológicas',
+            path: 'Início / Síndromes Hematológicas',
+            videos: sindromesHematologicasAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newSindromesHematologicasVideoTitles[i],
+                description: 'Descrição da aula sobre Síndromes Hematológicas.',
+                icon: 'fas fa-tint'
+            })),
+            materials: structureMaterials(sindromesHematologicasMateriais, newSindromesHematologicasMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_saude_mental',
+            title: 'Módulo - Saúde Mental',
+            path: 'Início / Saúde Mental',
+            videos: saudeMentalAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newSaudeMentalVideoTitles[i],
+                description: 'Descrição da aula sobre Saúde Mental.',
+                icon: 'fas fa-brain'
+            })),
+            materials: structureMaterials(saudeMentalMateriais, newSaudeMentalMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_sindromes_gastrointestinais',
+            title: 'Módulo - Síndromes Gastrointestinais',
+            path: 'Início / Síndromes Gastrointestinais',
+            videos: sindromesGastrointestinaisAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newSindromesGastrointestinaisVideoTitles[i],
+                description: 'Descrição da aula sobre Síndromes Gastrointestinais.',
+                icon: 'fas fa-stomach'
+            })),
+            materials: structureMaterials(sindromesGastrointestinaisMateriais, newSindromesGastrointestinaisMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_doencas_geniturinario',
+            title: 'Módulo - Doenças do Aparelho Geniturinário',
+            path: 'Início / Doenças do Aparelho Geniturinário',
+            videos: doencasGeniturinarioAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newDoencasGeniturinarioVideoTitles[i],
+                description: 'Descrição da aula sobre Doenças do Aparelho Geniturinário.',
+                icon: 'fas fa-kidney'
+            })),
+            materials: structureMaterials(doencasGeniturinarioMateriais, newDoencasGeniturinarioMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_neurologia_new',
+            title: 'Módulo - Neurologia',
+            path: 'Início / Neurologia',
+            videos: neurologiaAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newNeurologiaVideoTitles[i],
+                description: 'Descrição da aula de Neurologia.',
+                icon: 'fas fa-brain'
+            })),
+            materials: structureMaterials(neurologiaMateriais, newNeurologiaMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_infeccoes_prevalentes',
+            title: 'Módulo - Infecções Prevalentes',
+            path: 'Início / Infecções Prevalentes',
+            videos: infeccoesPrevalentesAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newInfeccoesPrevalentesVideoTitles[i],
+                description: 'Descrição da aula sobre Infecções Prevalentes.',
+                icon: 'fas fa-microscope'
+            })),
+            materials: structureMaterials(infeccoesPrevalentesMateriais, newInfeccoesPrevalentesMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_queixas_prevalentes',
+            title: 'Módulo - Queixas Prevalentes',
+            path: 'Início / Queixas Prevalentes',
+            videos: queixasPrevalentesAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newQueixasPrevalentesVideoTitles[i],
+                description: 'Descrição da aula sobre Queixas Prevalentes.',
+                icon: 'fas fa-notes-medical'
+            })),
+            materials: structureMaterials(queixasPrevalentesMateriais, newQueixasPrevalentesMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_cuidados_paliativos',
+            title: 'Módulo - Cuidados Paliativos',
+            path: 'Início / Cuidados Paliativos',
+            videos: cuidadosPaliativosAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newCuidadosPaliativosVideoTitles[i],
+                description: 'Descrição da aula sobre Cuidados Paliativos.',
+                icon: 'fas fa-hand-holding-heart'
+            })),
+            materials: structureMaterials(cuidadosPaliativosMateriais, newCuidadosPaliativosMaterialTitles)
+        });
+
+        modulesData.push({
+            id: 'module_webinar',
+            title: 'Módulo - Webinar',
+            path: 'Início / Webinar',
+            videos: webinarAulas.map((link, i) => ({
+                id: extractIdFromGoogleDriveLink(link),
+                title: newWebinarVideoTitles[i],
+                description: 'Gravação do Webinar.',
+                icon: 'fas fa-video'
+            })),
+            materials: [] // No materials for Webinar
+        });
+
+
+        /**
+         * Carrega um vídeo do Google Drive no player principal e atualiza o título da aula.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} videoId - O ID do vídeo do Google Drive.
+         * @param {string} lessonTitle - O título da aula a ser exibido.
+         */
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver ID válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = lessonTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (aula)
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Lida com o clique em um material de estudo, abrindo-o no campo de vídeo.
+         * Também gerencia o efeito de seleção na barra lateral.
+         * @param {string} link - O URL para o material de estudo.
+         * @param {string} materialTitle - O título do material de estudo.
+         */
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link) {
+                // Para links de documentos do Google Drive, use 'preview' para tentar abrir no iframe
+                const previewLink = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = ''; /* Limpa o player se não houver link válido */
+            }
+            if (titleElement) {
+                titleElement.textContent = materialTitle;
+            }
+
+            // Remove a seleção do item anterior, se houver
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected-lesson');
+                }
+            }
+
+            // Adiciona a seleção ao item atual (material)
+            selectedItemId = link; /* Usar o link completo como ID para materiais */
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) {
+                currentSelected.classList.add('selected-lesson');
+            }
+        }
+
+        /**
+         * Renderiza as aulas e materiais do módulo atual na barra lateral.
+         * @param {string} moduleId - O ID do módulo a ser renderizado.
+         */
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement) return;
+
+            // Encontra o módulo selecionado
+            const module = modulesData.find(m => m.id === moduleId);
+
+            if (!module) {
+                console.error(`Módulo com ID ${moduleId} não encontrado.`);
+                return;
+            }
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstItemId = null;
+            let firstItemTitle = null;
+            let firstItemType = null;
+
+            // Renderiza os vídeos
+            module.videos.forEach(item => {
+                const itemDescription = item.description || '';
+                // Captura o ID e título do primeiro item para carregamento inicial (prioriza o primeiro vídeo do módulo)
+                if (firstItemId === null) {
+                    firstItemId = item.id;
+                    firstItemTitle = item.title;
+                    firstItemType = 'video';
+                }
+
+                videosHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                         onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                            <p class="text-xs text-gray-400">${itemDescription}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Renderiza os materiais
+            module.materials.forEach(item => {
+                const itemDescription = item.description || '';
+                if (item.type === 'category') {
+                    // Renderiza um sub-módulo (dropdown)
+                    materialsHtml += `
+                        <details>
+                            <summary>${item.title}</summary>
+                            <div class="px-4 py-2 space-y-2">
+                                ${item.items.map(subItem => {
+                                    // subItem dentro de uma categoria de material sempre será um item direto, não uma categoria aninhada
+                                    return `
+                                        <div class="material-item"
+                                                onclick="loadMaterial('${subItem.link}', '${subItem.title.replace(/'/g, "\\'")}')" data-id="${subItem.link}">
+                                            <div class="item-thumbnail-placeholder">
+                                                <i class="${subItem.icon}"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-white">${subItem.title}</p>
+                                                <p class="text-xs text-gray-400">${subItem.description || ''}</p>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </details>
+                    `;
+                } else {
+                    // Renderiza um material comum (se não for parte de uma categoria)
+                    if (firstItemId === null && module.videos.length === 0) {
+                        firstItemId = item.link; /* Usar o link como ID para materiais para seleção */
+                        firstItemTitle = item.title;
+                        firstItemType = 'material';
+                    }
+
+                    materialsHtml += `
+                        <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                             onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                            <div class="item-thumbnail-placeholder">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                <p class="text-xs text-gray-400">${itemDescription}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            videosContainer.innerHTML = videosHtml;
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Carrega o primeiro item (vídeo ou material) do módulo na inicialização e aplica a seleção
+            if (firstItemId && firstItemTitle && firstItemType) {
+                if (firstItemType === 'video') {
+                    loadVideo(firstItemId, firstItemTitle);
+                } else if (firstItemType === 'material') {
+                    loadMaterial(firstItemId, firstItemTitle);
+                }
+            } else {
+                // Limpa o player e o título se o módulo não tiver conteúdo
+                document.getElementById('contentPlayer').src = '';
+                document.getElementById('lessonTitle').textContent = 'Selecione um item';
+                selectedItemId = null; // Reseta a seleção
+            }
+        }
+
+        // Popula o dropdown de seleção de módulos e adiciona o event listener
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Clear existing options before populating
+            moduleSelector.innerHTML = '';
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[8].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[8].id);
+            }
+        }
+
+        // Inicializa o seletor de módulos quando a página é carregada
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">MEDReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_trauma', title: 'TRAUMA', content: [
+                { type: 'group', video: { title: 'Aula 01 - ATLS 11ed: O Que há de Novo?', link: 'https://drive.google.com/file/d/1IIiC0_0h7eISz3kQte_ox0uHclmEf86P/view?usp=sharing' }, materials: [{ title: 'E-Book - ATLS 11ed: O que há de novo?', link: 'https://drive.google.com/file/d/1AaylVawszyoj_ETAFbKkUE1uJwK4e2WE/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Avaliação Inicial no Trauma', link: 'https://drive.google.com/file/d/16CZw8_toqmNrJbQxb_1_zvZdF3RVOMUU/view?usp=sharing' }, materials: [{ title: 'E-Book - Avaliação Inicial no Trauma', link: 'https://drive.google.com/file/d/16L8LyblB1oZHmS04NmH4P7_ILDGb22Fy/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Trauma da Via Aérea', link: 'https://drive.google.com/file/d/1fpybbiphkL4JHFIiGr6YjZLcB80BxxVx/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma da Via Aérea', link: 'https://drive.google.com/file/d/1q3sVPVBAguDDL6a6Oxgr96ozdaqrS6iq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Trauma: Choque Hemorrágico', link: 'https://drive.google.com/file/d/1mWXzyDJ6f1L_hnRo2YcFO5L6fhy1PwgB/view?usp=sharing' }, materials: [{ title: 'E-Book - Choque Hemorrágico', link: 'https://drive.google.com/file/d/1bH0ifl7H8BqjEuk8CxklRduuEzlW1687/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Trauma Torácico', link: 'https://drive.google.com/file/d/1VD7bsXKnTwbYYVe2PwgeMzCEKp5yUoHu/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma Torácico', link: 'https://drive.google.com/file/d/1WxYTx8p2Iit2vYmBG8yLdCyQ2NCy9LXH/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Trauma Abdominal e Pélvico', link: 'https://drive.google.com/file/d/15_83UsqZrdHGLV7EfnQx6ZrNYd-S1ERf/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma Abdominal e Pélvico', link: 'https://drive.google.com/file/d/1wQahJgTlLBfMtVRwgjiPuocyDSyOww6V/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Trauma Cranioencefálico', link: 'https://drive.google.com/file/d/1bA7N4cI9i8rjHun6-NpnhltgIqSQ0KG9/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma Cranioencefálico', link: 'https://drive.google.com/file/d/1JE7HxlOMYbfNfzWL36ux49-egNqppVEi/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Queimaduras', link: 'https://drive.google.com/file/d/17bW4HgIGLJayoCXWwdPQI7bvlj-8gRHT/view?usp=sharing' }, materials: [{ title: 'E-Book - Queimaduras', link: 'https://drive.google.com/file/d/1FXNdd58o5_95MQ60UVRJFCd4CUaavfvC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Trauma Raquimedular', link: 'https://drive.google.com/file/d/1VPEXEb24rbZSVihYCl4I2Gg_rV2H_zdT/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma Raquimedular', link: 'https://drive.google.com/file/d/1ZXtJjaj0WeF0JrI-GqrA-7U5x2A5PjpK/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Trauma Cervical e Facial', link: 'https://drive.google.com/file/d/18_WQZLNjf3nFaCz3-JsqSF2ekoYTi34U/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma Cervical e Facial', link: 'https://drive.google.com/file/d/1mQAolRVgeRiSiTHXC_Qp-Vzbi50WHrGn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Trauma em Populações Especiais', link: 'https://drive.google.com/file/d/1DZxcJjQnmE6OgoI5YW3orgqzlK57Ja03/view?usp=sharing' }, materials: [{ title: 'E-Book - Trauma em Populações Especiais', link: 'https://drive.google.com/file/d/1FtSy2YdDvP2l56cpfXIR5aVucyaCcmnk/view?usp=sharing' }] },
+            ]},
+            { id: 'module_abdome_agudo', title: 'ABDOME AGUDO', content: [
+                { type: 'group', video: { title: 'Aula 01 - Introdução Abdome Agudo', link: 'https://drive.google.com/file/d/1PY7T4RSShRbzj68O1tb6M4S-vK8Afmhn/view?usp=sharing' }, materials: [{ title: 'E-Book - Abdome Agudo: Introdução', link: 'https://drive.google.com/file/d/1oj8Eo55tmgeOxnv3lGbaK4v_bYeRTuHp/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Apendicite Aguda', link: 'https://drive.google.com/file/d/1cQOHuavdtYdxKwnj9UYMUgDQGVY1iCEl/view?usp=sharing' }, materials: [{ title: 'E-Book - Apendicite Aguda', link: 'https://drive.google.com/file/d/1S6VH8Yz5GINhsb263J2CYHc6FOAAv95V/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Diverticulite Aguda', link: 'https://drive.google.com/file/d/1vXKxnNWHobyR41pJ0CLRE43qbfwdtjUz/view?usp=sharing' }, materials: [{ title: 'E-Book - Diverticulite Aguda', link: 'https://drive.google.com/file/d/111AmeuGGNgVzLik6S7G_xpu3eV2R0oul/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Colelitíase e Colecistite Aguda', link: 'https://drive.google.com/file/d/14FFQWW7bZNuKXfgD__U66uVg83C1eVDp/view?usp=sharing' }, materials: [{ title: 'E-Book - Colelitíase e Colecistite Aguda', link: 'https://drive.google.com/file/d/1bLmuuDoO-QvrW1xSzLtmbde5Qu80CbBn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Coledocolitíase e Colangite Aguda', link: 'https://drive.google.com/file/d/1W2rYVGV_-5KM19ztuTTtFfJ-ji3Pwspr/view?usp=sharing' }, materials: [{ title: 'E-Book - Coledocolitíase e Colangite Aguda', link: 'https://drive.google.com/file/d/1uqHI3qXD82oHx0g8TCVLCB22454nMtcd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Pancreatite Aguda', link: 'https://drive.google.com/file/d/19eW2yC9jug1uw_3U9S_MI83ve8rUrP-J/view?usp=sharing' }, materials: [{ title: 'E-Book - Pancreatite Aguda', link: 'https://drive.google.com/file/d/1eAReZVZWuco_eN4oxOcrlSS9hfxHDRWT/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Pancreatite Crônica', link: 'https://drive.google.com/file/d/1a8-GQBRiEmCwp9QnZmu2tXyKmWVeC9DC/view?usp=sharing' }, materials: [{ title: 'E-Book - Pancreatite Crônica', link: 'https://drive.google.com/file/d/1UolcwyjYEdsregclCHF8NxDeO8VwfYzh/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Abdome Agudo Obstrutivo', link: 'https://drive.google.com/file/d/1oszkmBQlB1MFIh1BEzn6n950NUsy3MiG/view?usp=sharing' }, materials: [{ title: 'E-Book - Abdome Agudo Obstrutivo', link: 'https://drive.google.com/file/d/1K7lFp5M_2Sx3V5KOtLAIFX-pFmhq8g9C/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Abdome Agudo Perfurativo', link: 'https://drive.google.com/file/d/1CI4t4QXRYcM-9JlziY1w5pRXpcrpbLwp/view?usp=sharing' }, materials: [{ title: 'E-Book - Abdome Agudo Perfurativo', link: 'https://drive.google.com/file/d/1uBjD_ul9up5d7y_r84wJiL9erikSnOYe/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Abdome Agudo Vascular', link: 'https://drive.google.com/file/d/1MVf6N-9dHyOdLeJZhKn_PKyqoQDrzyAD/view?usp=sharing' }, materials: [{ title: 'E-Book - Abdome Agudo Vascular', link: 'https://drive.google.com/file/d/1uZyQ0tmOFpDeZoBGgvw17I4NDzm1rn6Z/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Abdome Agudo Hemorrágico', link: 'https://drive.google.com/file/d/1xewBFaI9Zin5hrQtwUfqprudaegXOu4c/view?usp=sharing' }, materials: [{ title: 'E-Book - Abdome Agudo Hemorrágico', link: 'https://drive.google.com/file/d/1DEc6o4V2i-De31q2mWrdd-O41JWrewGW/view?usp=sharing' }] },
+            ]},
+            { id: 'module_perioperatorio', title: 'PERIOPERATÓRIO', content: [
+                { type: 'group', video: { title: 'Aula 01 - Avaliação Pré-operatória: Parte I', link: 'https://drive.google.com/file/d/1p9fKN5MeFvcBXQwQ6Dl43Lv0bjVGdf5Q/view?usp=sharing' }, materials: [{ title: 'E-Book - Avaliação Pré-Operatória: Parte I', link: 'https://drive.google.com/file/d/1ujsDt_Uiezctyc9syRBflUoLFGFHJw1I/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Avaliação Pré-operatória: Parte II', link: 'https://drive.google.com/file/d/1auO59QTfBIO3A6cBBnq0wUAoZoq4UOVo/view?usp=sharing' }, materials: [{ title: 'E-Book - Avaliação Pré-Operatória: Parte II', link: 'https://drive.google.com/file/d/1NyxlxBr2KLoNzfntyyyirNqGH5QUuR8i/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Cirurgia Segura', link: 'https://drive.google.com/file/d/1gPWBAaQuXVtQvi3Za6Xk2pvNvOojLTHJ/view?usp=sharing' }, materials: [{ title: 'E-Book - Cirurgia Segura', link: 'https://drive.google.com/file/d/1x88VILBHztijGgEi_0LP85ZJvbLHhe0u/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Técnica Cirúrgica', link: 'https://drive.google.com/file/d/1xKmSwlGcG1zjlvMUStPlbNBlu7j2NU6n/view?usp=sharing' }, materials: [{ title: 'E-Book - Técnica Cirúrgica', link: 'https://drive.google.com/file/d/1IWHSwK0rxXHJDXsM7P4ONF5AAHDwSdDw/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Cirurgia Minimamente Invasiva', link: 'https://drive.google.com/file/d/1aYzxLWku3qBMnrVccCSKIDSmZGNd5Szk/view?usp=sharing' }, materials: [{ title: 'E-Book - Cirurgia Minimamente Invasiva', link: 'https://drive.google.com/file/d/1cAwYCpByMTF_i75JJUql0c2_xFD_etAi/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Recuperação Pós-operatória', link: 'https://drive.google.com/file/d/1uQ7z9qXvwzFqr1nzO2I4dwwLP6wNthCu/view?usp=sharing' }, materials: [{ title: 'E-Book - Recuperação Pós-Operatória', link: 'https://drive.google.com/file/d/178JAfj291pAxBvw_HiH--S__NLk2JUlH/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Complicações Pós-operatórias', link: 'https://drive.google.com/file/d/1Lkv61pofNzHh9TeSZXvtKDgt68WovoqU/view?usp=sharing' }, materials: [{ title: 'E-Book - Complicações Pós-Operatórias', link: 'https://drive.google.com/file/d/1tc2VRkwBTcAh-lWT-PxRoykmZklYbw83/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Princípios de Anestesiologia', link: 'https://drive.google.com/file/d/1qkV3NmiyzrG4YSssdzcZri7Zri_nu2mR/view?usp=sharing' }, materials: [] },
+            ]},
+            { id: 'module_hernia_abdominal', title: 'HÉRNIA ABDOMINAL', content: [
+                { type: 'group', video: { title: 'Aula 01 - Anatomia da Parede Abdominal', link: 'https://drive.google.com/file/d/1grDktZ9VSrm6k5MY4Qu9JHsXnI-4pPkP/view?usp=sharing' }, materials: [{ title: 'E-Book - Anatomia da Parede Abdominal', link: 'https://drive.google.com/file/d/1hzs9TqvH4mzwyJDAj0KxW1tZ58G-0YLn/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Hérnias Inguinocrurais', link: 'https://drive.google.com/file/d/1Z67yBg-cFpmfHJQvNzpEV85RsUL4rCaF/view?usp=sharing' }, materials: [] },
+                { type: 'group', video: { title: 'Aula 03 - Hérnias Ventrais', link: 'https://drive.google.com/file/d/1rzM_YK1lphaew-MMQzxl3lMSxz4s25dW/view?usp=sharing' }, materials: [] },
+            ]},
+            { id: 'module_coloproctologia', title: 'COLOPROCTOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Câncer Colorretal', link: 'https://drive.google.com/file/d/1SBU_p6ePC-YskrGTtDxbgEO90RgaAiYZ/view?usp=sharing' }, materials: [{ title: 'E-Book - Câncer Colorretal', link: 'https://drive.google.com/file/d/1eOTu6A-Lllr8GuAizv1bKljHJDfmCTE0/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Doenças Orificiais: Parte I', link: 'https://drive.google.com/file/d/1DLfp-ht-mLXMpxlQfeIT4ohm78C6xn9f/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Orificiais: Parte I', link: 'https://drive.google.com/file/d/1wgzbrBiHqhmPUU6VYTDuiA0IJoGWj_pr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Doenças Orificiais: Parte II', link: 'https://drive.google.com/file/d/1UjDMTQAv2Xegi-Gs1GrOAgxIoMjTgIci/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Orificiais: Parte II', link: 'https://drive.google.com/file/d/1qnVwV_tFnRN1RvLDuWhqMcaOxBSg0h9x/view?usp=sharing' }] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') return;
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials && selectedGroup.materials.length > 0) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            } else {
+                materialsContainer.innerHTML = '<p class="text-gray-400">Nenhum material de apoio para esta aula.</p>';
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[4].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[4].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
+

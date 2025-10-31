@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        /* Estilo para o item selecionado */
+        .selected-lesson {
+            background-color: #4299e1; /* Azul para destaque */
+            border: 2px solid #63b3ed; /* Borda para visibilidade */
+        }
+        /* Placeholder para a miniatura do vídeo/material */
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem; /* rounded-md */
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+
+        /* Estilos para o menu suspenso de materiais (details/summary) */
+        details {
+            background-color: #2d3748; /* bg-gray-700 */
+            border-radius: 0.375rem; /* rounded-md */
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        summary {
+            padding: 0.5rem 0.75rem;
+            padding-left: 2rem; /* Espaço para o ícone de dropdown */
+            cursor: pointer;
+            font-weight: 600; /* font-semibold */
+            color: #e2e8f0; /* text-white */
+            list-style: none; /* Remove a seta padrão */
+            position: relative;
+        }
+
+        summary::-webkit-details-marker {
+            display: none; /* Esconde a seta no Chrome/Safari */
+        }
+
+        summary::before {
+            content: '\25B6'; /* Triângulo para a direita */
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.2s;
+            color: #a0aec0; /* gray-400 */
+        }
+
+        details[open] summary::before {
+            transform: translateY(-50%) rotate(90deg); /* Gira o triângulo quando aberto */
+        }
+
+        .material-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background-color: #4a5568; /* bg-gray-600 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-left: 1rem; /* Recuo para itens dentro do dropdown */
+        }
+
+        .material-item:hover {
+            background-color: #2d3748; /* hover:bg-gray-700 */
+        }
+
+        /* Oculta a barra de rolagem */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Plataforma de Cursos</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Vídeo/Material -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="py-2 px-4 bg-gray-800">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner mt-4 flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais injetados via JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar" style="max-height: calc(100vh - 100px);">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6">
+                <!-- Aulas injetadas via JavaScript -->
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // ID do item selecionado
+        let selectedItemId = null;
+
+        // Extrai o ID de um link do Google Drive
+        function extractIdFromGoogleDriveLink(link) {
+            const regex = /\/d\/([a-zA-Z0-9_-]+)/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // --- NOVA ESTRUTURA DE DADOS ---
+        const modulesData = [
+            {
+                id: 'module_1',
+                title: 'Módulo 01 - Fundamentos da Emergência e Atendimento Inicial',
+                videos: [
+                    { link: 'https://drive.google.com/file/d/1zS1qRBEM0c1xTR70Xp-1MPQeWgfGjtU8/view?usp=sharing', title: 'Aula 01 - Pensando Rápido na Emergência! Como Pensamos na Emergência?', description: 'Dr. Ian Ward', icon: 'fas fa-brain' },
+                    { link: 'https://drive.google.com/file/d/17-9FhsQuyQIuUzK4Ukg0ohP6pYKCOA4F/view?usp=sharing', title: 'Aula 02 - Avaliação Inicial do Paciente no Departamento de Emergência', description: 'Dr. Luiz Cesar', icon: 'fas fa-user-md' },
+                    { link: 'https://drive.google.com/file/d/10MtZXxi7JUqW7gOM4DEMU56DfWkp6F43/view?usp=sharing', title: 'Aula 03 - Criança Grave: Avaliação e Intervenções Essenciais', description: 'Dr. Arthur de Campos', icon: 'fas fa-child' },
+                    { link: 'https://drive.google.com/file/d/1ahmyA0Yqid7YsViQs7mXLAWUZ6LwQg51/view?usp=sharing', title: 'Aula 04 - Parada Cardiorrespiratória no Adulto: O Que Realmente Importa?', description: 'Dr. Victor Paro', icon: 'fas fa-heartbeat' },
+                    { link: 'https://drive.google.com/file/d/1bhIiwWu6yXoNFEwRsiL5zrBWrOymkpCE/view?usp=sharing', title: 'Aula 05 - Parada Cardiorrespiratória na Criança: Particularidades', description: 'Dr. José Henrique', icon: 'fas fa-heartbeat' },
+                    { link: 'https://drive.google.com/file/d/1IJJJzzdXe4fie2WLvE9UFatm4ISK--lT/view?usp=sharing', title: 'Aula 06 - Parada Cardiorrespiratória no Neonato: O Básico e Essencial', description: 'Dr. José Henrique', icon: 'fas fa-baby' },
+                    { link: 'https://drive.google.com/file/d/1yvg5mLwpFfYXHCSdzIAza7UCPMWLQcix/view?usp=sharing', title: 'Aula 07 - Manejo da via Aérea no Adulto: Básico e Indispensável', description: 'Dr. Ian Ward', icon: 'fas fa-lungs' },
+                    { link: 'https://drive.google.com/file/d/1vn3Qr0vU7aKcqE3_kEbw-hfblDfsfxfc/view?usp=sharing', title: 'Aula 08 - Laringoscopia Direta: O Que Estou Errando?', description: 'Dr. Ian Ward', icon: 'fas fa-lungs' },
+                    { link: 'https://drive.google.com/file/d/1wJx5WquZqpqSwa5VFIJ8jFW_7QYoSwyp/view?usp=sharing', title: 'Aula 09 - Ventilação Mecânica Descomplicada: Fundamentos', description: 'Dr. Yan Pagnard', icon: 'fas fa-lungs-virus' },
+                    { link: 'https://drive.google.com/file/d/1kqIfV9wZgT1M2i-W9Drfs1z4x0U94eA_/view?usp=sharing', title: 'Aula 10 - Assincronias na Ventilação Mecânica: Compreendendo e Manejando', description: 'Dr. Yan Pagnard', icon: 'fas fa-lungs-virus' },
+                    { link: 'https://drive.google.com/file/d/1WdoU6ZLK1f5q-okCthUPK4mLF0ZlXXel/view?usp=sharing', title: 'Aula 11 - Gasometria Sem Mistérios: O Essencial para o Plantão', description: 'Dra. Beatriz Soletti', icon: 'fas fa-tint' },
+                    { link: 'https://drive.google.com/file/d/1SqnMQwAN5rJjSe49uGt-PN00HcGTHB3O/view?usp=sharing', title: 'Aula 12 - Choque Circulatório: Manejo Indiferenciado Passo a Passo', description: 'Dr. Lucas Rodrigues', icon: 'fas fa-shipping-fast' },
+                    { link: 'https://drive.google.com/file/d/1dwOwdIKKQUpSDqNtH39UJlKWbBSoqOVA/view?usp=sharing', title: 'Aula 13 - Sepse: Identificação Precoce e Tratamento Imediato', description: 'Dr. Victor Navarro', icon: 'fas fa-bacterium' },
+                    { link: 'https://drive.google.com/file/d/1GJTdFH9YdcRZZ7iRtMiEqMop5MYLAsin/view?usp=sharing', title: 'Aula 14 - Vasoativas: Como Dominar as Drogas que Fazem a Diferença', description: 'Dr. Victor Paro', icon: 'fas fa-syringe' },
+                    { link: 'https://drive.google.com/file/d/1xscOGxFzpUT79zpvByuh1_NnOLRdSvwv/view?usp=sharing', title: 'Aula 15 - Dor Torácica: O Que eu não Posso Deixar Passar?', description: 'Dra. Helena Amat', icon: 'fas fa-heart-broken' },
+                ],
+                materials: [
+                    { title: 'Aula 01 - Pensando Rápido na Emergência! Como Pensamos na Emergência?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1CliBKwzCEeDpMVVUiNNaDyzwolOZt1LP/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/13_B1u8rfcSaiwB4SNK5T7ZL2Z9AwB1bZ/view?usp=sharing' }] },
+                    { title: 'Aula 02 - Avaliação Inicial do Paciente no Departamento de Emergência', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1KjnU-QO5G6R1E7g4q8GhkQpssc3govV1/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1qblOce5H5UWZuYYqZMR-0f9_UsoCpodx/view?usp=sharing' }] },
+                    { title: 'Aula 03 - Criança Grave: Avaliação e Intervenções Essenciais', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1UReQRKMy-odgEGcXvCmGk0T96HKjaEUT/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1RFa7tEbvYT1PmrpYDVWeDTBgzFQOhgu1/view?usp=sharing' }] },
+                    { title: 'Aula 04 - Parada Cardiorrespiratória no Adulto: O Que Realmente Importa?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1zG8FcyO_klq_muS3ftyPhBIWAlKurw-J/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1a0wSZMUg9IH1_voZusD6cuQf9qTXyl-w/view?usp=sharing' }] },
+                    { title: 'Aula 05 - Parada Cardiorrespiratória na Criança: Particularidades', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1eZ2_rSKijj93mSbTW_yw9KlvMs2DJyRf/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1UYI96PDuioIRCfI5VdG5sxPNfBuBIS0X/view?usp=sharing' }] },
+                    { title: 'Aula 06 - Parada Cardiorrespiratória no Neonato: O Básico e Essencial', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1t9DIUQvCp4sMIhL2CTd3CJQ6eEfmV76F/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1fyZaOeAA2vK7fm7ZCrZQUUZAIc5Ks7cH/view?usp=sharing' }] },
+                    { title: 'Aula 07 - Manejo da via Aérea no Adulto: Básico e Indispensável', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1aqIp5jNMC-hp-vSSh7fqjX6dzjaskz29/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1wDNsp3akyfdN_wZMs5OMvFVO79dGA9d3/view?usp=sharing' }] },
+                    { title: 'Aula 08 - Laringoscopia Direta: O Que Estou Errando?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1rj6JH8sNX7xXmq3HJzv2lqMTX6dEQMEj/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/17eX51uBynqJw21a9MEi_E1kj5jj5KNdi/view?usp=sharing' }] },
+                    { title: 'Aula 09 - Ventilação Mecânica Descomplicada: Fundamentos', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1pf7ZcTgSwLPa1fw1gLiAgb7FnMS9IFLy/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1d4UEyj5L6iBBcgdFM7S6wYheIWDnO3Db/view?usp=sharing' }] },
+                    { title: 'Aula 10 - Assincronias na Ventilação Mecânica: Compreendendo e Manejando', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1fAcytB19sqkkXP7fA-qd2etCSVlFC9r_/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1IpmzU68LyQdlivwUCa_1j0SusgLQrxdG/view?usp=sharing' }] },
+                    { title: 'Aula 11 - Gasometria Sem Mistérios: O Essencial para o Plantão', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1f4QmdIMxvxpf37mxGpfF9h9RYCJPZmIc/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1Q6z2AIkCAMrQxnesr97CM7K5ViTm9J8C/view?usp=sharing' }] },
+                    { title: 'Aula 12 - Choque Circulatório: Manejo Indiferenciado Passo a Passo', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1RkH4R2CZK-riVZQopoNr1sAJO8pFxh-m/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1HufIMZS2f6pKlNq4OWMh9gLrOwEMdWUn/view?usp=sharing' }] },
+                    { title: 'Aula 13 - Sepse: Identificação Precoce e Tratamento Imediato', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1R8G__x9RAhOyxg0G9mkxDenvfPAcNrMk/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1cZYaug06omy5LXIsGSOVulwS9BPy4Nlw/view?usp=sharing' }] },
+                    { title: 'Aula 14 - Vasoativas: Como Dominar as Drogas que Fazem a Diferença', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1aPXOes-K68pp8u5PRA_BSp-sMn2smGIU/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/15Bc6SEXuz1no5GPgMdHCMsukK_Xjosa4/view?usp=sharing' }] },
+                    { title: 'Aula 15 - Dor Torácica: O Que eu não Posso Deixar Passar?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1ARrMUqd5aphLh8ZDOXOgH2w1NaKNIfeF/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1SNiY-S7SA1tsigJ-FaGAr-N5jWhvWwyo/view?usp=sharing' }] },
+                ]
+            },
+            {
+                id: 'module_2',
+                title: 'Módulo 02 - Cardiocerebral e Situações Específicas do Adulto',
+                videos: [
+                    { link: 'https://drive.google.com/file/d/1KsdMdzU_0uw-JNr9KjDk9WukAt_O8nqv/view?usp=sharing', title: 'Aula 01 - Cefaleia: Da Ficha Verde à Vermelha', description: 'Dra. Helena Amat', icon: 'fas fa-head-side-virus' },
+                    { link: 'https://drive.google.com/file/d/19CVzuR_2PEi4UI5DuNFVHtFmb30Xuhte/view?usp=sharing', title: 'Aula 02 - Síncope na Emergência: Alta ou Internação?', description: 'Dr. Lucas Rodrigues', icon: 'fas fa-dizzy' },
+                    { link: 'https://drive.google.com/file/d/16Wnegu8KJiN6yBz_B1NALXGDtfoLEwZi/view?usp=sharing', title: 'Aula 03 - Eletrocardiograma: Leitura Prática para o Plantão', description: 'Dr. Eduardo Campos', icon: 'fas fa-file-medical-alt' },
+                    { link: 'https://drive.google.com/file/d/1_UDSG5h4bJtFBtTXUWobUZh3DPZZg96r/view?usp=sharing', title: 'Aula 04 - Oclusão Coronariana Aguda: Tempo é Músculo', description: 'Dr. Lucas Rodrigues', icon: 'fas fa-heart' },
+                    { link: 'https://drive.google.com/file/d/1gS_mHuh3VlUvSqInNuqGkHo3sJfM10lX/view?usp=sharing', title: 'Aula 05 - Edema Agudo de Pulmão: Identificação e Tratamento Imediatos', description: 'Dra. Beatriz Soletti', icon: 'fas fa-lungs' },
+                    { link: 'https://drive.google.com/file/d/1010syPLdRq01sga4n-pc-BiaFlIR15sr/view?usp=sharing', title: 'Aula 06 - Fibrilação Atrial na Emergência: O Que não Fazer?', description: 'Dr. Paulo Aita', icon: 'fas fa-heartbeat' },
+                    { link: 'https://drive.google.com/file/d/1aeVT23qYsunWHGn3sjXWqNHz8ikHFSrm/view?usp=sharing', title: 'Aula 07 - Precisa de Marcapasso: E Agora?', description: 'Dr. Romulo Torquato', icon: 'fas fa-microchip' },
+                    { link: 'https://drive.google.com/file/d/1AYZY2GrLoD4daZVw0hSl2cbaCcPO1dDy/view?usp=sharing', title: 'Aula 08 - Insuficiência Cardíaca: Reconhecendo e Tratando', description: 'Dr. Lucas Oliveira', icon: 'fas fa-heart-broken' },
+                    { link: 'https://drive.google.com/file/d/193JogqL1x-IrXsx5SrhXu6lxPoaKhdVV/view?usp=sharing', title: 'Aula 09 - AVC Isquêmico: Da Identificação a Reperfusão', description: 'Dr. Victor Paro', icon: 'fas fa-brain' },
+                    { link: 'https://drive.google.com/file/d/1EAWCQKty-LRgOZZfN3onHPkhRhatU4yG/view?usp=sharing', title: 'Aula 10 - Agitação Psicomotora na Emergência. Como Abordar?', description: 'Dr. Lucas Gonçalves', icon: 'fas fa-running' },
+                    { link: 'https://drive.google.com/file/d/1R0MGgN2g7HNC-PUq7N9b1qRO6leBCmA3/view?usp=sharing', title: 'Aula 11 - Crise Convulsiva, Abordagem Prática', description: 'Dr. William Rangel', icon: 'fas fa-bolt' },
+                    { link: 'https://drive.google.com/file/d/1bSqZfISR55gQrp5eK5UQfkjND5WYtW7s/view?usp=sharing', title: 'Aula 12 - Vertigem na Emergência: Alta da Porta ou Imagem?', description: 'Dr. Anuar Saleh', icon: 'fas fa-dizzy' },
+                    { link: 'https://drive.google.com/file/d/1n6mLsda5eTFfyG5rU4XtDZ-VyT25nk_k/view?usp=sharing', title: 'Aula 13 - Atendimento Inicial ao Paciente Vítima de Trauma', description: 'Dra. Barbara Estevam', icon: 'fas fa-ambulance' },
+                    { link: 'https://drive.google.com/file/d/1trUmaA7caLLbcfPRm9CT-zD_DfRypAbR/view?usp=sharing', title: 'Aula 14 - Choque Hemorrágico: Uma Abordagem Geral', description: 'Dr. João Lenzi', icon: 'fas fa-tint-slash' },
+                    { link: 'https://drive.google.com/file/d/1iUvHTEQqYhDslyod4lsZsM0-IfoXAyVo/view?usp=sharing', title: 'Aula 15 - Paciente Intoxicado: Manejo Prático Passo a Passo', description: 'Dr. Tulio Couto', icon: 'fas fa-poison' },
+                ],
+                materials: [
+                    { title: 'Aula 01 - Cefaleia: Da Ficha Verde à Vermelha', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/19dkik4MgKxIl-_yvC4-iQpui90xdTu9z/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1AzzPwSxJOT6H2dMntX33pZ78yXdNl70y/view?usp=sharing' }] },
+                    { title: 'Aula 02 - Síncope na Emergência: Alta ou Internação?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1NoMQptbOmR4CUlL9v6vQWrwadCWMjCOV/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/15fh3Z_XJCkO2meQJeYjycFeAkbIAlRaD/view?usp=sharing' }] },
+                    { title: 'Aula 03 - Eletrocardiograma: Leitura Prática para o Plantão', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1Kr_aILlt3HSluyHNdtYsAqy3VOPMcNe9/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1LZYnBrRNx8JTOkNKZA_oJxLGhHbqK8Ls/view?usp=sharing' }] },
+                    { title: 'Aula 04 - Oclusão Coronariana Aguda: Tempo é Músculo', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/18dHrm6eqRlvC5da-i8z0Ny5_Pz2UzAyz/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1dwCD7huErgKQ9Y_ZT-n16A1wUAkJl0vS/view?usp=sharing' }] },
+                    { title: 'Aula 05 - Edema Agudo de Pulmão: Identificação e Tratamento Imediatos', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1tcfjqji2omawlwFWcgoX2irgo_QbLY6h/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1yj5iUnYXvl8TZKLPthstpyMngMGa-Bii/view?usp=sharing' }] },
+                    { title: 'Aula 06 - Fibrilação Atrial na Emergência: O Que não Fazer?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1djNCdOOBNHjDLXkqMpL3Bg9Hj6U30Y2k/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/173X0EiSi25sUjTrCrnG9q5aOER_cZawp/view?usp=sharing' }] },
+                    { title: 'Aula 07 - Precisa de Marcapasso: E Agora?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1APA5yO1nS3Vg1LTco6MfcLByHgKP776M/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1qjPc4CTQXN4UHvJkha4CtWJVz8UHdRbQ/view?usp=sharing' }] },
+                    { title: 'Aula 08 - Insuficiência Cardíaca: Reconhecendo e Tratando', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1uUxPevbg1ZZsIWeiSYYPb4kEoOs3mfup/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1WKHNNGIrPARCInhh4yUvb-SD67VtxMC4/view?usp=sharing' }] },
+                    { title: 'Aula 09 - AVC Isquêmico: Da Identificação a Reperfusão', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/110PXa1qtDNTPNkjVrRQaAhtN6DSwNAwT/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/17yDe-FexxA7R1GNiK4cdWCxhRrobWlSE/view?usp=sharing' }] },
+                    { title: 'Aula 10 - Agitação Psicomotora na Emergência. Como Abordar?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1y00IljJcD_5IuqFJPOu1zco-RLq6YngU/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1Zom5D5fqi1x-VP8dSw7ybo3vcuw73Ry6/view?usp=sharing' }] },
+                    { title: 'Aula 11 - Crise Convulsiva, Abordagem Prática', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1PLnkK_X6oDQGYJm_FcliPcVvATUoZmxF/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/18HSyWMnz3u1uGE9r6JhsY9090mCNcn3t/view?usp=sharing' }] },
+                    { title: 'Aula 12 - Vertigem na Emergência: Alta da Porta ou Imagem?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/17omi9oYxbdhfMGHGQy8_5OX-DHmLKY1v/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1PvkzNRMZTwNITza9JwGYnS_KqWfJNRja/view?usp=sharing' }] },
+                    { title: 'Aula 13 - Atendimento Inicial ao Paciente Vítima de Trauma', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1XZHwJQFY3hlKUdduhzAvi1ejK0aOy1WP/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1ifGzk70MBhdf3-JQwpc21sINiZdmbaGt/view?usp=sharing' }] },
+                    { title: 'Aula 14 - Choque Hemorrágico: Uma Abordagem Geral', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1vdaW7tS-OoSyHZHAoRlJn4WfB5RvzCab/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1ZvMJzNvjpYEOhqk3Sjy_xzKexntDeqAK/view?usp=sharing' }] },
+                    { title: 'Aula 15 - Paciente Intoxicado: Manejo Prático Passo a Passo', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1uaYCMArGrQ4cA2Hg6rYq14qpp9uVzCXq/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1NDVbkvNesdqfcp7pBK5UkjItAm7KNjob/view?usp=sharing' }] },
+                ]
+            },
+            {
+                id: 'module_3',
+                title: 'Módulo 03 - Cenários Complexos e Especialidades',
+                videos: [
+                    { link: 'https://drive.google.com/file/d/13bG8JD_WjqkKkmJhQnkrcNad1mLtTZww/view?usp=sharing', title: 'Aula 01 - Parto na Emergência: O Que eu não Posso Esquecer?', description: 'Dr. Eduardo Campos', icon: 'fas fa-baby-carriage' },
+                    { link: 'https://drive.google.com/file/d/1ultevhI-NUyDwg8_iNxid7Xpg1MW0hck/view?usp=sharing', title: 'Aula 02 - Ultrassom à Beira do Leito: Princípios e Aplicações Práticas', description: 'Dr. William Rangel', icon: 'fas fa-wave-square' },
+                    { link: 'https://drive.google.com/file/d/1B9Ryz-udZX6dRUjunzgsR76dbh17aBqp/view?usp=sharing', title: 'Aula 03 - Ecocardiograma Beira Leito para Emergencistas', description: 'Dr. Paulo Aita', icon: 'fas fa-heart-pulse' },
+                    { link: 'https://drive.google.com/file/d/1ARYAznyU2eHEFprCokB0alJjHLpeS7lt/view?usp=sharing', title: 'Aula 04 - Asma Aguda: Controle Rápido da Crise', description: 'Dra. Helena Amat', icon: 'fas fa-lungs' },
+                    { link: 'https://drive.google.com/file/d/1gk0r8oLTG209A_A7iEOwJc1-0IWGjJgn/view?usp=sharing', title: 'Aula 05 - Anafilaxia: Adrenalina e o que Mais?', description: 'Dr. Andrew Tavares', icon: 'fas fa-allergies' },
+                    { link: 'https://drive.google.com/file/d/1w4ieleQn52LGnppe7fpuJ4BESakHXVcg/view?usp=sharing', title: 'Aula 06 - Tromboembolismo Pulmonar: Trombolisar ou não Trombolisar', description: 'Dr. Andrew Tavares', icon: 'fas fa-lungs-virus' },
+                    { link: 'https://drive.google.com/file/d/1xT0ahtw2V9vExrm11f0JxlDFKyY4zZU-/view?usp=sharing', title: 'Aula 07 - Pneumonia na Emergência: Da Porta à Emergência', description: 'Dr. Lucas Gonçalves', icon: 'fas fa-head-side-cough' },
+                    { link: 'https://drive.google.com/file/d/13ZtSkMPvJglqp7YZpnXoHC1Ygp9poz2_/view?usp=sharing', title: 'Aula 08 - Injúria Renal Aguda: Como Abordar?', description: 'Dr. Arthur de Campos', icon: 'fas fa-kidneys' },
+                    { link: 'https://drive.google.com/file/d/1-7p4L5hM8ALX7vW4Fv1YcD0eGmYkX8ET/view?usp=sharing', title: 'Aula 09 - Hipercalemia, Entendendo e Manejando', description: 'Dra. Nathalia Campos', icon: 'fas fa-bolt' },
+                    { link: 'https://drive.google.com/file/d/1i8I8QpBUTgk9eJf4LaSr5_wNA1hDKKQj/view?usp=sharing', title: 'Aula 10 - Infecção do Trato Urinário: Alta Segura', description: 'Dra. Lais Penna', icon: 'fas fa-toilet-paper' },
+                    { link: 'https://drive.google.com/file/d/112Ii-kBmSHKe9A8arTOFQFELb9fjTl9r/view?usp=sharing', title: 'Aula 11 - Cetoacidose Diabética: O Que eu não Posso Errar?', description: 'Dra. Barbara Estevam', icon: 'fas fa-tint' },
+                    { link: 'https://drive.google.com/file/d/1D-UFHakqyntt2xoQlyWo7BY0HIfBllk6/view?usp=sharing', title: 'Aula 12 - O Paciente Cirrótico Descompensado: Indo Além da Ascite', description: 'Dr. Luiz Cesar', icon: 'fas fa-procedures' },
+                    { link: 'https://drive.google.com/file/d/1pj1-3EU5S7TxFk7xxVIIY9DAkVDA1b2x/view?usp=sharing', title: 'Aula 13 - Insuficiência Hepática Aguda: Prioridades para o Emergencista', description: 'Dr. Pedro Suplicy', icon: 'fas fa-procedures' },
+                    { link: 'https://drive.google.com/file/d/1fkNjy1iF73diWX1xmL6hyk2Db2u9IYu3/view?usp=sharing', title: 'Aula 14 - Dengue na Emergência: Manejando e Diagnosticando', description: 'Dr. Victor Navarro', icon: 'fas fa-bug' },
+                    { link: 'https://drive.google.com/file/d/10SZ-UUekf_JYtKxx9dB7XX0geh1ZQQLa/view?usp=sharing', title: 'Aula 15 - Cuidados Paliativos na Emergência: Como Começar?', description: 'Dra. Juliana Galvão', icon: 'fas fa-hand-holding-heart' },
+                ],
+                materials: [
+                    { title: 'Aula 01 - Parto na Emergência: O Que eu não Posso Esquecer?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1aj0UNmnN2g6DsrhvfHfh-sIeRdgdcJc4/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/13j9iP0I1ObEFR2BcErZTxG4_VvnRRnpZ/view?usp=sharing' }] },
+                    { title: 'Aula 02 - Ultrassom à Beira do Leito: Princípios e Aplicações Práticas', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1MLbXabtZa_f5jwf6ijPxIyQip9Br0cNC/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/10Tmh7eLv015zkK9WkxN9epCl1s2dzp0y/view?usp=sharing' }] },
+                    { title: 'Aula 03 - Ecocardiograma Beira Leito para Emergencistas', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/11ceEuUbfX-8MOzfJAtvyrzsNM8C9EdWF/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1m4zyT_e3rbqV_hBUY8C4rG2nLUxGn3s_/view?usp=sharing' }] },
+                    { title: 'Aula 04 - Asma Aguda: Controle Rápido da Crise', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1MHYgkkGrhty_w_Z-JY98HlsOQ6smRoPO/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1AeLmBCWsyVsc1W4QG2EZDWTfUy0n3T7r/view?usp=sharing' }] },
+                    { title: 'Aula 05 - Anafilaxia: Adrenalina e o que Mais?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1X1sd86cak0XeWTo2rpZjbUUN5hiKXY6q/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/13eTZ3fwizlYaibmvhLgaHyzokHeNfUkt/view?usp=sharing' }] },
+                    { title: 'Aula 06 - Tromboembolismo Pulmonar: Trombolisar ou não Trombolisar', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1wUEPvBMoqZ7s6pDWBq7A8fLc3Of5A1MX/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1iM8PI8be3XtL3Pxxw0k_-KQvp_zaUZ0w/view?usp=sharing' }] },
+                    { title: 'Aula 07 - Pneumonia na Emergência: Da Porta à Emergência', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1h2TsQ4S7pesF8ZYAJ2ih8jaDHsqFhcTv/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1tMKRqOlBf9lbCgJrhw-4HwPkj2w5Uc8m/view?usp=sharing' }] },
+                    { title: 'Aula 08 - Injúria Renal Aguda: Como Abordar?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1KtU0YwGKSgADDEZ8Sm_QES0huHmHIboH/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1ieqYLOPBGygYThvIl8uXu3vvVLsS9w_Z/view?usp=sharing' }] },
+                    { title: 'Aula 09 - Hipercalemia, Entendendo e Manejando', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1RKxISKaqA_Nc9rRqok2HUv42QuSayIaW/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1s0OdlxiUC_AVtZmqYGxK-GXC6Kzdj8fx/view?usp=sharing' }] },
+                    { title: 'Aula 10 - Infecção do Trato Urinário: Alta Segura', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1OWH7ZoO1sZjBHpIrkJolriYq_cqtisww/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1emTsPuKwe-EQOqPAVlUrjrxp_Nprt8Ll/view?usp=sharing' }] },
+                    { title: 'Aula 11 - Cetoacidose Diabética: O Que eu não Posso Errar?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1vRQOs8NmVnZw8D7znSSvU0R3Q2m9vXMd/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1AKt-5Lj4d9uGOfFBESecTQ-e7usXUWbt/view?usp=sharing' }] },
+                    { title: 'Aula 12 - O Paciente Cirrótico Descompensado: Indo Além da Ascite', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1kywTv1KGwsG1DOcnKWf6zAZVxIK6-sXv/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1yiJTP9OzKjUsZbObnLMvIJjVHI5p_cU4/view?usp=sharing' }] },
+                    { title: 'Aula 13 - Insuficiência Hepática Aguda: Prioridades para o Emergencista', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1Xv18Owx67DU0BqW-1-oKYtlfaDs4E2Q-/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1vCzxW6jIq8paObH2zgsoetcioir9Yp99/view?usp=sharing' }] },
+                    { title: 'Aula 14 - Dengue na Emergência: Manejando e Diagnosticando', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1s3rv6Q6Y0S8X42PeYAZpy8E_z65ScXRl/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1whWoZR41XVO2xrLczcjOPtSUKD8_1L31/view?usp=sharing' }] },
+                    { title: 'Aula 15 - Cuidados Paliativos na Emergência: Como Começar?', items: [{ title: 'Resumo', link: 'https://drive.google.com/file/d/1yAuwGEB2K3KFHeaVc6JmKnkywu2A9N8f/view?usp=sharing' }, { title: 'Slide', link: 'https://drive.google.com/file/d/1ZvP0XhFRuBFnIjjKEgLXWSRiYne7ns-O/view?usp=sharing' }] },
+                ]
+            }
+        ];
+
+        // Atualiza o player e o estado de seleção
+        function selectItem(itemId, itemTitle, url) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer) contentPlayer.src = url;
+            if (titleElement) titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+            
+            selectedItemId = itemId;
+        }
+
+        // Funções globais para onclick
+        window.loadVideo = function(videoLink, lessonTitle) {
+            const videoId = extractIdFromGoogleDriveLink(videoLink);
+            if (!videoId) return;
+            const url = `https://drive.google.com/file/d/${videoId}/preview`;
+            selectItem(videoLink, lessonTitle, url); // Usa o link completo como ID único
+        };
+
+        window.loadMaterial = function(materialLink, materialTitle) {
+            const previewLink = materialLink.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview');
+            selectItem(materialLink, materialTitle, previewLink); // Usa o link completo como ID único
+        };
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            if (!videosContainer || !materialsContainer) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            // Renderiza vídeos
+            videosContainer.innerHTML = module.videos.map(item => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadVideo('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                    <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                        <p class="text-xs text-gray-400">${item.description || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Renderiza materiais agrupados por aula
+            materialsContainer.innerHTML = module.materials.map(lesson => `
+                <details>
+                    <summary>${lesson.title}</summary>
+                    <div class="px-4 py-2 space-y-2">
+                        ${lesson.items.map(subItem => `
+                            <div class="material-item"
+                                 onclick="loadMaterial('${subItem.link}', '${subItem.title}')" data-id="${subItem.link}">
+                                <div class="item-thumbnail-placeholder"><i class="${subItem.title.toLowerCase().includes('resumo') ? 'fas fa-file-alt' : 'fas fa-file-powerpoint'}"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${subItem.title}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+            `).join('');
+
+            // Carrega o primeiro vídeo do módulo
+            if (module.videos.length > 0) {
+                loadVideo(module.videos[0].link, module.videos[0].title);
+            } else {
+                selectItem(null, 'Selecione um item', '');
+            }
+        }
+
+        // Inicializa o seletor de módulos
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            // Clear existing options before populating
+            moduleSelector.innerHTML = '';
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            // Adiciona listener para carregar o módulo selecionado
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[1].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[1].id);
+            }
+        }
+
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>

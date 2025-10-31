@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Curso de ECG</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Cor de fundo escura */
+            color: #e2e8f0; /* Cor do texto clara */
+        }
+        .selected-lesson {
+            background-color: #4299e1; /* Destaque para item selecionado */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 80px;
+            height: 45px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.8rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .hidden { 
+            display: none !important; 
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Cabeçalho da Aplicação -->
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-lg flex-shrink-0">
+        <div class="flex items-center space-x-4">
+            <button id="backButton" class="hidden bg-gray-700 text-white p-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </button>
+            <h1 id="mainTitle" class="text-xl font-bold text-white">ECG - Primeiros Passos</h1>
+        </div>
+    </header>
+
+    <!-- Container principal que alterna as "páginas" -->
+    <div id="pageContainer" class="flex-grow">
+        <!-- Página de Seleção de Módulos -->
+        <div id="moduleSelectionPage" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- PÁGINA DE CONTEÚDO (AULAS) -->
+        <main id="contentPage" class="hidden h-full p-4 lg:grid lg:grid-cols-3 lg:gap-x-4">
+            <!-- Coluna Esquerda: Player, Título e Materiais -->
+            <section class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0">
+                    <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-t-lg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-4 bg-gray-800 border-b border-t border-gray-700 flex-shrink-0">
+                    <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione uma aula</h2>
+                </div>
+                <div class="p-4 overflow-y-auto flex-grow">
+                     <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                     <div id="materialsContainer" class="space-y-3"></div>
+                </div>
+            </section>
+            <!-- Coluna Direita: Lista de Aulas -->
+            <aside class="mt-4 lg:mt-0 lg:col-span-1 bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col overflow-y-auto hide-scrollbar max-h-[calc(100vh-128px)]">
+                <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+                <div id="videosContainer" class="space-y-3"></div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        // --- Estrutura de Dados ---
+        let selectedItemId = null;
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // ESTRUTURA DE DADOS DO CURSO DE ECG COM LINKS
+        const modulesData = [
+            {
+                id: 'module_boas_vindas', title: 'Boas-Vindas', icon: 'fas fa-hand-sparkles',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GNVAjsP9_2u1e9utKrvSczP9dtEovBt4/view?usp=sharing'), title: 'Aula 01 - Boas-Vindas', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_01_funcionamento', title: 'Módulo 01 - Entendendo o Funcionamento do Coração', icon: 'fas fa-heart-pulse',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GUBXDFr0Oyeb7IPS0bwnD2k2ttAe4J-E/view?usp=sharing'), title: 'Aula 01 - As Células Miocárdicas', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GPz_tuPaYB_gESz2U1SWp7AvdELfgSc6/view?usp=sharing'), title: 'Aula 02 - Como o Coração Contrai?', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Gl5z9F5pPILmpQGD_UD3dXKXz75CYNeo/view?usp=sharing'), title: 'Aula 03 - O Sistema de Condução Cardíaco', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_02_registro', title: 'Módulo 02 - Como Surge o Registro Cardiográfico?', icon: 'fas fa-wave-square',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Glr11LaVjifXBlPBVp6SjGCVlHdTuYvt/view?usp=sharing'), title: 'Aula 01 - Como Funciona o Eletrocardiograma?', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FizAXlipoIV-FBjh4wBs-AZk79Y88chR/view?usp=sharing'), title: 'Aula 02 - O Registro Eletrocardiográfico', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1G2TRdO0XJE73J7VosbGg7wvC_qRTcAA8/view?usp=sharing'), title: 'Aula 03 - As Derivações do ECG', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Gc7WnW1H71Sr0Dt9jbTiDcSGGTyFALhN/view?usp=sharing'), title: 'Aula 04 - Como Realizar o ECG?', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_03_ondas', title: 'Módulo 03 - O Significado das Ondas do Coração', icon: 'fas fa-chart-line',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F2-z1JmMMT5_DPDPscFSeZxkLuGtVcLo/view?usp=sharing'), title: 'Aula 01 - Onda P', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FDCx55enVWkbeBtx1E-0PBabWEB4FG-r/view?usp=sharing'), title: 'Aula 02 - Intervalo PR', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GJZPJbByyfyTUlh-oaAEaHH_lCNCJcKw/view?usp=sharing'), title: 'Aula 03 - Complexo QRS', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GuCceZ6q0t8xN3VODGXKYLuIZE7S6Tq4/view?usp=sharing'), title: 'Aula 04 - Segmento ST', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FKsWcOQNf8rjGm75aKtLBhCfuq2z8Ng7/view?usp=sharing'), title: 'Aula 05 - Intervalo QT', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FfWWMQkntiwVk0x6hKbucIdcAFoN9oGw/view?usp=sharing'), title: 'Aula 06 - Onda T', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GHKCPkucczgTTMTwU-20sgF-cxA3t1Qm/view?usp=sharing'), title: 'Aula 07 - Onda U', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_04_analise', title: 'Módulo 04 - Passo a Passo da Análise do ECG', icon: 'fas fa-magnifying-glass-chart',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GvMx-mdJPfxP-5FZ08a-oLVqft6305m5/view?usp=sharing'), title: 'Aula 01 - Análise do Ritmo', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FVLMra5ER4b7Spc3HQkl7tMlZfqWA3it/view?usp=sharing'), title: 'Aula 02 - Análise do Eixo', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FsaFShWmr9vR0qVKz1sYMO3-b2_MBUWb/view?usp=sharing'), title: 'Aula 03 - Cálculo da Frequência Cardíaca', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FzhPWeXZrAs7uQHdvgzTrcNeEoXO_Doi/view?usp=sharing'), title: 'Aula 04 - Análise Onda por Onda', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FW1owu9XtCaBvMbPznh6TBGyFUwhGRSg/view?usp=sharing'), title: 'Aula 05 - Roteiro de Análise do ECG', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_05_alteracoes', title: 'Módulo 05 - Principais Alterações do ECG', icon: 'fas fa-triangle-exclamation',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FHsvULUyVA2yLGCFfD7Y-UFg_cKubenq/view?usp=sharing'), title: 'Aula 01 - Sobrecargas Atriais', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GIn5Sa9K-SKZD6emdniUR3AsynGGTO3Z/view?usp=sharing'), title: 'Aula 02 - Sobrecargas Ventriculares', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1G5II-cdpB1QdKtR4QsPS1igCkEnsG2TT/view?usp=sharing'), title: 'Aula 03 - Bloqueios de Ramo', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GbBNdvsb4blgmAVJ7LS-HpBn4lhLhPz1/view?usp=sharing'), title: 'Aula 04 - Bloqueios Divisionais', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Gm_fiD1nUxEiofe9bXLuzBIYZ8tPePsu/view?usp=sharing'), title: 'Aula 05 - ECG nas SCA', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Gp41CSafpK3x4iQzJrZTPJdRwrP8nfB1/view?usp=sharing'), title: 'Aula 06 - Taquicardias de QRS Estreito', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Gv9TvXVkN6VvrTwfTj7k-5Bsq2VdoOLm/view?usp=sharing'), title: 'Aula 07 - Taquicardias de QRS Largo', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1F8Zk7-e2CR6jOYyOUWiugFeUM1pOkt0W/view?usp=sharing'), title: 'Aula 08 - Bradiarritmias', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1GqqDRzR4O18LqHPH4OHaZLJAsXbC_qbt/view?usp=sharing'), title: 'Aula 09 - Doenças que Alteram o ECG', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1FYw7odL17kYAX7i4NUG6KYgj-Gh9DzfY/view?usp=sharing'), title: 'Aula 10 - Vias Acessórias e Extrassístoles', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1EryFXpHO3oIWvbBk3ynxterAlfvJLgBQ/view?usp=sharing'), title: 'Aula 11 - ECG em Portadores de Marca-Passo', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1Gol_VnKG1_ZxpRfQKMWUIcBSfYt2BCxB/view?usp=sharing'), title: 'Aula 12 - Distúrbios Eletrolíticos e Intoxicação Medicamentosa', icon: 'fas fa-video' },
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1G49kJtcKmkhpKFxDumgwxqugKUtd54eU/view?usp=sharing'), title: 'Aula 13 - Despedida', icon: 'fas fa-video' }
+                ],
+                materials: []
+            },
+            {
+                id: 'module_06_masterclass', title: 'Módulo 06 - MasterClass', icon: 'fas fa-star',
+                videos: [
+                    { id: extractIdFromGoogleDriveLink('https://drive.google.com/file/d/1cBQa-tn1xbCBHlOKvyk_OkQRDnU_HVj4/view?usp=sharing'), title: 'Aula 01 - ECG para Iniciantes: MasterClass', icon: 'fas fa-video' }
+                ],
+                materials: []
+            }
+        ];
+
+        // --- Funções de Navegação e Renderização ---
+
+        function navigateTo(pageId) {
+            document.getElementById('moduleSelectionPage').classList.add('hidden');
+            document.getElementById('contentPage').classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        function showModuleSelectionPage() {
+            const container = document.getElementById('moduleSelectionPage');
+            container.innerHTML = '';
+            modulesData.forEach(module => {
+                container.innerHTML += `
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+                         onclick="showContentPage('${module.id}')">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <i class="${module.icon} text-3xl text-blue-400"></i>
+                            <h2 class="text-xl font-bold text-white flex-1">${module.title}</h2>
+                        </div>
+                        <p class="text-gray-400">${module.videos.length} aulas</p>
+                    </div>`;
+            });
+            document.getElementById('mainTitle').textContent = 'ECG - Primeiros Passos';
+            document.getElementById('backButton').classList.add('hidden');
+            navigateTo('moduleSelectionPage');
+        }
+
+        function showContentPage(moduleId) {
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            renderContent(module);
+            
+            document.getElementById('mainTitle').textContent = module.title;
+            const backButton = document.getElementById('backButton');
+            backButton.classList.remove('hidden');
+            backButton.onclick = showModuleSelectionPage;
+            navigateTo('contentPage');
+        }
+
+        function renderContent(module) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            videosContainer.innerHTML = '';
+            materialsContainer.innerHTML = '';
+
+            let firstItem = null;
+            module.videos.forEach(item => {
+                if (!firstItem) firstItem = { type: 'video', data: item };
+                videosContainer.innerHTML += createItemHtml('video', item);
+            });
+            module.materials.forEach(item => {
+                if (!firstItem) firstItem = { type: 'material', data: item };
+                materialsContainer.innerHTML += createItemHtml('material', item);
+            });
+
+            if (module.materials.length === 0) {
+                 materialsContainer.innerHTML = '<p class="text-gray-400 text-sm">Nenhum material de estudo para este módulo.</p>';
+            }
+
+            if (firstItem) {
+                if (firstItem.type === 'video') {
+                    loadVideo(firstItem.data.id, firstItem.data.title);
+                } else {
+                    loadMaterial(firstItem.data.link, firstItem.data.title);
+                }
+            } else {
+                updatePlayerAndSelection(null, '', 'Nenhum item disponível');
+            }
+        }
+
+        function createItemHtml(type, item) {
+            const onclickAction = type === 'video' 
+                ? `loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')`
+                : `loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')`;
+            const dataId = type === 'video' ? item.id : item.link;
+            return `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors duration-200 min-h-[60px]"
+                     onclick="${onclickAction}" data-id="${dataId}">
+                    <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                    <div>
+                        <p class="text-sm font-semibold text-white">${item.title}</p>
+                        <p class="text-xs text-gray-400">${item.description || ''}</p>
+                    </div>
+                </div>`;
+        }
+
+        function loadVideo(videoId, lessonTitle) {
+            const isPlaceholder = !videoId || videoId.startsWith('video_placeholder');
+            const playerSrc = isPlaceholder ? '' : `https://drive.google.com/file/d/${videoId}/preview`;
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : lessonTitle;
+            updatePlayerAndSelection(videoId, playerSrc, displayTitle);
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const isPlaceholder = !link || link === '#';
+            const playerSrc = isPlaceholder ? '' : link.replace(/\/view\?usp=.*/, '/preview');
+            const displayTitle = isPlaceholder ? 'Conteúdo em breve' : materialTitle;
+            updatePlayerAndSelection(link, playerSrc, displayTitle);
+        }
+
+        function updatePlayerAndSelection(itemId, playerSrc, title) {
+            document.getElementById('contentPlayer').src = playerSrc;
+            document.getElementById('lessonTitle').textContent = title;
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+            if (itemId) {
+                 const currentSelected = document.querySelector(`[data-id="${itemId}"]`);
+                if (currentSelected) currentSelected.classList.add('selected-lesson');
+            }
+            selectedItemId = itemId;
+        }
+
+        // --- Inicialização ---
+        window.onload = showModuleSelectionPage;
+    </script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFTReview Extensivo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fundo escuro */
+            color: #e2e8f0; /* Texto claro */
+        }
+        .selected-item {
+            background-color: #4299e1; /* Destaque azul */
+            border: 2px solid #63b3ed;
+        }
+        .item-thumbnail-placeholder {
+            width: 60px;
+            height: 40px;
+            background-color: #4a5568;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+        }
+        .item-thumbnail-placeholder i {
+            font-size: 1.5rem;
+            color: #CBD5E0;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">MEDReview Extensivo</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Opções preenchidas via JavaScript -->
+            </select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <!-- Seção Principal do Player e Materiais -->
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <!-- Player de Vídeo -->
+            <div class="relative w-full h-0 pb-[56.25%] bg-black flex-shrink-0"> <!-- Proporção 16:9 -->
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-4 bg-gray-800 flex-shrink-0">
+                <h2 id="itemTitle" class="text-2xl font-bold text-white text-center">Selecione uma aula para começar</h2>
+            </div>
+            <!-- Seção de Materiais em PDF -->
+            <div class="p-4 bg-gray-800 rounded-b-lg shadow-inner flex-grow overflow-y-auto hide-scrollbar">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Apoio</h3>
+                <div id="materialsContainer" class="space-y-3">
+                    <!-- Materiais contextuais injetados aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral de Aulas -->
+        <aside class="w-full lg:w-[500px] bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col" style="max-height: calc(100vh - 100px);">
+            <h3 id="moduleTitle" class="text-lg font-bold mb-4 text-white flex-shrink-0">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow">
+                <!-- Aulas (vídeos) injetadas aqui -->
+            </div>
+        </aside>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-12">
+        <p>&copy; 2025 Medicina JVS. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        let selectedItemId = null;
+        let currentModuleId = null;
+
+        // --- ESTRUTURA DE DADOS DO CURSO ---
+        const modulesData = [
+            { id: 'module_neonatologia', title: 'NEONATOLOGIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Classificação do RN', link: 'https://drive.google.com/file/d/1sHXOQXIGtlLU8NJCC2GA9DgpmnoxgpxO/view?usp=sharing' }, materials: [{ title: 'E-Book - Classificação do RN', link: 'https://drive.google.com/file/d/1XhEm1ZIlPtt8dB-9TVXt1aYau8nXPEJR/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Reanimação Neonatal: Parte I - O Bumbum Rosa', link: 'https://drive.google.com/file/d/1Tsf8c6o6Hq8lJPi5teBwWMxXsF7AIJdF/view?usp=sharing' }, materials: [{ title: 'E-Book - Reanimação Neonatal: Parte I', link: 'https://drive.google.com/file/d/1OVnDRW3y2Tbrxj-jFjS8TFNuxqSHFK03/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Reanimação Neonatal: Parte II - O Bebê Problema', link: 'https://drive.google.com/file/d/1hp1hWLciaAMKhcHr7twDYV_MhlzE_zBY/view?usp=sharing' }, materials: [{ title: 'E-Book - Reanimação Neonatal: Parte II', link: 'https://drive.google.com/file/d/1NHB5av-Pkiw0PBxwFDlvGSCuepKoMWn7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Alojamento Conjunto e Prematuridade', link: 'https://drive.google.com/file/d/1I8GOOmdJHWI8ro2C3Kvi4YbxqE7uCAbO/view?usp=sharing' }, materials: [{ title: 'E-Book - Alojamento Conjunto e Prematuridade', link: 'https://drive.google.com/file/d/1wrbpcjEYoTDA55wGuhoQeEopLSETbboH/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Triagem Neonatal', link: 'https://drive.google.com/file/d/16u-CdhjOaiRqCgOSIGJQ1GiGMTH5UpeQ/view?usp=sharing' }, materials: [{ title: 'E-Book - Triagem Neonatal', link: 'https://drive.google.com/file/d/1SWaC_3qA7DrtSiMjkgEnZVffwglBl7kb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Distúrbios Respiratórios do RN', link: 'https://drive.google.com/file/d/1XpirsqDE1Dh4R9sZAQErhijYjNdYgQS1/view?usp=sharing' }, materials: [{ title: 'E-Book - Distúrbios Respiratórios do RN', link: 'https://drive.google.com/file/d/1VuDY99Kk-jyZv5A_3MGnHPNxUaycEbd7/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Icterícia Neonatal', link: 'https://drive.google.com/file/d/1yswkuUYrEzFY2LEfoqoMdSekujgn0KTq/view?usp=sharing' }, materials: [{ title: 'E-Book - Icterícia Neonatal', link: 'https://drive.google.com/file/d/1ZGkuqjjm-rFOb6yd8yAU2MGaUkWjs4N5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Infecções Congênitas: Parte I - TORCH', link: 'https://drive.google.com/file/d/1vuGTOPRg0IRx3yBJrd66vdri6lA7t43v/view?usp=sharing' }, materials: [{ title: 'E-Book - Infecções Congênitas: Parte I - TORCH', link: 'https://drive.google.com/file/d/12dsMnMz2bKeA6OYw1Vz1mSfzebWw759V/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Infecções Congênitas: Parte II - Sífilis', link: 'https://drive.google.com/file/d/1bRvdLNW_4boSY2lbJNkHru0Y62ZIBjc4/view?usp=sharing' }, materials: [{ title: 'E-Book - Infecções Congênitas: Parte II - Sífilis', link: 'https://drive.google.com/file/d/1hcgSaTCYpZvep2dl8zQ-_-SBFfyi3ZzM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Principais Síndromes Genéticas', link: 'https://drive.google.com/file/d/1fzt61qv7cSx2V7iEltqf9cGYMQugf568/view?usp=sharing' }, materials: [{ title: 'E-Book - Principais Síndromes Genéticas', link: 'https://drive.google.com/file/d/1n8vXIEjxGWa633CAWDKY_2BIVkojbkZ_/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Infecções Congênitas: Parte III - HIV', link: 'https://drive.google.com/file/d/1pOr0ZmVDxVf1rl_-WNS9NknmKflDxpv7/view?usp=sharing' }, materials: [{ title: 'E-Book - Infecções Congênitas: Parte III - HIV', link: 'https://drive.google.com/file/d/1RYzj3KA0ynGqB9YFTMFFhYT9rRUe7OVd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Sepse Neonatal', link: 'https://drive.google.com/file/d/1kx3fFYP-QtlMRbe5k_WMf6hAb9IC7vnn/view?usp=sharing' }, materials: [{ title: 'E-Book - Sepse Neonatal', link: 'https://drive.google.com/file/d/18bIjc-CKj_r9yGCMOpprTXWKFTgKpjEW/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Cardiopatias Congênitas: Parte I', link: 'https://drive.google.com/file/d/1mlzMVvVr80mZhHWN9fY41dQuAdE69bna/view?usp=sharing' }, materials: [{ title: 'E-Book - Cardiopatias Congênitas: Parte I', link: 'https://drive.google.com/file/d/1183g52YPKWXC8Pt7tNSQSTrsfIfcCgNb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Cardiopatias Congênitas: Parte II', link: 'https://drive.google.com/file/d/1ReD7p0SsDZrW2tXy-TYxI7WUhWCD-PXF/view?usp=sharing' }, materials: [{ title: 'E-Book - Cardiopatias Congênitas: Parte II', link: 'https://drive.google.com/file/d/1wdMh6ooUsqb14V5yKCuUK2Q1Dpm7zKeq/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Cardiopatias Congênitas: Parte III', link: 'https://drive.google.com/file/d/1NlWqJfP5KB4Lpj_aGfEFdDjEBNmuoQYh/view?usp=sharing' }, materials: [{ title: 'E-Book - Cardiopatias Congênitas', link: 'https://drive.google.com/file/d/1befnZ3py9xAHes1BgiLKGNKVRQ66YHXm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Distúrbios Metabólicos do RN', link: 'https://drive.google.com/file/d/15tBzRP8j3fzD_HCsYvaMypy2MMSz0TlY/view?usp=sharing' }, materials: [{ title: 'E-Book - Distúrbios Metabólicos do RN', link: 'https://drive.google.com/file/d/1HfQ1vTi2s8nNQScjlCuW6kJRmGhKpBDw/view?usp=sharing' }] },
+            ]},
+            { id: 'module_nutricao_infantil', title: 'NUTRIÇÃO INFANTIL', content: [
+                { type: 'group', video: { title: 'Aula 01 - Aleitamento Materno: Conceitos Básicos', link: 'https://drive.google.com/file/d/1ufWhEhOhvF8A2EskqRPJyPWfpWEPMmJ1/view?usp=sharing' }, materials: [{ title: 'E-Book - Aleitamento Materno: Conceitos Básicos', link: 'https://drive.google.com/file/d/1oeZYKAzb3MrQRSQuQ0RJmE6h8kWTH2rf/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Aleitamento Materno: Principais Queixas', link: 'https://drive.google.com/file/d/11gvOK0Lln3F7DG_paELck5tiK-SRxYrZ/view?usp=sharing' }, materials: [{ title: 'E-Book - Aleitamento Materno: Principais Queixas', link: 'https://drive.google.com/file/d/1TeoKG-HWy2dP6F54csLzvRS-IAZquYpb/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Aleitamento Materno: Contraindicações', link: 'https://drive.google.com/file/d/1Tcaxd-DWDRl2k0tI9eWr_R3L2NlfV5_7/view?usp=sharing' }, materials: [{ title: 'E-Book - Aleitamento Materno: Contraindicações', link: 'https://drive.google.com/file/d/1bNh_d4dgOJoMueZTb57Rm0sT9MTFfCD1/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Alimentação Infantil e Distúrbios Nutricionais: Parte I', link: 'https://drive.google.com/file/d/1l6V-Oiq5C_GsFkoihjLzDrCHANLm7K87/view?usp=sharing' }, materials: [{ title: 'E-Book - Alimentação Complementar: Parte I', link: 'https://drive.google.com/file/d/1NXSHTxxl7_hjXIbMAGRhCIEnxhFIMo24/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Alimentação Infantil e Distúrbios Nutricionais: Parte II', link: 'https://drive.google.com/file/d/1jHtZFxUAKzQezWZeF5o-oMt67R2mzJd9/view?usp=sharing' }, materials: [{ title: 'E-Book - Alimentação Complementar: Parte II', link: 'https://drive.google.com/file/d/14JDtHHuB0LOkETqoiBOjXqZwHxEOJELr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Alergia a Proteína do Leite de Vaca', link: 'https://drive.google.com/file/d/143Hn-yTPfjw1a8Qa9C27DHxKlhp1VGDG/view?usp=sharing' }, materials: [{ title: 'E-Book - Alergia à Proteína do Leite de Vaca', link: 'https://drive.google.com/file/d/16nMeZzakgkC1GcbWfrtuiMeRDTju21P4/view?usp=sharing' }] },
+            ]},
+            { id: 'module_crescimento_desenvolvimento', title: 'CRESCIMENTO E DESENVOLVIMENTO', content: [
+                { type: 'group', video: { title: 'Aula 01 - Crescimento Infantil: Parte I', link: 'https://drive.google.com/file/d/1CbGDvsJxlMGFdSSLbc8c3rIHwTfMnf7w/view?usp=sharing' }, materials: [{ title: 'E-Book - Crescimento Infantil: Parte I', link: 'https://drive.google.com/file/d/1g856tgiO6a4E6lf-ZEJ1M_kXLq9QJFab/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Crescimento Infantil: Parte II', link: 'https://drive.google.com/file/d/188XBCU6ce_8RxFpnncgJOYffUu2QR9v5/view?usp=sharing' }, materials: [{ title: 'E-Book - Crescimento Infantil: Parte II', link: 'https://drive.google.com/file/d/17PYhvj_7-RzLU4ADhjTTrjnknHPWI7Ym/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Desenvolvimento Neuropsicomotor', link: 'https://drive.google.com/file/d/1LnHFk9xZz70hwZjUz_zAgwskSfrA0FBa/view?usp=sharing' }, materials: [{ title: 'E-Book - Desenvolvimento Neuropsicomotor', link: 'https://drive.google.com/file/d/1ZfXQfQUhg5BLviI5pERqtp9jNYXRzWNd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Puberdade', link: 'https://drive.google.com/file/d/1o6BjGe42q25-LUSUpz48ljdD2G2Etvft/view?usp=sharing' }, materials: [{ title: 'E-Book - Puberdade', link: 'https://drive.google.com/file/d/1KzYODDuBcXZJ2eUEqAfHjNKOorqKU5YC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Puericultura', link: 'https://drive.google.com/file/d/1HqThuea-7WP8KN61p5z1fEArmiK15qlC/view?usp=sharing' }, materials: [{ title: 'E-Book - Puericultura', link: 'https://drive.google.com/file/d/14lkSdd0d2bA4Rl0LVBjHWp3RRdyFNY1b/view?usp=sharing' }] },
+            ]},
+            { id: 'module_vacinacao', title: 'VACINAÇÃO', content: [
+                { type: 'group', video: { title: 'Aula 01 - Imunizações: Parte I', link: 'https://drive.google.com/file/d/1jmgXGXgYE5XFzg2Y5JizlJnPPvpYQvef/view?usp=sharing' }, materials: [{ title: 'E-Book - Imunizações: Parte I', link: 'https://drive.google.com/file/d/1s3bpAf2YeKGmccryMiOkrX6MAYIk7C7e/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - Imunizações: Parte II', link: 'https://drive.google.com/file/d/1CuEtTQuvm6HQmWqMp6cThwOtL_9GPAmZ/view?usp=sharing' }, materials: [{ title: 'E-Book - Imunizações: Parte II', link: 'https://drive.google.com/file/d/1jDMW7GoLctdbCXVPLVaInLAvZZBWUO-P/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Imunizações: Parte III', link: 'https://drive.google.com/file/d/1xLx3dc227-sKLjs4vkIpbzCPS1Swa1Lo/view?usp=sharing' }, materials: [{ title: 'E-Book - Imunizações: Parte III', link: 'https://drive.google.com/file/d/17HlwyVjQhwpXXyKZBgaTC2j7LVHelhjJ/view?usp=sharing' }] },
+            ]},
+            { id: 'module_urgencia_emergencia', title: 'URGÊNCIA E EMERGÊNCIA', content: [
+                { type: 'group', video: { title: 'Aula 01 - Bradiarritmias na Infância', link: 'https://drive.google.com/file/d/1ZGQ8fDQWsVV0Lm4tIiG-7o__jD9r9AZa/view?usp=sharing' }, materials: [{ title: 'E-Book - Bradiarritmias na Infância', link: 'https://drive.google.com/file/d/1TbBlhxHZruzB3wUxCHRteR2nErZIoomI/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 02 - PCR Pediátrica', link: 'https://drive.google.com/file/d/1ilEwh_qTmq39kntjYuqChwmtkovKL_yH/view?usp=sharing' }, materials: [{ title: 'E-Book - PCR Pediátrica', link: 'https://drive.google.com/file/d/1kUZg-H0Y6LKbMv3GokPxhMg8RZJ6lPKC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Taquiarritmias na Infância', link: 'https://drive.google.com/file/d/18kY1KPWxCpJsTvN-OpgNr4w3S5vSJp2A/view?usp=sharing' }, materials: [{ title: 'E-Book - Taquiarritmias na Infância', link: 'https://drive.google.com/file/d/1-A_X0RYZEfgoLUr7-f-Zb8OuxUj0OAWZ/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Choque na Pediatria', link: 'https://drive.google.com/file/d/1nbyPZoxE1NNSaBWT0YEcTEmjLQdX4Mjc/view?usp=sharing' }, materials: [{ title: 'E-Book - Choque na Pediatria', link: 'https://drive.google.com/file/d/1NzhNIXuFqft3cPY402K26GvpCb0ZBDjy/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Crise Convulsiva Febril', link: 'https://drive.google.com/file/d/1_8daH_gRD01lrRyp2kdGsFgq7sthxJ6p/view?usp=sharing' }, materials: [{ title: 'E-Book - Crise Convulsiva Febril', link: 'https://drive.google.com/file/d/1Ns36a3uHUckCTXvaWERYeMgYdtf7-uOs/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Anafilaxia e Urticária', link: 'https://drive.google.com/file/d/11hhQiILPzr5-pTRlui87Y70PHZOrJqYI/view?usp=sharing' }, materials: [{ title: 'E-Book - Anafilaxia e Urticária', link: 'https://drive.google.com/file/d/1naWOGeb8kcw7YLYP0v6jM78qbBKOiYZu/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - OVACE e Ingestão de Corpo Estranho', link: 'https://drive.google.com/file/d/1jeHFXU5wlS_fLwfqdsEmQ09mZ-aOX3qN/view?usp=sharing' }, materials: [{ title: 'E-Book - OVACE e Ingestão de Corpo Estranho', link: 'https://drive.google.com/file/d/1Q5gj2letmSdt6w9r_fbWgz3V4ZLJz7AM/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Violência Infantil', link: 'https://drive.google.com/file/d/1a4HvR3I-zL2Skr5qa5QglT5ZyxXqZrOZ/view?usp=sharing' }, materials: [{ title: 'E-Book - Violência Infantil', link: 'https://drive.google.com/file/d/1p9clgzw8d_nBgijjywoFSxDBVXRTxxAQ/view?usp=sharing' }] },
+            ]},
+            { id: 'module_doencas_infancia', title: 'DOENÇAS DA INFÂNCIA', content: [
+                { type: 'group', video: { title: 'Aula 02 - Infecção do Trato Urinário na Pediatria', link: 'https://drive.google.com/file/d/1s6MNBwNvHJT2-ElJh_Apyp1_B0kojO_j/view?usp=sharing' }, materials: [{ title: 'E-Book - Infecção do Trato Urinário na Pediatria', link: 'https://drive.google.com/file/d/1TsoY-8HODLQPchcWLNAgErrlrVvUp2mC/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 03 - Tuberculose na Pediatria', link: 'https://drive.google.com/file/d/1csnAwox08IJeZ64pG9w68IpFej8h2jiR/view?usp=sharing' }, materials: [{ title: 'E-Book - Tuberculose na Pediatria', link: 'https://drive.google.com/file/d/1gJffcmbL4e3_CZ8lPVgGBGnU4S7CPYE5/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 04 - Infecções de Vias Aéreas Superiores', link: 'https://drive.google.com/file/d/1AHR5HkbI4gkPV1mO6oWRpXxYdvtLGsPb/view?usp=sharing' }, materials: [{ title: 'E-Book - Infecções de Vias Aéreas Superiores', link: 'https://drive.google.com/file/d/154UuujO6pXyliFqkj23DGswdNsbvSFCA/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 05 - Doenças Exantemáticas', link: 'https://drive.google.com/file/d/1yCHMhsHqC8fJsT2KwxRKqZEQKd1r3pOr/view?usp=sharing' }, materials: [{ title: 'E-Book - Doenças Exantemáticas', link: 'https://drive.google.com/file/d/1jH0fbLSnEAL0TJexMaiwROUQfoS-Ft6E/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 06 - Bronquiolite Viral Aguda e Coqueluche', link: 'https://drive.google.com/file/d/1tgEWtw7DB7xOMCjRhxBZS1KZkKVUryCm/view?usp=sharing' }, materials: [{ title: 'E-Book - Bronquiolite Viral', link: 'https://drive.google.com/file/d/1zCefUO2oSjVyTM1_e21WtK3O2ymUxb-R/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 07 - Pneumonia na Criança: Etiologia e Fisiopatologia', link: 'https://drive.google.com/file/d/1cXG17XMGEufWMHPRaJLw_t18wuI7gyyO/view?usp=sharing' }, materials: [{ title: 'E-Book - Pneumonia na Criança: Etiologia e Fisiopatologia', link: 'https://drive.google.com/file/d/1qBcsX2TKw9pIh7wW2-YEz9Chjh6lGvtr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 08 - Pneumonia na Criança: Clínica, Diagnóstico e Tratamento', link: 'https://drive.google.com/file/d/1sHX_YavwGm17a-t0FF81nV-2On4svBWS/view?usp=sharing' }, materials: [{ title: 'E-Book - Pneumonia na Criança: Clínica, Diagnóstico e Tratamento', link: 'https://drive.google.com/file/d/1GlL4Pa0Mxltddo81gNETrTJJig7piHfm/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 09 - Pneumonia na Criança: Complicações', link: 'https://drive.google.com/file/d/1tWElWcH-d7lUKy3JXTc4wqhF6yaTW82e/view?usp=sharing' }, materials: [{ title: 'E-Book - Pneumonia na Criança: Complicações', link: 'https://drive.google.com/file/d/1TEqKy0cumwQoLCuKxd2B6MRN7zKIzqC-/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 10 - Fibrose Cística', link: 'https://drive.google.com/file/d/1KxOTxeM9UIVQXhajhUviSqaEf8YxXLnc/view?usp=sharing' }, materials: [{ title: 'E-Book - Fibrose Cística', link: 'https://drive.google.com/file/d/1HIYuHNCnWGEMLOc6OvFRzuHTxIeZazVi/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 11 - Diarreia Aguda', link: 'https://drive.google.com/file/d/1TzUm00JnecJLUIOw8pdtwD7cZ1aYDKM9/view?usp=sharing' }, materials: [{ title: 'E-Book - Diarreia Aguda', link: 'https://drive.google.com/file/d/1qvITqFJ4iBMOHM0IiPOTVUUBp4poZiLr/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 12 - Constipação Intestinal', link: 'https://drive.google.com/file/d/18YAIrSSLDCR_dCdPHKGnG5xowQiDs_Um/view?usp=sharing' }, materials: [{ title: 'E-Book - Constipação Intestinal', link: 'https://drive.google.com/file/d/1durfNQdHo8S7JSJ75QN_WNs21FsXYE8V/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 13 - Parasitologia: Parte I', link: 'https://drive.google.com/file/d/18yRapKGr4g_gJdHuxbUgc9a2LR3JUl7I/view?usp=sharing' }, materials: [{ title: 'E-Book - Parasitologia: Parte I', link: 'https://drive.google.com/file/d/1Tw7RbGBXuXdtP5u4rOjY9iWqy76QxrBd/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 14 - Parasitologia: Parte II', link: 'https://drive.google.com/file/d/1BGmLrr42fbJOKhiia_Cao_MNw2MFeCaK/view?usp=sharing' }, materials: [{ title: 'E-Book - Parasitologia: Parte II', link: 'https://drive.google.com/file/d/1NmRgqG7rDczBG46DWgft0XRkHor-cAc6/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 15 - Refluxo Gastroesofágico na Infância', link: 'https://drive.google.com/file/d/1KQ3Bw4DyaIfa-uGGvXhdQbju7C4z6jOJ/view?usp=sharing' }, materials: [{ title: 'E-Book - Refluxo Gastroesofágico na Infância', link: 'https://drive.google.com/file/d/1JD6zfyBdO_Spb6kC91XajWWpsh6Y1g85/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 16 - Febre Reumática', link: 'https://drive.google.com/file/d/1WT1Kuwq6y-KS4WCq1R4N251zVS9_CxRb/view?usp=sharing' }, materials: [{ title: 'E-Book - Febre Reumática', link: 'https://drive.google.com/file/d/1FEA_8E1R3A-Q9izcc8dblj8E6tElZ3Eo/view?usp=sharing' }] },
+                { type: 'group', video: { title: 'Aula 17 - Meningites na Pediatria', link: 'https://drive.google.com/file/d/1ScURTk-RinPF0eUiMjGwC9nRgRsuDosV/view?usp=sharing' }, materials: [{ title: 'E-Book - Meningites na Pediatria', link: 'https://drive.google.com/file/d/1fUXxWK9r5xEBiwm3uvM6QPGHbMRLZvk-/view?usp=sharing' }] },
+            ]}
+        ];
+
+        // Carrega um item (vídeo ou PDF) no player
+        function loadItem(itemLink, itemTitle) {
+            if (!itemLink || itemLink === '#') return;
+
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('itemTitle');
+            if (!contentPlayer || !titleElement) return;
+
+            const previewUrl = itemLink.replace('/view?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+            contentPlayer.src = previewUrl;
+            titleElement.textContent = itemTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-item');
+            }
+            const currentSelected = document.querySelector(`[data-id="${itemLink}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-item');
+            
+            selectedItemId = itemLink;
+            renderAssociatedMaterials(itemLink);
+        }
+        window.loadItem = loadItem;
+
+        function renderAssociatedMaterials(videoLink) {
+            const materialsContainer = document.getElementById('materialsContainer');
+            materialsContainer.innerHTML = ''; // Limpa os materiais anteriores
+
+            const module = modulesData.find(m => m.id === currentModuleId);
+            if (!module) return;
+
+            const selectedGroup = module.content.find(item => item.type === 'group' && item.video.link === videoLink);
+            
+            if (selectedGroup && selectedGroup.materials && selectedGroup.materials.length > 0) {
+                materialsContainer.innerHTML = selectedGroup.materials.map(material => `
+                    <div class="flex items-center space-x-3 bg-gray-600 rounded-md p-2 hover:bg-gray-500 cursor-pointer transition-colors"
+                         onclick="loadItem('${material.link}', '${material.title.replace(/'/g, "\\'")}')" data-id="${material.link}">
+                        <div class="item-thumbnail-placeholder"><i class="fas fa-file-alt"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${material.title}</p></div>
+                    </div>
+                `).join('');
+            } else {
+                materialsContainer.innerHTML = '<p class="text-gray-400">Nenhum material de apoio para esta aula.</p>';
+            }
+        }
+
+        // Função para ordenar as aulas numericamente
+        function sortVideos(videos) {
+            const extractNumber = (title) => {
+                let match = title.match(/Aula (\d+)/);
+                if (match) return parseInt(match[1], 10);
+                return Infinity;
+            };
+            videos.sort((a, b) => extractNumber(a.title) - extractNumber(b.title));
+        }
+
+        // Renderiza o conteúdo do módulo
+        function renderModuleContent(moduleId) {
+            currentModuleId = moduleId;
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const moduleTitleElement = document.getElementById('moduleTitle');
+            if (!videosContainer || !materialsContainer || !moduleTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            moduleTitleElement.textContent = `Aulas - ${module.title}`;
+            
+            const videos = module.content.filter(item => item.type === 'video' || item.type === 'group').map(item => item.type === 'video' ? item : item.video);
+            sortVideos(videos);
+
+            videosContainer.innerHTML = videos.map(video => `
+                <div class="flex items-center space-x-3 bg-gray-700 rounded-md p-2 hover:bg-gray-600 cursor-pointer transition-colors"
+                     onclick="loadItem('${video.link}', '${video.title.replace(/'/g, "\\'")}')" data-id="${video.link}">
+                    <div class="item-thumbnail-placeholder"><i class="fas fa-play-circle"></i></div>
+                    <div><p class="text-sm font-semibold text-white">${video.title}</p></div>
+                </div>
+            `).join('');
+            
+            // Limpa materiais e carrega o primeiro vídeo
+            materialsContainer.innerHTML = '<p class="text-gray-400">Selecione uma aula para ver os materiais.</p>';
+            const firstVideo = videos.length > 0 ? videos[0] : null;
+            if (firstVideo) {
+                loadItem(firstVideo.link, firstVideo.title);
+            } else {
+                const firstMaterial = module.content.find(item => item.type === 'pdf');
+                if (firstMaterial) {
+                    loadItem(firstMaterial.link, firstMaterial.title);
+                } else {
+                    loadItem('', 'Nenhum item neste módulo');
+                }
+            }
+        }
+
+        // Inicializa a aplicação
+        function initializeApp() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+            
+            moduleSelector.innerHTML = modulesData.map(module =>
+                `<option value="${module.id}">${module.title}</option>`
+            ).join('');
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo na inicialização
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[2].id; // Define a primeira opção como selecionada
+                renderModuleContent(modulesData[2].id);
+            }
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
+
