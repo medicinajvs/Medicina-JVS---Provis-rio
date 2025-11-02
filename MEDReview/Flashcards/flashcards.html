@@ -1554,26 +1554,144 @@
         { path: "Clínica Médica/Hematologia/Oncohematologia/Gamopatias Monoclonais/Mieloma Múltiplo", count: 26 },
         { path: "Clínica Médica/Hematologia/Hemostasia/Hemostasia Primária", count: 29 },
         { path: "Clínica Médica/Hematologia/Hemostasia/Hemostasia Secundária", count: 31 },
-        { path: "Clínica Médica/Infectologia/Tuberculose/Tuberculose na infância", count: 26 },
-        { path: "Clínica Médica/Infectologia/Síndromes Febris/Arboviroses/Dengue", count: 50 },
-        { path: "Clínica Médica/Infectologia/HIV", count: 326 },
-        { path: "Clínica Médica/Infectologia/Síndromes Bacterianas/Pneumonia", count: 78 },
-        { path: "Clínica Médica/Infectologia/Síndromes Bacterianas/Infecção do Trato Urinário", count: 52 },
-        { path: "Clínica Médica/Infectologia/Síndromes Bacterianas/Sepse", count: 25 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Esquistossomose", count: 36 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Ascaridíase", count: 20 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Estrongiloidíase", count: 16 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Ancilostomose", count: 12 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Enterobiose e Oxiuríase", count: 10 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Tricuríase", count: 10 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Toxocaríase", count: 13 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Teníase", count: 14 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Cisticercose", count: 22 },
-        { path: "Clínica Médica/Infectologia/Parasitoses/Amebíase e Giardíase", count: 40 },
-        { path: "Clínica Médica/Infectologia/COVID-19", count: 43 },
-        { path: "Clínica Médica/Infectologia/Infecções do Sistema Nervoso Central/Meningite/Meningite Bacteriana", count: 23 },
-        { path: "Clínica Médica/Infectologia/Infecções do Sistema Nervoso Central/Meningite/Meningite Tuberculosa", count: 15 },
-        { path: "Clínica Médica/Infectologia/Infecções do Sistema Nervoso Central/Encefalite Herpética", count: 13 },
+        { 
+            path: "Clínica Médica/Infectologia/Tuberculose/Conceitos Gerais em Tuberculose",
+            count: 120,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_tuberc_cge_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_tuberc_cge_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Tuberculose/Tuberculose na Infância",
+            count: 26,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_tuberc_infancia_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_tuberc_infancia_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Síndromes Febris/Arboviroses/Conceitos Gerais em Arboviroses",
+            count: 28,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindfeb_arboviroses_cge_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindfeb_arboviroses_cge_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Síndromes Febris/Arboviroses/Dengue",
+            count: 50,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindfeb_arboviroses_dengue_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindfeb_arboviroses_dengue_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/HIV",
+            count: 326,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_hiv_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_hiv_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Síndromes Bacterianas/Pneumonia",
+            count: 78,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindbact_pneumonia_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindbact_pneumonia_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Síndromes Bacterianas/Infecção do Trato Urinário",
+            count: 52,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindbact_itu_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindbact_itu_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Síndromes Bacterianas/Sepse",
+            count: 25,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindbact_sepse_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_sindbact_sepse_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Conceitos Gerais em Parasitoses",
+            count: 1,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_cge_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_cge_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Esquistossomose",
+            count: 36,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_esquistossomose_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_esquistossomose_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Ascaridíase",
+            count: 20,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_ascaridiase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_ascaridiase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Estrongiloidíase",
+            count: 16,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_estrongiloidiase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_estrongiloidiase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Ancilostomose",
+            count: 12,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_ancilostomose_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_ancilostomose_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Enterobiose e Oxiuríase",
+            count: 10,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_enterobiose_oxiuriase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_enterobiose_oxiuriase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Tricuríase",
+            count: 10,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_tricuríase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_tricuríase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Toxocaríase",
+            count: 13,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_toxocaríase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_toxocaríase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Teníase",
+            count: 14,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_teniase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_teniase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Cisticercose",
+            count: 22,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_cisticercose_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_cisticercose_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Parasitoses/Amebíase e Giardíase",
+            count: 40,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_amebiase_giardiase_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_parasitoses_amebiase_giardiase_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/COVID-19",
+            count: 43,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_covid19_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_covid19_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Infecções do Sistema Nervoso Central/Meningite/Meningite Bacteriana",
+            count: 23,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_infsnc_meningite_bacteriana_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_infsnc_meningite_bacteriana_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Infecções do Sistema Nervoso Central/Meningite/Meningite Tuberculosa",
+            count: 15,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_infsnc_meningite_tuberculosa_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_infsnc_meningite_tuberculosa_resp_comp.png`
+        },
+        { 
+            path: "Clínica Médica/Infectologia/Infecções do Sistema Nervoso Central/Encefalite Herpética",
+            count: 13,
+            questionPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_infsnc_encefalite_herpetica_perg_comp.png`,
+            answerPattern: (i) => `card_${String(i).padStart(2, '0')}_cm_infect_infsnc_encefalite_herpetica_resp_comp.png`
+        },
         { path: "Clínica Médica/Dermatologia/Hanseníase/Estados Reacionais", count: 15 },
         { path: "Clínica Médica/Dermatologia/Dermatoviroses/Herpes-Zóster", count: 22 },
         { path: "Clínica Médica/Dermatologia/Farmacodermias/Síndrome DRESS", count: 1 },
