@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula - Endocrinologia</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a202c; color: #e2e8f0; }
+        .selected-lesson { background-color: #4299e1; border: 2px solid #63b3ed; }
+        .item-thumbnail-placeholder { width: 80px; height: 45px; background-color: #4a5568; display: flex; justify-content: center; align-items: center; border-radius: 0.375rem; flex-shrink: 0; }
+        .item-thumbnail-placeholder i { font-size: 1.8rem; color: #CBD5E0; }
+        details { background-color: #2d3748; border-radius: 0.375rem; overflow: hidden; margin-bottom: 0.75rem; }
+        summary { padding: 0.5rem 0.75rem 0.5rem 2rem; cursor: pointer; font-weight: 600; color: #e2e8f0; position: relative; list-style: none; user-select: none; }
+        summary::-webkit-details-marker { display: none; }
+        summary::before { content: '\25B6'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); transition: transform 0.2s; color: #a0aec0; font-size: 0.8rem; }
+        details[open] summary::before { transform: translateY(-50%) rotate(90deg); }
+        .material-item { display: flex; align-items: center; gap: 0.75rem; background-color: #4a5568; border-radius: 0.375rem; padding: 0.5rem; margin-top: 0.5rem; cursor: pointer; transition-colors: 0.2s; margin-left: 0.5rem; margin-right: 0.5rem; }
+        .material-item:hover { background-color: #2d3748; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Minha Plataforma</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-md" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3"></div>
+            </div>
+        </section>
+        <aside class="w-full lg:w-80 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6"></div>
+        </aside>
+    </main>
+
+    <script>
+        // Variável global para rastrear o item selecionado
+        let selectedItemId = null;
+
+        // --- DADOS BRUTOS DOS LINKS ---
+        const rawLinks = `
+Vias do apetite_COFEXPRESS - https://drive.google.com/file/d/1--MWMJZEeCWB1rOA_2D4lU1WwMfyoSUV/view?usp=sharing
+Pé diabéticos_COFEXPRESS - https://drive.google.com/file/d/1-6ZnhtphZQEA8cftpJYaG_MmTklHQBvv/view?usp=sharing
+Síndromes hiperandrogênicas e SOP - https://drive.google.com/file/d/1-T9fZxLHZZUE9s4uJW8eZ_luBCMvc21j/view?usp=sharing
+Feocromocitoma parte 2 genética_COFEXPRESS - https://drive.google.com/file/d/1-l4ZFBSFsXygPLRzkJzYcnK1E3RZFo1E/view?usp=sharing
+Puberdade precoce - https://drive.google.com/file/d/10FnRP3IGO-tpn9HqEp4zUhL5YyVUiNJd/view?usp=sharing
+Deficiencia de AVP - express - https://drive.google.com/file/d/10Tdxac3ZQhGl9kFXNVuEFqwozc7BOLt1/view?usp=sharing
+Hipotireoidismo_COFEXPRESS - https://drive.google.com/file/d/10nEDqCkwIPVf_5FyPkdGsfYKMBtS2QEX/view?usp=sharing
+Imunologia do atleta_COFEXPRESS - https://drive.google.com/file/d/10uQVGtzWo6dsyKqdyqC7guPfmxMgk5bs/view?usp=sharing
+Patologias relacionadas ao treinamento tríade da mulher atleta, REDs, síndrome do overtraining_COFEXPRESS - https://drive.google.com/file/d/11XrcGH4HTOCP3fqT_S1Awbq5chfC0zRy/view?usp=sharing
+Hiperglicemia hospitalar - https://drive.google.com/file/d/123rhxZWGtoh07ZokBpEmUco4yX-_QaPq/view?usp=sharing
+PDF de slides - Fisiologia do metabolismo glicêmico.pdf - https://drive.google.com/file/d/124gXI3JylzafqA7TFaB18cIhMWmDrWWV/view?usp=sharing
+Pré-diabetes_COFEXPRESS - https://drive.google.com/file/d/12ajA4i_Wz205jLM6kFTFlCYXbCfM-u5L/view?usp=sharing
+Transtornos alimentares_COFEXPRESS - https://drive.google.com/file/d/12j8_nkuQN7F6IAZMGwdpTJA3EwVwKZZ5/view?usp=sharing
+Fisiologia do metabolismo lipídico_COFEXPRESS - https://drive.google.com/file/d/138sWv4SGTH1t6U23Q3eBt4ojPu6Cy3co/view?usp=sharing
+Hipertrigliceridemias - https://drive.google.com/file/d/14EQIrQwOIYNflsuN3I1rGoJWL00MA62t/view?usp=sharing
+Transtornos alimentares - https://drive.google.com/file/d/14P-3FFt9Brpn-ysE-jAgwLAhd221ZUEx/view?usp=sharing
+Anticoncepcionais_COFEXPRESS - https://drive.google.com/file/d/14_opuq2oSBNVu2gSPfo6ePxuC-2nJJIL/view?usp=sharing
+PDF de slides - Vias do apetite.pdf - https://drive.google.com/file/d/14tpG3zGrLH_P0AFMBvYYCDWH68ti6S-Z/view?usp=sharing
+Hipoglicemias parte 2 etiologias e tratamento, hipoglicemias em crianças, hipoglicemias em indivíduos com diabetes_COFEXPRESS - https://drive.google.com/file/d/15R_1aaPh6VEArZdO44eAJwE96M0U2Whi/view?usp=sharing
+Adendo Hiperplasia adrenal congênita 1 deficiência da 21 hidroxilase - https://drive.google.com/file/d/15aCw3sFeHWcmkKJCTsc8sRVyKDfQf4Zu/view?usp=sharing
+Fisiologia, remodelação óssea, DXA_COFEXPRESS - https://drive.google.com/file/d/16KImaNy6WKNv2vM8XxpAdbEa6rhe4UYk/view?usp=sharing
+Crescimento e baixa estatura_COFEXPRESS - https://drive.google.com/file/d/1705bzqBvDcfKDmZ04AeE_CFpkyNL5cb6/view?usp=sharing
+Diagnóstico da obesidade e avaliação da composição - https://drive.google.com/file/d/17FIAllhytd4rK6RRIQQT8rdbqN220Tpx/view?usp=sharing
+Diagnóstico da obesidade e avaliação da composição_COFEXPRESS - https://drive.google.com/file/d/17JpGPyBtzIwelqKeTovyyb6_KkiGoSS8/view?usp=sharing
+Obesidade e comorbidades 2 síndrome metabólica, coração e rim - https://drive.google.com/file/d/17e77LiqHwZ8wJalWzzt900CsONEP52BT/view?usp=sharing
+Doença de Graves_COFEXPRESS - https://drive.google.com/file/d/17koY6blkogjFubjJjGXe-mQudcXi6_qZ/view?usp=sharing
+Hipoparatireoidismo e hipocalcemia_COFEXPRESS - https://drive.google.com/file/d/17uExhTiTWlR7_dpKkO0b3fvFLeDqM03S/view?usp=sharing
+Micropênis e criptorquidia - https://drive.google.com/file/d/17zFiUzPg1e5SKnwihRytUP-KZPcpxZ4v/view?usp=sharing
+Distúrbios do desenvolvimento sexual (DDS) - https://drive.google.com/file/d/18-rfvzimZNtM6kPlcjFFbX2LeWEYF3yH/view?usp=sharing
+Tratamento medicamentoso da obesidade off-label - https://drive.google.com/file/d/18HaKvt0DCuRCe1TwC9edESwnKVSY0eBy/view?usp=sharing
+Lipodistrofias - https://drive.google.com/file/d/18SNdGCdSiP-ahMECy3i8AJpWhfH52P-h/view?usp=sharing
+Diagnóstico, rastreio e diagnóstico diferencial no diabetes - continuação - https://drive.google.com/file/d/193LabRpqaBy0TuqP7Os99TUZh31bxzgs/view?usp=sharing
+Termogênicos_COFEXPRESS - https://drive.google.com/file/d/19qze9s7yecfVDufV7h0xoGcWvxNRZ4-k/view?usp=sharing
+Hiperandrogenismo pós menopausa - https://drive.google.com/file/d/19uHkXRwabsxGY1BYTd9dOS0asZRp6vUl/view?usp=sharing
+Raquitismo e osteomalácia - https://drive.google.com/file/d/19uhrd8Iz3HVmopG2VClw_67MiMnCdZHS/view?usp=sharing
+Incidentaloma adrenal_COFEXPRESS - https://drive.google.com/file/d/1A6_1t46f995mp4jkW34cIJ7APAU72WCY/view?usp=sharing
+Sarcopenia_COFEXPRESS - https://drive.google.com/file/d/1AM6BXirPY4i1dVfbOKmOzWp82jvYxHQD/view?usp=sharing
+NEM-2 - https://drive.google.com/file/d/1AgP8keqPZRh2w5nLWu5sNi24WAS4IN0t/view?usp=sharing
+PDF de slides - Tipos de receptores e hormônios.pdf - https://drive.google.com/file/d/1BNvqXkvjAn_-BfDtL8YmEYOGp1h4eONv/view?usp=sharing
+Hiperprolactinemia e prolactinomas_COFEXPRESS - https://drive.google.com/file/d/1BmFAMalU-xejaMFX_waqeecyA56mxAOI/view?usp=sharing
+Diagnóstico da obesidade e avaliação da composição_COFEXPRESS (Duplicata) - https://drive.google.com/file/d/1BxN_VdQH75xNEwBY290hx-upNyEs0Vqr/view?usp=sharing
+Micropênis e criptorquidia_COFEXPRESS - https://drive.google.com/file/d/1BzAiFos28amvix_Kadlh4FBOIL_PGu_2/view?usp=sharing
+Diabetes mellitus tipo 1 parte 1_COFEXPRESS - https://drive.google.com/file/d/1Cp5W0hpR7OML95Py8C618vwjG18jvh-j/view?usp=sharing
+Imunologia do atleta - https://drive.google.com/file/d/1D8jZ9ZwWCXjQj0-OqArlv6KePzp3Bhzr/view?usp=sharing
+Fisiologia do metabolismo glicêmico - https://drive.google.com/file/d/1DL3Zeo35_7f33NaaQdx3D9L41ONifhMO/view?usp=sharing
+Doença de Graves_COFEXPRESS (Duplicata) - https://drive.google.com/file/d/1E235KKbfpIqyASKehQK9oKqVEPCyKg3v/view?usp=sharing
+Tratamento medicamentoso da obesidade on-label_COFEXPRESS - https://drive.google.com/file/d/1E7u3xGXSQbZjqrR8rORd68r7UQ5yL7Nc/view?usp=sharing
+Amenorreia primária_COFEXPRESS - https://drive.google.com/file/d/1EGtzS2VaBKLGgNzA69grcESkj6SzKcli/view?usp=sharing
+Hiperlipidemias primárias e secundárias_COFEXPRESS - https://drive.google.com/file/d/1EdeBiJWo6vNTIMvAjqno8mbHJdavd7yt/view?usp=sharing
+Orbitopatia de Graves_COFEXPRESS - https://drive.google.com/file/d/1FBpY3gwB2Lq1S4hZCUA5f0-zds9hl0oB/view?usp=sharing
+Feocromocitoma parte 2 genética - https://drive.google.com/file/d/1FE7Y0qUmgRcqzJ1HDak8tzH2p3R7tYvC/view?usp=sharing
+Atividade física- recomendações gerais - https://drive.google.com/file/d/1FT4dE7TZtAfPLbn8OB9dLk9tuRfu7HLK/view?usp=sharing
+Fisiologia e biologia do tecido adiposo_COFEXPRESS - https://drive.google.com/file/d/1FZC1Y1fDa10xMljDwP61OpxfMVMUbfet/view?usp=sharing
+Incidentaloma hipofisário, adenoma clinicamente não funcionante e tumores agressivos - https://drive.google.com/file/d/1Fd0IAv0q4-DlAtrGF8jHzuOwiiZB1H-G/view?usp=sharing
+Cirurgia bariátrica 2 técnicas e complicações - https://drive.google.com/file/d/1FqXyTUzofhlvRxOHdOFY_7tTjXKMDOjK/view?usp=sharing
+Síndrome de Turner _COFEXPRESS - https://drive.google.com/file/d/1GUwKKMTgJTuURzlnoOllX-S2abzWhrsj/view?usp=sharing
+Incidentaloma hipofisário, adenoma clinicamente não funcionante e tumores agressivos_COFEXPRESS - https://drive.google.com/file/d/1GgQX3WyKXASL88NAFwFAUxeZxHqA8-DK/view?usp=sharing
+Complicações microvasculares neuropatia diabética _COFEXPRESS - https://drive.google.com/file/d/1H2MfgRNka_x73OAmrWwMqJgg6shqzkm3/view?usp=sharing
+Raquitismo e osteomalácia_COFEXPRESS - https://drive.google.com/file/d/1H6XALSjHxsvd1bln3WIEsQNb_Zzf3j9C/view?usp=sharing
+Tratamento medicamentoso da obesidade on-label - https://drive.google.com/file/d/1HPWGycbXlh22K_lqauhGs8lSQytPn_pW/view?usp=sharing
+Deficiencia de AVP - https://drive.google.com/file/d/1I9FkwYd9p2UpVlM5eo69duJaV74de8J-/view?usp=sharing
+Hipoglicemias parte 1 fisiopatologia, investigação, testes diagnósticos - https://drive.google.com/file/d/1IJyl55f94b7TY0PjPI-X5K7gMIv4S_da/view?usp=sharing
+Fisiologia do ciclo menstrual_COFEXPRESS - https://drive.google.com/file/d/1IT2b5v1nBApCFaJn9wzx_bAW8D-inJZm/view?usp=sharing
+PDF de slides - Fisiologia tireoidiana.pdf - https://drive.google.com/file/d/1ITI9mw9Ns35zr62_T7map-1L17R8J8f8/view?usp=sharing
+Obesidade e metabolismo resistencia insulinica, DLP, DM, SOP - https://drive.google.com/file/d/1Iv-hJRCwaTGMhwfFr8sUibtGEpn1TShh/view?usp=sharing
+Adendo Lípides guidelines SBDSBEM e AHAACC - https://drive.google.com/file/d/1JIrUBbZXjm5771h0wUmuOTvrTFoPqcxJ/view?usp=sharing
+Atraso puberal - https://drive.google.com/file/d/1JXCwIb9PtcRNiqu8QpJ6QTznrI6RWrfW/view?usp=sharing
+Fisiologia, remodelação óssea, DXA - https://drive.google.com/file/d/1JZ5khOPU5R0GBgd02aH-mCXtnuRdjEeE/view?usp=sharing
+Emergências no diabetes_COFEXPRESS - https://drive.google.com/file/d/1Jj9erhhY57LQmsnk7NlfFV82pIZbqmmo/view?usp=sharing
+Crise tireotóxica e hipertireoidismo subclínico - https://drive.google.com/file/d/1Jm2Dm1X8VEEngmCThm0EDpkjI_csfoVO/view?usp=sharing
+PDF de slides - Fisiologia e tumorigênese em neuroendocrinologia.pdf - https://drive.google.com/file/d/1K36GHAfrzeHrcKtQNi428DZ3K0c2v12M/view?usp=sharing
+PDF de slides - Fisiologia adrenal e esteroidogênese.pdf - https://drive.google.com/file/d/1KMj-vLLkA01PMgjATBfIpFd092wDO4uZ/view?usp=sharing
+Cirurgia bariátrica 1 indicações, contraindicações e benefícios_COFEXPRESS - https://drive.google.com/file/d/1KR-IN1AlXKRXZErLrSsqnyD6iFs8Pr82/view?usp=sharing
+Osteoporose parte 1 avaliação, diagnóstico e OP secundária_COFEXPRESS - https://drive.google.com/file/d/1KizobrOrox2G-4lW5pCE0gCmQiveawGM/view?usp=sharing
+Hipoalfalipoproteinemias e LP(a) - https://drive.google.com/file/d/1LLyUjYt3FpmSNrEB4XZ1ZWqxPRRzSce0/view?usp=sharing
+Crise tireotóxica e hipertireoidismo subclínico_COFEXPRESS - https://drive.google.com/file/d/1LOySWx1vcskk9wuEgwKZE-AL0eeUvSNs/view?usp=sharing
+Termogênicos - https://drive.google.com/file/d/1LPkbbJ2XxSH2ijQbSSft-81BDn5tFM8b/view?usp=sharing
+Lípides guidelines SBDSBEM e AHAACC_COFEXPRESS - https://drive.google.com/file/d/1LfMhl89-Z_AI6RbmNXe6lRySDMFGdInE/view?usp=sharing
+Outros tipos de diabetes - https://drive.google.com/file/d/1LpR1K9IzAqCkK5DYqhA26ZIKeft4-ple/view?usp=sharing
+Interferentes laboratoriais e situações comuns - https://drive.google.com/file/d/1MeDK6ToTzdoT2YqhHS5UvGT7FDRU_mh3/view?usp=sharing
+Fisiologia e biologia do tecido adiposo - https://drive.google.com/file/d/1Mrc3mnXoXMnT98YXqY8iCA3lLyBWHqm9/view?usp=sharing
+Hiperprolactinemia e prolactinomas - https://drive.google.com/file/d/1NJ6emN49iPIfZcFsz_xv37sS5uY1G5Ho/view?usp=sharing
+Tipos de receptores e hormônios - https://drive.google.com/file/d/1NObg4TQYlJ2279dImyX0ndqjj02DGNXa/view?usp=sharing
+Pé diabéticos - https://drive.google.com/file/d/1NTNWdZ46aqivTS0yZ_ejWm61Qc1AIHJZ/view?usp=sharing
+Doença de Cushing - https://drive.google.com/file/d/1Nh7ojODg3_24hIdTajMinVrH5X1eNjLy/view?usp=sharing
+Outras causas de tireotoxicoses - https://drive.google.com/file/d/1NjRi5skjDIoMXbBhYwB5PsKxSYdTO3B1/view?usp=sharing
+Hiperaldosteronismo primário - https://drive.google.com/file/d/1OmYXYhEj1o8nhvuMHZQCYJQ-35Q8r-Bq/view?usp=sharing
+Bases introdutórias à medicina esportiva.pdf - https://drive.google.com/file/d/1OwrnnivK_iHMJRanIzMciLMvwCCl-uyA/view?usp=sharing
+Diagnóstico, rastreio e diagnóstico diferencial no diabetes_COFEXPRESS - https://drive.google.com/file/d/1P4mGsphPt2vPCeBBpet0j9tjC5PllVZK/view?usp=sharing
+Diabetes mellitus gestacional - https://drive.google.com/file/d/1PP7h2Q8_W8VNuwsX4UGWVBgS59JbJJII/view?usp=sharing
+Hipoglicemias parte 2 etiologias e tratamento, hipoglicemias em crianças, hipoglicemias em indivíduos com diabetes - https://drive.google.com/file/d/1Po7w5Dv9w6XPjRB8wTzvhmvvInSAoHQO/view?usp=sharing
+Suplementação para performance esportiva - https://drive.google.com/file/d/1Pp6Qz_KIrKfl-0nKH-REThGiSpMMOhBu/view?usp=sharing
+Insuficiência adrenal_COFEXPRESS - https://drive.google.com/file/d/1QLhIudp87u2vzkJ_tWPd8bH1URXSwD8x/view?usp=sharing
+Hipoalfalipoproteinemias e LP(a)_COFEXPRESS - https://drive.google.com/file/d/1QjDkk_c0wmx_vYaGNWKOSXraic2sFWYQ/view?usp=sharing
+Feocromocitoma parte 1 clínica, diagnóstico, tratamento_COFEXPRESS - https://drive.google.com/file/d/1ReyV_X3t3mNZeXk0HjBik_uY6QfN6sSU/view?usp=sharing
+Síndrome de Turner - https://drive.google.com/file/d/1RjnXddCM6_8Zj-R2sCeBnriujavvvl6r/view?usp=sharing
+PDF de slides - Interferentes laboratoriais e situações comuns.pdf - https://drive.google.com/file/d/1RqW6RxIpAus_Bwt8PhQ8g0-5pDQaEHhZ/view?usp=sharing
+Tratamento medicamentoso da obesidade on-label_COFEXPRESS (Duplicata) - https://drive.google.com/file/d/1SJDpxUP1UHo1PN5DXE9NI7XsiUcaLCLj/view?usp=sharing
+Hipopituitarismo e interação entre eixos_COFEXPRESS - https://drive.google.com/file/d/1SYUvx43qxjrxCdFwpXol7gTn7suuPnsx/view?usp=sharing
+Dietas e adoçantes_COFEXPRESS - https://drive.google.com/file/d/1SkXIqKbQdBCI5I0nS8MsGP5pYwlyIMcK/view?usp=sharing
+Puberdade precoce_COFEXPRESS - https://drive.google.com/file/d/1Sqx8gByJO9KOTpGFS8eBNPhc1ovqNfo3/view?usp=sharing
+MODY - 1920x1080 4788K (1).ts - https://drive.google.com/file/d/1Suk_ZG00fSqGkxb7Ts1Q713rZO-X0Ow7/view?usp=sharing
+Menopausa e TRH_COFEXPRESS - https://drive.google.com/file/d/1T1h5yiAdeGZv88QC8IjqZApnUGqtjmQO/view?usp=sharing
+Cirurgia bariátrica 2 técnicas e complicações_COFEXPRESS - https://drive.google.com/file/d/1T8f-2nOpAidPcx2nGAo2rjog6SHaFzHi/view?usp=sharing
+Pré-diabetes - https://drive.google.com/file/d/1TVPpdItMOmK95PZNhgyOoba2Lw0a0xuE/view?usp=sharing
+Hipotireoidismo - https://drive.google.com/file/d/1TcmkQfjz0eXN6EO7aKfYhKtbcbHmuItO/view?usp=sharing
+Emergências no diabetes - https://drive.google.com/file/d/1UO2om6wQ7UXF1cn5d5ZG54BsRDm-V-e2/view?usp=sharing
+Introdução à pediatria_COFEXPRESS - https://drive.google.com/file/d/1UniNf9b0S-3zeG2g2E8Of5aa0UtUa5tm/view?usp=sharing
+Fisiologia tireoidiana_COFEXPRESS - https://drive.google.com/file/d/1VGYkcdoXPoOspoAT4WdvsVNTrMMPRx6Z/view?usp=sharing
+Onboardings - Matheus Meireles - https://drive.google.com/file/d/1WOfiBA8cIiQXyDjDXvU3kAqt6CNhTkqi/view?usp=sharing
+Feocromocitoma parte 1 clínica, diagnóstico, tratamento - https://drive.google.com/file/d/1WaJI1ahrOe_VAGKjJvR_jogq5piqKmsw/view?usp=sharing
+MODY - https://drive.google.com/file/d/1WqD6LNxq1PY54NwaogCFrhesYHdEppQ0/view?usp=sharing
+MODY_COFEXPRESS - https://drive.google.com/file/d/1WrLinYgtPFHyK64pqVcEnitn8XqsInFt/view?usp=sharing
+Diabetes mellitus tipo 1 parte 2 - https://drive.google.com/file/d/1Wz_YKfTskhRLqGiyD-dsVNxfY6IO2_nC/view?usp=sharing
+Lípides guidelines SBDSBEM e AHAACC - https://drive.google.com/file/d/1X_3eUN0vw--ockS5bnQewILi5xYwk47Y/view?usp=sharing
+NEM-2_COFEXPRESS - https://drive.google.com/file/d/1Xh1JA3nuPyGofHDFLLI54zSJNCb4kfgJ/view?usp=sharing
+Menopausa e TRH parte 2 IOP, terapias não hormonais na menopausa, desejo sexual hipoativo - https://drive.google.com/file/d/1Xt0asMsYSs0zzbAi9T8Am4WoIupdPK03/view?usp=sharing
+Diagnóstico, rastreio e diagnóstico diferencial no diabetes - https://drive.google.com/file/d/1XuSsJDgetkWVkAKgFsztCXPblExKWhXe/view?usp=sharing
+Hipopituitarismo e interação entre eixos - https://drive.google.com/file/d/1XznNt_YUN7tN56fAVkvaBHdnuUP45lPY/view?usp=sharing
+Menopausa e TRH parte 1 clínica, indicações e contraindicações, tratamento - https://drive.google.com/file/d/1YBfXmD5qKhcCaUjN21px9FZMV1rzeyPG/view?usp=sharing
+Fisiologia tireoidiana - https://drive.google.com/file/d/1YC-8hJRUL92ZlTw5uyaLx1KvwWygXMze/view?usp=sharing
+PDF de slides - Fisiologia e biologia do tecido adiposo.pdf - https://drive.google.com/file/d/1YECPJgnchRPRyHKXKXISxDU7IFSNxgK7/view?usp=sharing
+Diabetes mellitus tipo 1 parte 2_COFEXPRESS - https://drive.google.com/file/d/1YGt7sTcgZ3YxsVV9v4Lbq94ZRsi1M9Wi/view?usp=sharing
+Tecnologias em diabetes_COFEXPRESS - https://drive.google.com/file/d/1YlBz-S5EfXZG4dcwbAOt36TBpgIHdago/view?usp=sharing
+Introdução à genética_Cofexpress - https://drive.google.com/file/d/1Z1JvponuFhYFUrQuTdw28uIdLevPL0an/view?usp=sharing
+Obesidade sindrômica e monogênica_COFEXPRESS - https://drive.google.com/file/d/1ZWYbsD9cT4CmtAK0y_m3PsM2tKOWQYPq/view?usp=sharing
+Lípides drogas, efeitos colaterais e interações_COFEXPRESS - https://drive.google.com/file/d/1_MhvaS_wLACoHNbQQ-29yqIgJJqVtNaA/view?usp=sharing
+Diabetes mellitus tipo 1 parte 1 - https://drive.google.com/file/d/1aDaCpwrNCCEov9GfzH7y1LiVtSEHL30K/view?usp=sharing
+Patologias relacionadas ao treinamento tríade da mulher atleta, REDs, síndrome do overtraining - https://drive.google.com/file/d/1anxDB1HoS-IaONPLPGWR0gzEj9JvLRCB/view?usp=sharing
+Síndromes hiperandrogênicas e SOP_COFEXPRESS - https://drive.google.com/file/d/1atxAYNtCB1B_IsB5iJppHbE6ubRsZWNB/view?usp=sharing
+Obesidade e comorbidades 2 síndrome metabólica, coração e rim_COFEXPRESS - https://drive.google.com/file/d/1b8jPb61A6Um2pZSPDJPsGeg26dgYp600/view?usp=sharing
+Nódulos tóxicos e bócio multinodular _COFEXPRESS - https://drive.google.com/file/d/1bTeBD8wPsMtGa0DXTmoa2E-mVQwqt9r4/view?usp=sharing
+Sarcopenia - https://drive.google.com/file/d/1bXedIIxOD4H9eQCmnSrnb-S7xKaGUJ58/view?usp=sharing
+Crescimento e baixa estatura - https://drive.google.com/file/d/1bvXECExQ1HFLI1vEZS4IIDcXHnPv15Sm/view?usp=sharing
+Triagem neonatal_COFEXPRESS - https://drive.google.com/file/d/1c8-pzrm0ARyE7q-eGWkh_zPub_CUgOfH/view?usp=sharing
+Atividade física recomendações gerais_COFEXPRESS - https://drive.google.com/file/d/1cLGCxKGtTRnwyj98AR_SAFugbtKpVI-4/view?usp=sharing
+SIADH e diferenciais de hiponatremia - https://drive.google.com/file/d/1cWPJ-j8GD7u6LqldrM_FNV-b_Ye7go2B/view?usp=sharing
+Vitamina D_COFEXPRESS - https://drive.google.com/file/d/1d4UMGgWCLnIDzg3_l3zfAVACyUbauFdK/view?usp=sharing
+Hiperparatireoidismo primário e diagnóstico diferencial de hipercalcemias_COFEXPRESS - https://drive.google.com/file/d/1dRAwVM8wSzLRf9bN9GMNTop_14Lenb0p/view?usp=sharing
+Obesidade sindrômica e monogênica - https://drive.google.com/file/d/1dRdc_c6BZ9pcqYaeLemCahbxE1z--PpU/view?usp=sharing
+PDF de slides - Fisiologia do ciclo menstrual.pdf - https://drive.google.com/file/d/1dZvKm8PM4XkFZlX3a7oiUkGcNFOD2YYK/view?usp=sharing
+Onboarding - Ettore - https://drive.google.com/file/d/1dbnCcmNm0TSfO6dNfPDrHZaNOc7bQgP1/view?usp=sharing
+Hiperplasia adrenal congênita 2 outras formas_COFEXPRESS - https://drive.google.com/file/d/1dgvq1ovfilcgJj01cvTHBTooHibbJcTe/view?usp=sharing
+Complicações Microvasculares – Doença Renal do Diabetes - https://drive.google.com/file/d/1eLzn9BgH76ZDfQjjjjQzT_a7-44CgPTS/view?usp=sharing
+SIADH e diferenciais de hiponatremia_COFEXPRESS - https://drive.google.com/file/d/1es2etsrbE1ghIn6F84E7GllGTJNF0SVx/view?usp=sharing
+Incidentaloma adrenal - https://drive.google.com/file/d/1f3YasgG_oPgz8migdtfBMk3AMx16yqcG/view?usp=sharing
+Fisiologia do ciclo menstrual - https://drive.google.com/file/d/1ff44IrBp66W-QuXgcmCsj93ldxXHkmjX/view?usp=sharing
+Diabetes mellitus gestacional - Continuação - https://drive.google.com/file/d/1frdhMD7no5mk92nbQ94oHp-Za_7-IhxB/view?usp=sharing
+Acromegalia - https://drive.google.com/file/d/1gJqkacK96rdLEQh11EK5dKgIQ7WaJqEM/view?usp=sharing
+Osteoporose parte 2 tratamento e complicações - https://drive.google.com/file/d/1gV_ijiuH5DwraWUezi8BTSPtzidNn6II/view?usp=sharing
+Ginecomastia_COFEXPRESS - https://drive.google.com/file/d/1h2a64LUwWehl5JuGU420FWRtm_KMPnyN/view?usp=sharing
+Obesidade e metabolismo resistencia insulinica, DLP, DM, SOP _COFEXPRESS - https://drive.google.com/file/d/1h374zt6u0LX4ZtyzbzOdzerOsdBenJdD/view?usp=sharing
+Hipoglicemias parte 1 fisiopatologia, investigação, testes diagnósticos_COFEXPRESS - https://drive.google.com/file/d/1hER6R9NHxxInir0ohigHJQr6_0nfHQU6/view?usp=sharing
+PDF de slides - Introdução à genética.pdf - https://drive.google.com/file/d/1hZlXRFgTVo_azmpVGrwpDgqGOqx3cEv4/view?usp=sharing
+Introdução à pediatria - https://drive.google.com/file/d/1hctVjTp__w6VLOtS2GGpefZ6kOrdNW7Q/view?usp=sharing
+Tratamento medicamentoso da obesidade on-label - 1920x1080 4836K_2.ts - https://drive.google.com/file/d/1hdYjrY1nLphkG1EnajkOAPJ5ebvpgtKM/view?usp=sharing
+Suplementação para performance esportiva_COFEXPRESS - https://drive.google.com/file/d/1hfAz85PWnK3SeHVJmTZ37T5bPIfL5UrK/view?usp=sharing
+MODY_COFEXPRESS (Duplicata) - https://drive.google.com/file/d/1iOGqtFJzmjIBiyRFiRTjJt4ha7YpIzuH/view?usp=sharing
+Atraso puberal_COFEXPRESS - https://drive.google.com/file/d/1iYsAdWK6V5H-wEqQJtBioNSii9ameISa/view?usp=sharing
+PDF de slides - Fisiologia do metabolismo lipídico.pdf - https://drive.google.com/file/d/1jBzl1vAwPw4__vxJEn3DIpA_j9ATXqre/view?usp=sharing
+Complicações microvasculares neuropatia diabética - https://drive.google.com/file/d/1jZnERx17gauHhQ7chulzuv-qE4NYw8th/view?usp=sharing
+Tratamento medicamentoso da obesidade off-label_COFEXPRESS - https://drive.google.com/file/d/1k83hbFI5PBlUepA52oh07Gft9rlsOrEw/view?usp=sharing
+Hiperplasia adrenal congênita 1 deficiência da 21 hidroxilase - https://drive.google.com/file/d/1kJvFyPznv_-8CR0BBUC_hpwIpJzsDULR/view?usp=sharing
+Hiperandrogenismo pós menopausa_COFEXPRESS - https://drive.google.com/file/d/1kfXNdnRFhisylAkwWkdzguQR9mgkgMuP/view?usp=sharing
+Introdução à genética - https://drive.google.com/file/d/1kpPq0JltJHk1VOPZcjWi89bQCVlHCypY/view?usp=sharing
+Hiperparatireoidismo primário e diagnóstico diferencial de hipercalcemias - https://drive.google.com/file/d/1lSFXbYCjixhI7wletwaSIJezKEwRFMgz/view?usp=sharing
+Diabetes mellitus gestacional_COFEXPRESS - https://drive.google.com/file/d/1lbMRsgxBJyvbDxscAL31iX-46lEhXHae/view?usp=sharing
+Doença de Cushing_COFEXPRESS - https://drive.google.com/file/d/1lcZg6tDsDVnoGwwfsYhq8jxisRwNrTS6/view?usp=sharing
+Onboarding - Apresentação QBank - Gustavo Boog - https://drive.google.com/file/d/1lfYUd2mVH_QpN20Zf9BdbKk5YnbK1b5B/view?usp=sharing
+Fisiologia do metabolismo glicêmico_COFEXPRESS - https://drive.google.com/file/d/1lt2MJNDn_Jp8B6_XJb9NVqvg9uy7hmyc/view?usp=sharing
+Hipertrigliceridemias_COFEXPRESS - https://drive.google.com/file/d/1m0XUAxnnvIWjR0b00q0jav5oZfv0coLc/view?usp=sharing
+Tipos de receptores e hormônios_Cofexpress - https://drive.google.com/file/d/1mjG8R4XTFJ1JNDhQ0mtuHXzzy-8Wyn1L/view?usp=sharing
+Complicações Microvasculares – Doença Renal do Diabetes_COFEXPRESS - https://drive.google.com/file/d/1mmhL27UX2b1-UnqLeSK04BDjkWTnUY0O/view?usp=sharing
+Insuficiência adrenal - https://drive.google.com/file/d/1mpsTEm6FFQIWuYU34XdH3R831Zulmk6k/view?usp=sharing
+Hiperlipidemias primárias e secundárias - https://drive.google.com/file/d/1nefufQ0V_ha8SaAd24XkfhIg-wfzAWgi/view?usp=sharing
+PDF de slides - Introdução à pediatria.pdf - https://drive.google.com/file/d/1on-VNez3GJLYkAicbSGhAxsB4v-tsbqE/view?usp=sharing
+Orbitopatia de Graves - https://drive.google.com/file/d/1p1iUvJjuAKEIoEr0gC109ZgB_CFB0EW7/view?usp=sharing
+Bases introdutórias á medicina esportiva_COFEXPRESS - https://drive.google.com/file/d/1p6ATQLdS9uiss1ziKPomRAQkx2YX5sp-/view?usp=sharing
+Fisiologia adrenal e esteroidogênese - https://drive.google.com/file/d/1pb_BpgSw7cZlX3XKKxViE4xG-pebU85y/view?usp=sharing
+Tecnologias em diabetes - https://drive.google.com/file/d/1pfShPJVhpD3N-GCOjtYm33vOe7f2RC3f/view?usp=sharing
+Fisiologia e tumorigênese em neuroendocrinologia - https://drive.google.com/file/d/1ppNiAuxkSwRKiOryBk-ZDaFoPg-Yjw5Z/view?usp=sharing
+Câncer medular de tireoide - https://drive.google.com/file/d/1pyM8--IKGvZ8MQM77K7Cp8uEFvNLuEs-/view?usp=sharing
+Triagem neonatal - https://drive.google.com/file/d/1pz9Wo5yc_eK-RQN_ZsptfN35JT_lIv50/view?usp=sharing
+Ginecomastia - https://drive.google.com/file/d/1q-1y72HKY32ordoWQGYmVTyyH0SkPmvt/view?usp=sharing
+Obesidade e comorbidades parte 1 pulmao, figado, cancer - https://drive.google.com/file/d/1q84wq35TtMssFY7DPXWzCfO851NaSCwA/view?usp=sharing
+Hiperplasia adrenal congênita 2 outras formas - https://drive.google.com/file/d/1qNHGXqHbMFdY3JORGR4tVYSP_t5xXJAF/view?usp=sharing
+Vias do apetite - https://drive.google.com/file/d/1qaOFirPDgo-tObOQ74kW03AtKNgZhJYf/view?usp=sharing
+Distúrbios do desenvolvimento sexual (DDS)_COFEXPRESS - https://drive.google.com/file/d/1qsQGHGlzzcBpYWv2nRJ2guxNrL2m77mT/view?usp=sharing
+Hipotireoidismo subclínico e coma mixedematoso - https://drive.google.com/file/d/1rZec0FDQrxXBn9EIbX16piYoQHVKEnie/view?usp=sharing
+Infertilidade - https://drive.google.com/file/d/1rq3bLblHIK-YqZ0biMMQIk-eHQE8QvO_/view?usp=sharing
+Infertilidade_COFEXPRESS - https://drive.google.com/file/d/1rqJ-T6e6W0Bc_zlpkcbKifj4PgeNigZR/view?usp=sharing
+Câncer medular de tireoide_COFEXPRESS - https://drive.google.com/file/d/1sO-QU1JmxYWLxt4FVN68rlhZ-LysoIno/view?usp=sharing
+Nódulos tóxicos e bócio multinodular - https://drive.google.com/file/d/1sOKSU5hJzQ0OkwGHdCGX1T8beM-5ZqSP/view?usp=sharing
+Amenorreia primária (reegravação) - https://drive.google.com/file/d/1sUIvtOKVpTkytiFa3wIEVUGg_tIfALZs/view?usp=sharing
+Interferentes laboratoriais e situações comuns_COFEXPRESS - https://drive.google.com/file/d/1uGX_aQbPM45mgNVwk1jhrEmbjCb9CxR8/view?usp=sharing
+Osteoporose parte 2 tratamento e complicações_COFEXPRESS - https://drive.google.com/file/d/1uQ-Q9VlK_LNRAxlDWV2cPLZDweyfvtlK/view?usp=sharing
+Hiperaldosteronismo primário_COFEXPRESS - https://drive.google.com/file/d/1udE7hwUS990aHEDQFBopwr4mnT-seMY5/view?usp=sharing
+Hiperplasia adrenal congênita 1 deficiência da 21 hidroxilase_COFEXPRESS - https://drive.google.com/file/d/1uoDOPBA973OwRIJeX2Ajk0fjAdPlsUjL/view?usp=sharing
+Fisiologia adrenal e esteroidogênese_COFEXPRESS - https://drive.google.com/file/d/1uto8vEEivc3qL_J2ZotzP-CvEd5mrYj5/view?usp=sharing
+PDF de slides - Fisiologia, remodelação óssea, DXA.pdf - https://drive.google.com/file/d/1vCyrF-esPqUWt1S3m-y9RMTy_4YvY-rK/view?usp=sharing
+Doença de Graves - https://drive.google.com/file/d/1vE82dZtC6VSLEzLLk7rqFI80qqoJcUak/view?usp=sharing
+Dietas e adoçantes - https://drive.google.com/file/d/1vH_CfP2em_ZbbWaShkw8a7gtGfiu_6YC/view?usp=sharing
+Anticoncepcionais - https://drive.google.com/file/d/1vOAn58-S4LG8Il-EFjw7ohz9iAVGi6qT/view?usp=sharing
+Osteoporose parte 1 avaliação, diagnóstico e OP secundária - https://drive.google.com/file/d/1vWqe9U9oDvo18mQnMpMXEk6R1SepZYHg/view?usp=sharing
+Hipotireoidismo subclínico e coma mixedematoso_COFEXPRESS - https://drive.google.com/file/d/1vkV2k5AdiiZCJ4bcgbAZxtGHRJKyLdlI/view?usp=sharing
+Hipoparatireoidismo e hipocalcemia - https://drive.google.com/file/d/1vq55ZRFX9WBPrzDfOL97IOXwZjizxuas/view?usp=sharing
+Fisiologia e tumorigênese em neuroendocrinologia_COFEXPRESS - https://drive.google.com/file/d/1wKyU5KWJnbWz38h5qKc2Z4GG-h7OG1EL/view?usp=sharing
+Outras causas de tireotoxicoses_COFEXPRESS - https://drive.google.com/file/d/1wXfP-k8S8b3h3x_cNGPKeVvgs4Vks6g6/view?usp=sharing
+Bases introdutórias á medicina esportiva - https://drive.google.com/file/d/1wdpFfyvmb4-K1Gcez-Ac7VAz_alBFVXk/view?usp=sharing
+Apresentação do TEEM 2026 - https://drive.google.com/file/d/1wzrgI-Usr9rO68CJZxcXGk_ytke3m3_Y/view?usp=sharing
+Fisiologia do metabolismo lipídico - https://drive.google.com/file/d/1x5i3dK9wqOAYbU9sO9l2CG8yQh1eOKHT/view?usp=sharing
+Hiperglicemia hospitalar_COFFEXPRESS - https://drive.google.com/file/d/1xSCPHCRkMT3OofFGvekZPpPVR_gWo2kj/view?usp=sharing
+Cirurgia bariátrica 1 indicações, contraindicações e benefícios - https://drive.google.com/file/d/1zCRO8W6cIiG3s9etdAND5b_V5EQwBdMi/view?usp=sharing
+Vitamina D - https://drive.google.com/file/d/1zIslNTVANPQLGyNzg0hfhNZyHiJrWsXY/view?usp=sharing
+Lipodistrofias_COFEXPRESS - https://drive.google.com/file/d/1zSD9xrODoKK9CxpTIY7Ui8O3_FEfFJBU/view?usp=sharing
+Outros tipos de diabetes_COFEXPRESS - https://drive.google.com/file/d/1zVp5K4-GahSKFgAK6XH0bBKJCpLR9vk7/view?usp=sharing
+Obesidade e comorbidades parte 1 pulmão, fígado, câncer_COFEXPRESS - https://drive.google.com/file/d/1zWjueB0wmidqWwg_w_bAT-7dLaHjXMFj/view?usp=sharing
+Acromegalia_COFEXPRESS - https://drive.google.com/file/d/1zboCEOpCAPSpVpZRL8RG_SLL6ho6QQSL/view?usp=sharing
+Lípides drogas, efeitos colaterais e interações - https://drive.google.com/file/d/1zh_MzGRfpuiiGY1RWzd37hsR1nxvsOjB/view?usp=sharing
+`;
+
+        // --- PROCESSAMENTO E MAPA DE LINKS ---
+        const linkMap = {};
+        
+        // Função para normalizar strings (remover acentos, minúsculas, etc) para comparação
+        function normalizeKey(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        // Popular o mapa de links
+        rawLinks.trim().split('\n').forEach(line => {
+            const parts = line.split(' - https');
+            if (parts.length >= 2) {
+                const title = parts[0].trim();
+                const url = 'https' + parts[1].trim();
+                // Armazenamos com chave normalizada para facilitar a busca
+                linkMap[normalizeKey(title)] = url;
+            }
+        });
+
+        // Função para encontrar o melhor link
+        function findLink(title, type) {
+            // type: 'cofexpress' (curta), 'standard' (longa), 'material' (pdf)
+            
+            // Remove prefixos comuns para busca
+            let coreTitle = title.replace(/^Aula \d+ - (CofExpress: )?/, "").replace(/^PDF de Slides - /, "").trim();
+            
+            // Tenta encontrar chaves específicas no mapa
+            let targetKey = "";
+            
+            if (type === 'material') {
+                // Tenta achar algo com "PDF" ou o nome exato do material
+                // Muitas vezes o material no drive tem o mesmo nome da aula ou "PDF de slides - ..."
+                // Vamos tentar variações
+                const attempts = [
+                    `PDF de slides - ${coreTitle}.pdf`,
+                    `PDF de slides - ${coreTitle}`,
+                    `${coreTitle}.pdf`,
+                    coreTitle
+                ];
+                
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else if (type === 'cofexpress') {
+                // Prioriza links com "_COFEXPRESS"
+                const attempts = [
+                    `${coreTitle}_COFEXPRESS`,
+                    `${coreTitle}_Cofexpress`,
+                    `${coreTitle} _COFEXPRESS`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else { // standard
+                // Prioriza links SEM "_COFEXPRESS" (ou tenta achar o nome limpo)
+                const attempts = [
+                    coreTitle,
+                    `${coreTitle} - 1920x1080`, // As vezes tem sulfixo de video
+                    `${coreTitle} (reegravação)`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+                
+                // Se não achou, tenta achar qualquer coisa que contenha o nome core mas NAO tenha cofexpress, se possível
+                // Iteração manual no mapa se necessário (custoso, vamos evitar por enquanto e usar placeholder)
+            }
+
+            return ""; // Retorna vazio se não achar
+        }
+
+        // Função auxiliar para extrair ID ou retornar nulo
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const PLACEHOLDER_VIDEO = '1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU'; // ID genérico
+        const PLACEHOLDER_LINK = '#'; // Link genérico
+
+        function createSubmodule(subTitle, aulaTitles, matTitles) {
+            const videos = aulaTitles.map(title => {
+                const isCof = title.toLowerCase().includes('cofexpress');
+                const foundLink = findLink(title, isCof ? 'cofexpress' : 'standard');
+                const videoId = extractIdFromGoogleDriveLink(foundLink) || PLACEHOLDER_VIDEO;
+                
+                return {
+                    id: videoId,
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-play-circle'
+                };
+            });
+
+            const materials = matTitles.map(title => {
+                const foundLink = findLink(title, 'material');
+                return {
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-file-pdf',
+                    link: foundLink || PLACEHOLDER_LINK
+                };
+            });
+
+            return { title: subTitle, videos, materials };
+        }
+
+        const modulesData = [];
+        const populate = (id, title, subs) => {
+            const m = { id, title, videos: [], materials: [] };
+            subs.forEach(s => {
+                const obj = createSubmodule(s.t, s.a, s.m);
+                m.videos.push({ type: 'category', title: obj.title, items: obj.videos });
+                m.materials.push({ type: 'category', title: obj.title, items: obj.materials });
+            });
+            modulesData.push(m);
+        };
+
+        // --- DEFINIÇÃO DOS MÓDULOS ---
+        
+        // M01 Onboarding
+        populate('mod_01', 'Módulo 01 - Onboarding', [
+            { t: 'Onboarding 2025 - História da Medcof', a: ['Aula 01 - CofExpress: Onboarding 2025 - História da Medcof', 'Aula 02 - Onboarding 2025 - História da Medcof'], m: ['PDF de Slides - Onboarding 2025 - História da Medcof'] },
+            { t: 'Onboarding 2025 - Apresentação da plataforma Medcof Plus', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação da plataforma Medcof Plus', 'Aula 02 - Onboarding 2025 - Apresentação da plataforma Medcof Plus'], m: ['PDF de Slides - Onboarding 2025 - Apresentação da plataforma Medcof Plus'] },
+            { t: 'Onboarding 2025 - Apresentação plataforma QBANK', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação plataforma QBANK', 'Aula 02 - Onboarding 2025 - Apresentação plataforma QBANK'], m: ['PDF de Slides - Onboarding 2025 - Apresentação plataforma QBANK'] },
+            { t: 'Onboarding - TEEM', a: ['Aula 01 - CofExpress: Onboarding - TEEM', 'Aula 02 - Onboarding - TEEM'], m: ['PDF de Slides - Onboarding - TEEM'] }
+        ]);
+
+        // M02 Diabetes
+        const m02_names = [
+            'Fisiologia do metabolismo glicêmico', 'Diagnóstico, rastreio e diagnóstico diferencial no diabetes', 'Pré-diabetes', 'MODY', 'Lipodistrofias', 'Outros tipos de diabetes',
+            'Diabetes mellitus tipo 1: parte 1', 'Diabetes mellitus tipo 1: parte 2', 'Diabetes mellitus gestacional', 'Tecnologias em diabetes',
+            'Complicações microvasculares: neuropatia diabética', 'Complicações Microvasculares – Doença Renal do Diabetes', 'Pé diabético',
+            'Hipoglicemias parte 1: fisiopatologia, investigação, testes diagnósticos', 'Hipoglicemias parte 2: etiologias e tratamento, hipoglicemias em crianças',
+            'Emergências no diabetes', 'Hiperglicemia hospitalar', 'Tratamento diabetes: anti-diabéticos', 'Tratamento diabetes: insulinas', 'Grandes trials e CVOTs',
+            'Complicações microvasculares: retinopatia diabética', 'Comorbidades relacionadas ao diabetes parte 1: risco cardiovascular',
+            'Comorbidades relacionadas ao diabetes parte 2: DHGM e miscelânea', 'Diabetes em situações especiais: idosos, crianças e remissão'
+        ];
+        populate('mod_02', 'Módulo 02 - Diabetes', m02_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M03 Tireóide
+        const m03_names = [
+            'Fisiologia tireoidiana', 'Interferentes laboratoriais e situações comuns', 'Doença de Graves', 'Orbitopatia de Graves', 'Crise tireotóxica e hipertireoidismo subclínico',
+            'Nódulos tóxicos e bócio multinodular', 'Outras causas de tireotoxicoses', 'Hipotireoidismo', 'Hipotireoidismo subclínico e coma mixedematoso', 'Câncer medular de tireoide',
+            'NEM-2', 'Tireoide e gestação', 'Nódulo de tireoide parte 1: avaliação inicial, PAAF', 'Nódulo de tireoide parte 2: citologia, teste molecular, manejo de nódulos benignos',
+            'Câncer diferenciado de tireoide parte 1: introdução, patogênese, subtipos, tratamento', 'Câncer diferenciado de tireoide parte 2: radioiodoterapia, seguimento e estratificação', 'Câncer anaplásico de tireoide'
+        ];
+        populate('mod_03', 'Módulo 03 - Tireóide', m03_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M04 Obesidade
+        const m04_names = [
+            'Vias do apetite', 'Fisiologia e biologia do tecido adiposo', 'Diagnóstico da obesidade e avaliação da composição corporal', 'Dietas e adoçantes', 'Transtornos alimentares',
+            'Obesidade sindrômica e monogênica', 'Tratamento medicamentoso da obesidade on-label', 'Tratamento medicamentoso da obesidade off-label',
+            'Cirurgia bariátrica 1: indicações, contraindicações e benefícios', 'Cirurgia bariátrica 2: técnicas e complicações', 'Obesidade e comorbidades parte 1: pulmão, fígado, câncer',
+            'Obesidade e comorbidades 2: síndrome metabólica, coração e rim', 'Obesidade e metabolismo: resistência insulínica, DLP, DM, SOP', 'Microbiota intestinal',
+            'Obesidade e eixos endócrinos', 'Obesidade hipotalâmica e pseudotumor cerebral'
+        ];
+        populate('mod_04', 'Módulo 04 - Obesidade', m04_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M05 Adrenal
+        const m05_names = [
+            'Fisiologia adrenal e esteroidogênese', 'Insuficiência adrenal', 'Incidentaloma adrenal', 'Hiperaldosteronismo primário',
+            'Feocromocitoma parte 1: clínica, diagnóstico, tratamento', 'Feocromocitoma parte 2: genética', 'Hiperplasia adrenal congênita 1: deficiência da 21 hidroxilase',
+            'Hiperplasia adrenal congênita 2: outras formas', 'Bônus: atualização em tratamento para HAC', 'Síndrome de Cushing ACTH independente e CA adrenal'
+        ];
+        populate('mod_05', 'Módulo 05 - Adrenal', m05_names.map(n => ({ 
+            t: n, 
+            a: n.includes('Bônus') ? [`Aula 01 - ${n}`] : [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], 
+            m: [`PDF de Slides - ${n}`] 
+        })));
+
+        // M06 Lípides
+        const m06_names = [
+            'Fisiologia do metabolismo lipídico', 'Hiperlipidemias primárias e secundárias', 'Lípides: drogas, efeitos colaterais e interações',
+            'Lípides: guidelines SBD/SBEM e AHA/ACC', 'Hipertrigliceridemias', 'Hipoalfalipoproteinemias e LP(a)', 'Bônus: Diretriz brasileira de dislipidemia da SBC', 'Dislipidemia na gestação'
+        ];
+        populate('mod_06', 'Módulo 06 - Lípides', m06_names.map(n => ({ 
+            t: n, 
+            a: n.includes('Bônus') ? [`Aula 01 - ${n}`] : [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], 
+            m: [`PDF de Slides - ${n}`] 
+        })));
+
+        // M07 Gônadas
+        const m07_names = [
+            'Fisiologia do ciclo menstrual', 'Anticoncepcionais', 'Amenorreia primária', 'Síndromes hiperandrogênicas e SOP', 'Infertilidade',
+            'Menopausa e TRH parte 1: clínica, indicações e contraindicações, tratamento', 'Menopausa e TRH parte 2: IOP, terapias não hormonais na menopausa',
+            'Hiperandrogenismo pós menopausa', 'Hipogonadismo masculino', 'Transgênero', 'Uso abusivo de anabolizantes e gestrinona', 'Lipedema'
+        ];
+        populate('mod_07', 'Módulo 07 - Gônadas', m07_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M08 Neuroendocrinologia
+        const m08_names = [
+            'Fisiologia e tumorigênese em neuroendocrinologia', 'Hipopituitarismo e interação entre eixos', 'Hiperprolactinemia e prolactinomas', 'Acromegalia',
+            'Doença de Cushing', 'Incidentaloma hipofisário, adenoma clinicamente não funcionante e tumores agressivos', 'Deficiência de AVP',
+            'SIADH e diferenciais de hiponatremia', 'Diagnóstico diferencial de patologias selares', 'Perioperatório em neuroendocrinologia'
+        ];
+        populate('mod_08', 'Módulo 08 - Neuroendocrinologia', m08_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M09 Endocrinopediatria
+        const m09_names = [
+            'Introdução à pediatria', 'Puberdade precoce', 'Atraso puberal', 'Crescimento e baixa estatura', 'Ginecomastia', 'Distúrbios do desenvolvimento sexual (DDS)',
+            'Síndrome de Turner', 'Micropênis e criptorquidia', 'Triagem neonatal', 'Obesidade infantil e lípides', 'Tireoide e endocrinopediatria'
+        ];
+        populate('mod_09', 'Módulo 09 - Endocrinopediatria', m09_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M10 Osteometabolismo
+        const m10_names = [
+            'Fisiologia, remodelação óssea, DXA', 'Osteoporose parte 1: avaliação, diagnóstico e OP secundária', 'Osteoporose parte 2: tratamento e complicações',
+            'Hiperparatireoidismo primário e diagnóstico diferencial de hipercalcemias', 'Hipoparatireoidismo e hipocalcemia', 'Raquitismo e osteomalácia',
+            'Vitamina D', 'Osteogênese imperfeita', 'Paget'
+        ];
+        populate('mod_10', 'Módulo 10 - Osteometabolismo', m10_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M11 Endocrinologia Básica
+        const m11_names = ['Introdução à genética', 'Tipos de receptores e hormônios', 'Síndromes poliglandulares autoimunes', 'NEM-1'];
+        populate('mod_11', 'Módulo 11 - Endocrinologia Básica', m11_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+        // M12 Medicina Esportiva
+        const m12_names = [
+            'Bases introdutórias à medicina esportiva', 'Atividade física: recomendações gerais', 'Suplementação para performance esportiva', 'Termogênicos',
+            'Sarcopenia', 'Imunologia do atleta', 'Patologias relacionadas ao treinamento: tríade da mulher atleta, REDs',
+            'Atividade física em situações específicas (diabetes, dislipidemias, osteoporose)'
+        ];
+        populate('mod_12', 'Módulo 12 - Medicina Esportiva', m12_names.map(n => ({ t: n, a: [`Aula 01 - CofExpress: ${n}`, `Aula 02 - ${n}`], m: [`PDF de Slides - ${n}`] })));
+
+
+        // --- FUNÇÕES DE UI ---
+        function loadVideo(videoId, lessonTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (videoId && videoId !== PLACEHOLDER_VIDEO) {
+                p.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else {
+                p.src = ''; // Sem vídeo disponível
+            }
+            t.textContent = lessonTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = videoId;
+            const cur = document.querySelector(`[data-id="${videoId}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (link && link !== PLACEHOLDER_LINK) {
+                const preview = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                p.src = preview;
+            } else {
+                p.src = '';
+            }
+            t.textContent = materialTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = link;
+            const cur = document.querySelector(`[data-id="${link}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function renderModuleContent(moduleId) {
+            const vc = document.getElementById('videosContainer');
+            const mc = document.getElementById('materialsContainer');
+            const t = document.getElementById('lessonTitle');
+            
+            const m = modulesData.find(mod => mod.id === moduleId);
+            if (!m) return;
+
+            let vHtml = '';
+            let mHtml = '';
+            let first = null;
+
+            m.videos.forEach(cat => {
+                vHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                    if (!first && item.id !== PLACEHOLDER_VIDEO) first = { type: 'video', ...item }; // Prioriza item com link real
+                    else if (!first) first = { type: 'video', ...item };
+
+                    vHtml += `<div class="material-item" onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                vHtml += `</div></details>`;
+            });
+
+            m.materials.forEach(cat => {
+                mHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                     mHtml += `<div class="material-item" onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                mHtml += `</div></details>`;
+            });
+
+            vc.innerHTML = vHtml;
+            mc.innerHTML = mHtml;
+
+            const fd = vc.querySelector('details');
+            if (fd) fd.open = true;
+
+            if (first) {
+                if (first.type === 'video') loadVideo(first.id, first.title);
+            } else {
+                document.getElementById('contentPlayer').src = '';
+                t.textContent = 'Selecione um item';
+            }
+        }
+
+        const sel = document.getElementById('moduleSelector');
+        modulesData.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.title;
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', (e) => renderModuleContent(e.target.value));
+        if (modulesData.length > 0) {
+            sel.value = modulesData[7].id;
+            renderModuleContent(modulesData[7].id);
+        }
+    </script>
+</body>
+</html>

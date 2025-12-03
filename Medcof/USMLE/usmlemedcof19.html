@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Vídeo-Aula - USMLE</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a202c; color: #e2e8f0; }
+        .selected-lesson { background-color: #4299e1; border: 2px solid #63b3ed; }
+        .item-thumbnail-placeholder { width: 80px; height: 45px; background-color: #4a5568; display: flex; justify-content: center; align-items: center; border-radius: 0.375rem; flex-shrink: 0; }
+        .item-thumbnail-placeholder i { font-size: 1.8rem; color: #CBD5E0; }
+        
+        /* Estilos dos menus suspensos (Accordion) */
+        details { background-color: #2d3748; border-radius: 0.375rem; overflow: hidden; margin-bottom: 0.75rem; }
+        summary { padding: 0.5rem 0.75rem 0.5rem 2rem; cursor: pointer; font-weight: 600; color: #e2e8f0; position: relative; list-style: none; user-select: none; transition: background-color 0.2s; }
+        summary:hover { background-color: #4a5568; }
+        summary::-webkit-details-marker { display: none; }
+        summary::before { content: '\25B6'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); transition: transform 0.2s; color: #a0aec0; font-size: 0.7rem; }
+        details[open] summary::before { transform: translateY(-50%) rotate(90deg); }
+        
+        .material-item { display: flex; align-items: center; gap: 0.75rem; background-color: #4a5568; border-radius: 0.375rem; padding: 0.5rem; margin-top: 0.5rem; cursor: pointer; transition-colors: 0.2s; margin-left: 0.5rem; margin-right: 0.5rem; }
+        .material-item:hover { background-color: #2d3748; }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Medcof USA - USMLE</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs md:max-w-md"></select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-md" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um módulo e uma aula</h2>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4 flex-grow">
+                <h3 class="text-lg font-bold mb-4 text-white"><i class="fas fa-book mr-2"></i>Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3 overflow-y-auto max-h-[400px] hide-scrollbar"></div>
+            </div>
+        </section>
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full flex flex-col">
+            <h3 class="text-lg font-bold mb-4 text-white"><i class="fas fa-play-circle mr-2"></i>Aulas</h3>
+            <div id="videosContainer" class="space-y-3 mb-6 flex-grow"></div>
+        </aside>
+    </main>
+
+    <script>
+        // --- CONFIGURAÇÃO E DADOS ---
+        let selectedItemId = null;
+        const PLACEHOLDER_VIDEO = '1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU'; // ID de vídeo padrão
+        const PLACEHOLDER_MATERIAL = '1FEJnZWOPlPgCPde7vGm80sEdf0WNNZco'; // ID de PDF padrão
+
+        // Dados brutos de links fornecidos
+        const rawLinks = `
+Phakomatoses - https://drive.google.com/file/d/1-4R-F69e5DIQqUPRjD0XX1kK2rRZeyg4/view?usp=sharing
+DNA Mutations - https://drive.google.com/file/d/1-HA0hS7kAl4IIAJCxGo-d9chDh50G7gT/view?usp=sharing
+ADHD autism (1) - https://drive.google.com/file/d/1-KR4VmODtcFMzNek0RcTf4KZXv0wlSDi/view?usp=sharing
+Surface Cells - https://drive.google.com/file/d/1-Nx14C7Z-5f6fe__S4h1XFiAN2oIpbFo/view?usp=sharing
+Pulmonary Physiology Part 2n - https://drive.google.com/file/d/1-Rc_p5U4w6kquDs9HSQVcPVjV-tt2wDp/view?usp=sharing
+Informed Consent - https://drive.google.com/file/d/1-_drlm4uELll3GBuEzF56Q4jTQxtBLP0/view?usp=sharing
+Cardiac Tumors - https://drive.google.com/file/d/1-d3P7dcjD7Hu1Xk-NIm9BJRsIq9MAdTG/view?usp=sharing
+Autonomic System pt I - https://drive.google.com/file/d/10DIXv-2gHzFkZNPFj0xftRQPzew2JGwX/view?usp=sharing
+Acquired Hemolytic Disorders.mp4 - https://drive.google.com/file/d/10OlXtb_hG7UQS7m9SvhyPXtM6o9Nd5ws/view?usp=sharing
+Neuromuscular Junction Muscle Contraction pt III - https://drive.google.com/file/d/10OzaVbZaxM1UvaAgmrIpOK7zawt4v1cc/view?usp=sharing
+The HIV virus - https://drive.google.com/file/d/10RGVxPTM_SMG5O_BM34B0vUjuD5caTv-/view?usp=sharing
+Spinal Cord - https://drive.google.com/file/d/10ShY9GMLzHzHghIfRoz3yfI_YMroEtHk/view?usp=sharing
+Embryology of the Nervous System - https://drive.google.com/file/d/10_4k60ZpSBoV04QVlLIQRqG3QbDek0aj/view?usp=sharing
+HFpEF vs HFrEF - https://drive.google.com/file/d/10eOwwuwHGYOvmo0z6F9n9S9DBz7fm2mF/view?usp=sharing
+Rhabdomyolysis (7 minutes) - https://drive.google.com/file/d/10m7NqZU6Ds7e1MJ0BGtGzLXL-eg_JZG-/view?usp=sharing
+Immunotherapy and target - https://drive.google.com/file/d/10mJZ44lNKVYw_lbrNo-NYf-frj_6BJgw/view?usp=sharing
+Chronic Heart Failure - https://drive.google.com/file/d/10sw1TKC2UX6NKP4N82Mt2mQXhTc-Cg9D/view?usp=sharing
+Diagnostic Tests of Accuracy I - https://drive.google.com/file/d/11Z267kp0mTIFDxxLe8meaaMJjcRZNXB6/view?usp=sharing
+Skin neoplasia - https://drive.google.com/file/d/11i3zCkZ7tvJy1G-Z4kwc4DW0Cd89pZST/view?usp=sharing
+Medium Vessel Vasculitis - https://drive.google.com/file/d/11lG4wK4KvHzIGJpPoz3A8xUiMpI5IRiF/view?usp=sharing
+Osteoporosis - https://drive.google.com/file/d/12164VpOR-qxq2r3vdb14YuLqf0u64fyJ/view?usp=sharing
+Penile Disorders - https://drive.google.com/file/d/128q-dpaub1hF9zFLeUqOiVbDQBfUw2z4/view?usp=sharing
+Vascularization - https://drive.google.com/file/d/129j08FChOZ4kR_IMlDM5QjQ5uEQuRjxJ/view?usp=sharing
+child abuse and neglect - https://drive.google.com/file/d/12ASe48cloUp-epas4joC3xGpO0x19M_t/view?usp=sharing
+Cronograma do Curso - https://drive.google.com/file/d/12BCd2AYkxS1cbdTVxy-6of38nDcJTuMx/view?usp=sharing
+HMP Shunt - https://drive.google.com/file/d/12Teorn2d4xJk0t1QK9gWvWGuhnsy-MYc/view?usp=sharing
+Viruses of DNA II - https://drive.google.com/file/d/137t-boq3oCfVbingdMp7eFNULVjuEPOi/view?usp=sharing
+NSAIDs, Aspirin and Acetaminophen.mp4 - https://drive.google.com/file/d/13HQakTeho-UW9fOnFBeEPN6Oo2dmwLuF/view?usp=sharing
+Glycolysis - https://drive.google.com/file/d/13HUrMmbFMrUEwD_M6fmlj8-zIrq5u5G8/view?usp=sharing
+Pharmacodynamics parte 2 - https://drive.google.com/file/d/13Lhzz4ZsqDrszy7zGYgPSAGduHSTvVB4/view?usp=sharing
+Brainstem and Cranial Nerves Pt I - https://drive.google.com/file/d/13R3XWwJyl3QNMkmTbCZZwevhvJGJ5khV/view?usp=sharing
+sleep disorders - https://drive.google.com/file/d/13e0LcqfNa68ie8T3_STRdTDFOUYY2_yA/view?usp=sharing
+Intro to pediatrics - https://drive.google.com/file/d/1495TYaQb-OQMOMUSvFZonpnS2s-8bTyR/view?usp=sharing
+Aula4_Muscular_Dystrophies - https://drive.google.com/file/d/14Cpi9lVFXJkvlUWya666M6k9bAYBIQQr/view?usp=sharing
+Diabetes - https://drive.google.com/file/d/14FNJrLbUhmV_mfmCW1xyw7_Hb4kpqyXp/view?usp=sharing
+Gluconeogenesis - https://drive.google.com/file/d/14PKfLnMZuTGrB7IrbNPoq8MZLAbCNc1O/view?usp=sharing
+Renal Tubular Acidosis - https://drive.google.com/file/d/14TIrQFQ2JCUUv8NnMJWLYHf1SPuWfJRT/view?usp=sharing
+Connective Tissue - https://drive.google.com/file/d/14ex-nT3y2SXG9j4B0hHnJ0sPO4GldRQN/view?usp=sharing
+Hormonal - https://drive.google.com/file/d/14pRFYvTcX5XMdfbsjqfrpMNvl9U2cItI/view?usp=sharing
+Vitamins E, K and zinc - https://drive.google.com/file/d/14r4pCqFMilM4yCRa42FwU-zvXqZ9PIkr/view?usp=sharing
+Carpal Bones - https://drive.google.com/file/d/156MF1ZaO_dnQOJZs2npSbpFtOoznDVYk/view?usp=sharing
+Cystic Fibrosis - https://drive.google.com/file/d/1583yNJFRt9SRN9kqaQdudXQMCw0g1hrw/view?usp=sharing
+Cytoskeleton - https://drive.google.com/file/d/15Mph6NC58f0KOKE-W6AxXzs6em1mQmuA/view?usp=sharing
+Liver & Gallbender - https://drive.google.com/file/d/15OpAhIeKNCIpHDy3cpPSsVuvb-CVDKv6/view?usp=sharing
+antipsychotics - https://drive.google.com/file/d/15TEj3tG0fhVKQjxbU9WogZpO4kb-LB8V/view?usp=sharing
+Congenital Cardiac Shunts_Regravação - https://drive.google.com/file/d/15ixE46NeDrBL64qeX2B0-HIUdq0qm-Gk/view?usp=sharing
+Hyperbilirubinemia Special Causes, Neonatal Jaundice & Workup - https://drive.google.com/file/d/16CJEOGFDxd-JJGzxI52VEj7nP5SZntdh/view?usp=sharing
+Estágios nos EUA - https://drive.google.com/file/d/16aiR_P8daGsUryIQ3Vi6xkRKV68LdDgS/view?usp=sharing
+Psychotic disorders - https://drive.google.com/file/d/16yHGC6wbD3JQyDJkNQfg5w96DVXTU-A2/view?usp=sharing
+Hypothesis Testing - https://drive.google.com/file/d/176_G7rBk_d5Ayjg752qcbTtNy0YU6d7X/view?usp=sharing
+Cardiac Auscultation - https://drive.google.com/file/d/17AHyaOsm74xe39oanOGuAP4LgQGrAsB/view?usp=sharing
+Sodium Disorders - https://drive.google.com/file/d/17C2bEIdQScjDvDtmu15-ANTGCCDRAzpL/view?usp=sharing
+Regravção Cardiac Cycle Dynamics PV Loops and the Wiggers Diagram - https://drive.google.com/file/d/17OV0Gkw7ZIrbuTliuYKYn0r41l9HPcQ_/view?usp=sharing
+Ethics Principles - https://drive.google.com/file/d/17S7MjfzEO9js89lFckdEyCDvm8z-yF2k/view?usp=sharing
+Overview of Hemostasis - https://drive.google.com/file/d/17pP8PdSkYHaVELHz8NWkPr_FhQ_i-WvW/view?usp=sharing
+Rheumatoid arthritis - https://drive.google.com/file/d/17rCMFLrtd6vP254mJ4ntRGxHWklmqAPk/view?usp=sharing
+Arthiris - https://drive.google.com/file/d/17sbiTUm-KkCCRhJ2npz84WoG9AbRM3vj/view?usp=sharing
+PFT.mp4 - https://drive.google.com/file/d/17vUOYEeTWC6_Daub5D2ApiwnRCyaySPh/view?usp=sharing
+Sleep Apnea.mp4 - https://drive.google.com/file/d/17wgxOviIE3mmqiWEVXFZjob5ml5fuaoO/view?usp=sharing
+GI Pharm - https://drive.google.com/file/d/188-CgFT8_05a-i9DfJGEIDqrfa5jLnUe/view?usp=sharing
+Respiratory Failure(Hypoxemia) - https://drive.google.com/file/d/188rXvIA55OajF15daj8u5h9sd71laEBt/view?usp=sharing
+Bacterial Culture - https://drive.google.com/file/d/18Jzo7w32tObOCQxf84TPRcu6jhe5v3Va/view?usp=sharing
+Non-ST Elevation Acute Coronary Syndromes - https://drive.google.com/file/d/18k6E48oIyiboeZ-J0RMAuIPHk93sPsBO/view?usp=sharing
+Biliary Disorders - https://drive.google.com/file/d/196AnJkt8fx3GosakykYSAeYccQYwpVtT/view?usp=sharing
+Primary Hemostasis - https://drive.google.com/file/d/19BeiMJ59_4HkShVgyQUlAYiA_CEFUsZe/view?usp=sharing
+Headaches - https://drive.google.com/file/d/19FMQjHt1aA4sW-R2mcHnYNUMbrB4Ht4i/view?usp=sharing
+Oxygen Transport and Hemoglobin Part 1 - https://drive.google.com/file/d/19JRETVHl7dSlWcN9SDgxdG-pQzRq715N/view?usp=sharing
+Local Anesthetics - https://drive.google.com/file/d/19VQ_FC9xxCw4FLsZ7CrLfo7xeSE2Y-4M/view?usp=sharing
+Worms I - https://drive.google.com/file/d/19qrQMC5R8zJESVcc4t3QWAq9_R5ya-yD/view?usp=sharing
+Endocrine Response - https://drive.google.com/file/d/19zfeuDfC6roozPK9a5TgKQXjM-q6iqNT/view?usp=sharing
+Restrictive Disease.mp4 - https://drive.google.com/file/d/1A-vaJN3XruEwanoXBNI39v-SiTiahgv0/view?usp=sharing
+Intracranial Hypertension and Hemorrhage - https://drive.google.com/file/d/1A5lvvcMyHcAbQFSJXz1frvNwNz0dN4hY/view?usp=sharing
+Purine Metabolism - https://drive.google.com/file/d/1AQysjWGgRPhcemkK-dXGU1jb2dEn9rE4/view?usp=sharing
+Sarcoidosis.mp4 - https://drive.google.com/file/d/1ARQRVqXyARquG3EWhSaKCQgPmXAor7MX/view?usp=sharing
+Physiology pt.II - https://drive.google.com/file/d/1AUIWMAoGYZrLPNPpaE6O-yvFQdzz3ML2/view?usp=sharing
+General Anesthesia - https://drive.google.com/file/d/1BGvzlZFBm2SFjOj362e-aUc5Iv1F2JJS/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Neuro Ophthalmology - https://drive.google.com/file/d/1BHddYY5HY4dz_ItXbKu7eoI3imvsv5sh/view?usp=sharing
+Gastrointestinal Embryology_parte 1 reeditado - https://drive.google.com/file/d/1BLpl6pEPbv2qzVVSV1RY4u_tNO-0kms4/view?usp=sharing
+Male Reproductive Hormones - https://drive.google.com/file/d/1BRzu2EDgTGfZqbL5NQ9qijmdYQvG6B5a/view?usp=sharing
+The Healthy Patient - https://drive.google.com/file/d/1BbFCTcrk7O9RnsVi08cT6eJavvzgQeFe/view?usp=sharing
+Amino Acids IV.mp4 - https://drive.google.com/file/d/1Bh0JZ9OTGurhNvAyBPjnzBbU1VP4K9yb/view?usp=sharing
+Systemic Lupus Erythematosus - https://drive.google.com/file/d/1BilGecMEVKwl-J2FxWo6WNkjMc-LEI2P/view?usp=sharing
+Amyloidosis - https://drive.google.com/file/d/1BnmjeJu2EulohjmSld1uGLNMexbmY15g/view?usp=sharing
+Experimental Techniques - https://drive.google.com/file/d/1Bvqw5Wrx1CW7R_xqqF041lA4eOMY6iWa/view?usp=sharing
+O que é o STEP1- - https://drive.google.com/file/d/1C-HRFhSK9czDUbHZifxlwODFxGrCkLE6/view?usp=sharing
+conditioning and transference - https://drive.google.com/file/d/1CEWYpsXj0RbwzoyF5mt5HTVT2wSL94rJ/view?usp=sharing
+Na and H2O Equilibrium - https://drive.google.com/file/d/1CHjONOPZpx4sMQPv4zcs69vzFbDxFskq/view?usp=sharing
+DNA Structure - https://drive.google.com/file/d/1CJpwklwPIVOtVNBUEK3a0mvQLAUtLAZw/view?usp=sharing
+Rickets and Osteomalacia - https://drive.google.com/file/d/1CL5yPS4Yz04zuhkZuFSYjoxB17aDV5w4/view?usp=sharing
+Protozoa I.mp4 - https://drive.google.com/file/d/1CXaRyVN5Zdl336uB4yMUNq4qoUFNTeq9/view?usp=sharing
+DNA Repair - https://drive.google.com/file/d/1CjXiGjhZVI11W85KfNok8FIVw8PAlLzJ/view?usp=sharing
+Diuretics (22 minutes) - https://drive.google.com/file/d/1D-4sB6ZhEuRZl_euRHfZM4HJ61yUSQqU/view?usp=sharing
+Ethanol metabolism - https://drive.google.com/file/d/1D7rksZOvv1kZCm2Vm83sQvhteBIpCjTP/view?usp=sharing
+Onboarding da Plataforma do Qbank - https://drive.google.com/file/d/1D8hHDvglG3kBbiikZgCiePEMcet48vPm/view?usp=sharing
+Hemolysis.mp4 - https://drive.google.com/file/d/1DFpokGCF54yYVha4XQeVh4vtEOYGSB77/view?usp=sharing
+Pseudogout - https://drive.google.com/file/d/1DO4NJ_wPpeUL4aImKcgBWlDBW6J8Ni2P/view?usp=sharing
+Microbiology Introduction.mp4 - https://drive.google.com/file/d/1DcF8wHz8O92zVfRhvNlhf3aoKnJ_BtVE/view?usp=sharing
+Core Concepts of Inflammation - https://drive.google.com/file/d/1Df1ZXSeMaJ2wvU8TmapXLGc6iuA6FROF/view?usp=sharing
+Ketone Bodies - https://drive.google.com/file/d/1DkZ6TnTyIVP8jqr-EuzlvCmIKGk5f2Ir/view?usp=sharing
+Antimetabolites - https://drive.google.com/file/d/1Dqvv63f4TojF26ftjHnoeWI3qzBI4YHU/view?usp=sharing
+Immune hypersensitivity conditions - https://drive.google.com/file/d/1DuCMqXP6b8bLDApsSaDQH1iLKFILDdk1/view?usp=sharing
+Regravação Frank-Starling Relationship and Ventricular Function - https://drive.google.com/file/d/1E1WOFmkXB3d9ryjzUGiH59fX1aUTdhj/view?usp=sharing
+Cell Cycle - https://drive.google.com/file/d/1EBHmv0hFBOA0ZgdOTVdq9tJMJSuKf8N-/view?usp=sharing
+Reproductive Hormones - https://drive.google.com/file/d/1EWHtildnvjNpJYWm8AtOpE_X_RX8qIx_/view?usp=sharing
+Opportunistic mycoses - https://drive.google.com/file/d/1Ee5g6_bo9916p6XwnL9Qi78V5d_lhQ67/view?usp=sharing
+Hodgkin Lymphoma - Parte I - https://drive.google.com/file/d/1EkPqV98ikRSG01sVkeA3sB0R_LxpUgaT/view?usp=sharing
+Disorders of Sexual Development- - https://drive.google.com/file/d/1EsW9TNU1ka3auva2movqQeE619P1vh22/view?usp=sharing
+Pericardial Disease - https://drive.google.com/file/d/1EuCnPRguIUj5KgmPiYsD_Tvrjpu5g453/view?usp=sharing
+Pleural EFfusion - https://drive.google.com/file/d/1Ex7RxIVN-pelZwH6_Ht4yT2tVvesX5vh/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Infectious Ocular Diseases- - https://drive.google.com/file/d/1FWJ0WGRT8aq1qlb9SI8vSsf4rNeGEnRG/view?usp=sharing
+Myocardial Ischemia - https://drive.google.com/file/d/1FgCLTDaQlc8eibjjM84Pgd1Ffs-z-_PQ/view?usp=sharing
+✅Aula 02 medcof - https://drive.google.com/file/d/1G-EfFpLeysexPoUpH8UTWkyQfr7CkBop/view?usp=sharing
+B Vitamins II - https://drive.google.com/file/d/1GAUbrGZT7XCpe-hX2gu5of-vplazeEAC/view?usp=sharing
+Tissue repair and scarring - https://drive.google.com/file/d/1GEYcX59PqnnCoIj8_eJblkpdcacW6633/view?usp=sharing
+Meta-Analysis - https://drive.google.com/file/d/1GFXJetj4J28H5r5JcmKvrUWx50LODqp2/view?usp=sharing
+Congenital Adrenal Hyperplasia - https://drive.google.com/file/d/1GH9Kh1LiVJmSA9wtEgNELNYito-W3Uar/view?usp=sharing
+Inflammatory Bowel Disease - https://drive.google.com/file/d/1GOvybAxIN--zskeKHZKtY0r6FgQEc3Tl/view?usp=sharing
+Autonomic System pt II - https://drive.google.com/file/d/1GTby9zrEygt-5L0Y6EvZBcFoNPe9nY1K/view?usp=sharing
+Early pregnancy.mp4 - https://drive.google.com/file/d/1GdcA8586U60RkcSKZuYfb0GA_Z9Lqf1a/view?usp=sharing
+Secundary Hemostasis - https://drive.google.com/file/d/1GrOnNd_ZS0ZCDhyJqTOJjtJ1y5MYBqcq/view?usp=sharing
+Acute Pulmonary Embolism - https://drive.google.com/file/d/1Gw6pxz3AiMu_9845kLLsdD9nPyNG4LAO/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Refractive Errors & Cataracts - https://drive.google.com/file/d/1H4MqqcnNpxnGq3-OOQyMK9Bl5VmPWuou/view?usp=sharing
+Stomach Diseases - https://drive.google.com/file/d/1H7t3c_e0hCk9DC_aLp9QuX1I3e5JZKW9/view?usp=sharing
+Pregnancy Pathology - https://drive.google.com/file/d/1HA8f-f0zJhGC_-aVUH2cDk4zbdp1s67J/view?usp=sharing
+Fibrinolysis - https://drive.google.com/file/d/1HNfRJ7SAcHnujbtaCwzxkvraFAGDCL5l/view?usp=sharing
+Motor System - https://drive.google.com/file/d/1HTJGh72dtXW1dP-q8V9z-2D-6VeH2Cim/view?usp=sharing
+Multiple Endocrine Neoplasia - https://drive.google.com/file/d/1HUnWI3tyqWgH9xUZCcT27U-P5MUMzIfj/view?usp=sharing
+Vesiculobullous conditions - https://drive.google.com/file/d/1I2W3w743gkeat4CS9NNAps9QxCo1Kxx_/view?usp=sharing
+Translation - https://drive.google.com/file/d/1INtDxclee5lw1acrB3V4weGvxwrLE9zZ/view?usp=sharing
+Neuro-infectious Diseases - https://drive.google.com/file/d/1IYpieS_719J0WDIEWInkmSTPbvxsgcoj/view?usp=sharing
+Malignant Bone tumors - https://drive.google.com/file/d/1I_JBQxFPUbSv0yT6IC314ukv6tBmzlxr/view?usp=sharing
+Aula7_The_Genetics_Of_Cancer - https://drive.google.com/file/d/1IzqBtfRPjhQc-hLl_XLNw4Gtz6b2i85K/view?usp=sharing
+Penicillins - https://drive.google.com/file/d/1JIfELt3TJlde_u8oHQ-NbmWgVu3ydTLx/view?usp=sharing
+Aula prostate - https://drive.google.com/file/d/1JwkLfvRGLpRUHl2YBzs_CTDt4qOwrv1s/view?usp=sharing
+Breast - https://drive.google.com/file/d/1JyjLDEWblJWiRlc7wRRgu5kEtArQuJJY/view?usp=sharing
+Amino Acids III.mp4 - https://drive.google.com/file/d/1KHojYtBxCWpPfMwoNp3oXWEMjy5v34GZ/view?usp=sharing
+✅Aula 06 - O exame fisico GERAL alterado- - https://drive.google.com/file/d/1KLJDF167GG6hAbPgdFwgxzP6LFlRShPA/view?usp=sharing
+Amino Acids - https://drive.google.com/file/d/1KM52FQk_Ap4Ih7v4H_TqYkmr0XWnWf1a/view?usp=sharing
+Basal Nuclei - https://drive.google.com/file/d/1KOolJlJYG3um7xJnyRWy-7yhY06vIlHb/view?usp=sharing
+Atherosclerosys - https://drive.google.com/file/d/1KVICcT64RmjooPaECi8gU_gQl9e-QYCV/view?usp=sharing
+Aortic Disease - https://drive.google.com/file/d/1Kun2fsdS4I2IjBmq8DUK8B0fULLCTNmo/view?usp=sharing
+Small Vessel Vasculitis - https://drive.google.com/file/d/1LL7yUkc2ncAnkhAVL3te6AVwh8hhSgCG/view?usp=sharing
+personality disorders - https://drive.google.com/file/d/1LRNoEr2mWehAWD2MkGhln_KU2jbiE79m/view?usp=sharing
+Aula5_Chromosomal_Abnormalities - https://drive.google.com/file/d/1Lm9uwudo1ItzAZzgT8CT8R7oLXFxI-m0/view?usp=sharing
+Pituitary Gland Pathology - https://drive.google.com/file/d/1LpaAKqDb6FgxfNL7XJuP2ncj2_oYgJxE/view?usp=sharing
+Bacterial Metabolism - https://drive.google.com/file/d/1LqRGXhtPrld6DyNg7MuCSQNOzR9L-kKl/view?usp=sharing
+stimulants - https://drive.google.com/file/d/1LrLO0fxph2DJ25BqqlnnRrwmx2e0wj1y/view?usp=sharing
+Lipid Metabolism.mp4 - https://drive.google.com/file/d/1M7C-hSzhwaJ972055SRoSJR1fQ8u1fQ3/view?usp=sharing
+Diagnostic Tests of Accuracy II - https://drive.google.com/file/d/1MUlxaCEtRCPNtzu8bCxvv-0ORohq4EGl/view?usp=sharing
+Initial and ongoing - https://drive.google.com/file/d/1MVNWHbfLAWIYGhMPFbLQV1E9LO_6HktR/view?usp=sharing
+Reactive Molecules - https://drive.google.com/file/d/1McL9bDupFeGz54JK5sw4Y6vyYNkMocMU/view?usp=sharing
+Psychosis - https://drive.google.com/file/d/1MkYkoTvt_4UiLRT2eEEROssbr97wI2pp/view?usp=sharing
+Sjogren Syndrome - https://drive.google.com/file/d/1MuUubYE0zUr3mn_qsO6ddqtaer5RqYiT/view?usp=sharing
+TCA Cycle - https://drive.google.com/file/d/1N-XOSBIsH97CsqdIDDhZQCoBo-VHv50-/view?usp=sharing
+Neuromuscular Junction Axon terminal pt I - https://drive.google.com/file/d/1N03lV-v87EKBoEMbYXEQ2ajwCo4OwXBh/view?usp=sharing
+Pyrimidine Metabolism - https://drive.google.com/file/d/1N535JbR2MxkCJtoy8eozHQS9GgHUr5kv/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Pediatric Ophthalmology - https://drive.google.com/file/d/1N5s8MZdWye6gHXRn0W3gL4NlvicCAv2n/view?usp=sharing
+cognitive and dissociative disorders - https://drive.google.com/file/d/1NBdZTI48jq0Cfn5WuJ2_gCSlwlyfMFne/view?usp=sharing
+Porphyrias.mp4 - https://drive.google.com/file/d/1NGDJVTz4JQkhJOQuTQtc29R-5TPwlJ8U/view?usp=sharing
+Exocrine Pancreas - https://drive.google.com/file/d/1NJGbZxhEe7hVLrZurDm6DnTZFfA2ieKl/view?usp=sharing
+Renal and Bladder Tumors (12 minutes) - https://drive.google.com/file/d/1NMd1KTj-PdjycgTL0LU8Q2adlGlJmAEG/view?usp=sharing
+Checagem de Sponsor Notes - https://drive.google.com/file/d/1NYas-cGPC4zTKOZxn2TSkD7eNAGTZg2u/view?usp=sharing
+Nephrotic Syndrome - https://drive.google.com/file/d/1Nb53X5Tcic0xfO1d8EJ2HwK7vNIFFqwZ/view?usp=sharing
+Cellular Damage - https://drive.google.com/file/d/1NhPcrOvwIIkbh_Z7U-SiisVNqetW4hQH/view?usp=sharing
+Scrotum introducao - https://drive.google.com/file/d/1NipW4GJ8ThE7J6BFvBPVIlijQmwczc-o/view?usp=sharing
+Antivirals - https://drive.google.com/file/d/1Njhpd6xoU2TJOhHgKSLk8psmtzGqHbb2/view?usp=sharing
+Esophageal Disorders - https://drive.google.com/file/d/1NnxdT5x0DvVmdiDuY9W1Ys7gyQor2UA6/view?usp=sharing
+Benign Bone tumors - https://drive.google.com/file/d/1Of8pdn8lfazZF_Up7P7vU2RB9kVR4oqz/view?usp=sharing
+Hyperthrophic Cardiomyopathy - https://drive.google.com/file/d/1OsD2FFQp5Pd-B1MgarGWQE1A_yQSzcM_/view?usp=sharing
+antidepressants - https://drive.google.com/file/d/1OwUZsCUpDJj9vgeyE3KYD11y8Jkfa-a7/view?usp=sharing
+O que é STEP3 - https://drive.google.com/file/d/1OyjUS1tG7Dpr7eCCW1owWKkc0Y9s72Cl/view?usp=sharing
+Antifungals.mp4 - https://drive.google.com/file/d/1P3qf4WGim3G2llfJT2ve9KUBe2nCljP3/view?usp=sharing
+Bacteria Morphology.mp4 - https://drive.google.com/file/d/1PDDgqfsB9YyhXWIThi0yP57DeLWmYIsw/view?usp=sharing
+Pulmonary Circulation part 2n - https://drive.google.com/file/d/1PEdBB1Am-HS4YgC_b4Czm2V3l33mBsP2/view?usp=sharing
+Documentos comuns para a realização dos Estágios - https://drive.google.com/file/d/1PfeSSVYJOWbahSUZh5DnBMItCAA_DptA/view?usp=sharing
+Parkinson’s, Huntington’s, and Movement Disorders - https://drive.google.com/file/d/1PmGh8VZUjinxZXiSs_Sf-A-P2gqAYJyd/view?usp=sharing
+Female Reproductive Hormones - https://drive.google.com/file/d/1Q9L0V-iFbDOf4sFYvIAvsvwwI7HwCioY/view?usp=sharing
+Tubulointerstitial Disease - https://drive.google.com/file/d/1QFH09cPoJ-A_FFXi-lPmh278utLS7StL/view?usp=sharing
+Telencephalon - https://drive.google.com/file/d/1QHUwEc7ZpzmmHF9fqHoy5GDxuJlGb8XP/view?usp=sharing
+Ca, K, P, Mg - https://drive.google.com/file/d/1QLtXOa2Ytn1BLuI_PDSHEEFg5KzvCBep/view?usp=sharing
+Agendamento da Prova - https://drive.google.com/file/d/1QRyyvQCAdejXRvlkeinyCAsxMpokAN6a/view?usp=sharing
+Late Pregnancy - https://drive.google.com/file/d/1QYTlQ47vnSTk3ih5WgzjSa70bCAjRqzb/view?usp=sharing
+Glucose - https://drive.google.com/file/d/1QxPG5Aasj8cnLnnJRU4C4pxlE7cYEC0K/view?usp=sharing
+Pituitary Gland Anatomy and Physiology - https://drive.google.com/file/d/1R3xB3fDbnmJ395tslFdFPAiyVmAc5tor/view?usp=sharing
+Forearm and Hand - https://drive.google.com/file/d/1RLpdYZ4VQpXjMf4v6WNRTz0y5lbUSYX_/view?usp=sharing
+Brachial Plexus - https://drive.google.com/file/d/1Rn2uYJ51W9wrFF6UAI2FFafMtU4iR7ha/view?usp=sharing
+Delirium Dementia and Coma.mp4 - https://drive.google.com/file/d/1RotOmQQzGdXlAfdB3r5zRf28AwTX8Zy8/view?usp=sharing
+Respiratory Disorders - https://drive.google.com/file/d/1S989qvIVtDAhwdObUcdwqTpcxWCK1CJNJ/view?usp=sharing
+Patological cell death - https://drive.google.com/file/d/1SF24UhLJT4-sIS2mt0daBjyRscSYBAY8/view?usp=sharing
+Pancreas - https://drive.google.com/file/d/1SQho93qBdYKVNO0t0soNYVDMr1bUr4zK/view?usp=sharing
+Smooth Muscle - https://drive.google.com/file/d/1SYRxjHp6DRNCYe6rZa7ph51uKRCJrT4g/view?usp=sharing
+Thyroid Gland - https://drive.google.com/file/d/1S_he64C7joIhxigI6U-xmljaMwaWTnQ-/view?usp=sharing
+Salivary Glands Structure, Secretion, and Pathology - https://drive.google.com/file/d/1ScZOE63tE_f3otf3Y8zYE8bIm_H7Gjyf/view?usp=sharing
+Worms II - https://drive.google.com/file/d/1Shz7txEHL7w7TPncPHVmqeas0WRMN0B8/view?usp=sharing
+Restrictive CMP Causes and Hemodynamic Findings - https://drive.google.com/file/d/1SlWcCxj53GScvweHQg6xJ7y_4eIVgqBJ/view?usp=sharing
+Asthma and COPD treatment part 2 - https://drive.google.com/file/d/1SqPjiO_H8PEuMAh-XP-GF8VwzP_8lDlq/view?usp=sharing
+Statistics - https://drive.google.com/file/d/1SuXecZdxtH3lM8k62DZgk23eDvvrvTpQ/view?usp=sharing
+Colon Polyps and Cancer - https://drive.google.com/file/d/1SzrVZXmE37HcJRGA3RXpp2T8q4UJscki/view?usp=sharing
+Metabolic Acidosis - https://drive.google.com/file/d/1T1f9e6UPldRidryuJDhmT9RV38QAV-9g/view?usp=sharing
+Virology - https://drive.google.com/file/d/1T9J80bcQIQj8gZ4GTaVyPMBJxhlSmhIL/view?usp=sharing
+Renal Physiology II - https://drive.google.com/file/d/1TDFEV0__5RT_ohzD_TeWclCkKj_HHxxA/view?usp=sharing
+Leukemias.mp4 - https://drive.google.com/file/d/1TK4JS2FfjbAIyq75bxwTpJycKGQozxFW/view?usp=sharing
+Parathyroid Glands - https://drive.google.com/file/d/1TaaIcd6MiET64dSgQJAfI37Ewt44AV4p/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Pupillary Abnormalities - https://drive.google.com/file/d/1Tj4KG7mKUsT_yzDyzJ4NODMYaVvmmyVx/view?usp=sharing
+Lumbosacral Plexus - https://drive.google.com/file/d/1TuDtQc3rslBzcLPMAogxwkOVNGZ7zhMe/view?usp=sharing
+The Sarcomere - https://drive.google.com/file/d/1TwJ_ve0nz7S_oTpBa7XO0r0FFEjOpLXU/view?usp=sharing
+Vídeo de Boas-vindas e Apresentação Geral do Curso - https://drive.google.com/file/d/1U0UK3WKi6sRS_I0x8cOhScGAPGdbBVq8/view?usp=sharing
+Cell Structure - https://drive.google.com/file/d/1U1-GRgKNY-IgvaieGBmq7XA4APwaENQj/view?usp=sharing
+Pneumonia - https://drive.google.com/file/d/1U24nJhe-wFKsT52e_iRjyRrOIiW8ixb3/view?usp=sharing
+Torches and Teratogens - https://drive.google.com/file/d/1UYh34U9NPtgxFqVkbt44-JmPhfm2t6z7/view?usp=sharing
+Metodologia de Estudo para Garantir Sua Aprovação - https://drive.google.com/file/d/1UYjCXcQoYNeVd9s9pJekqrjGFumnZWUE/view?usp=sharing
+Cervix - https://drive.google.com/file/d/1UnG5ULGyjPGGuXzbnAmlVw82SDnPf_jd/view?usp=sharing
+Secundary Hemostasis Disorders - https://drive.google.com/file/d/1UnxshnMu5lJrxo376Yon4PGlCRXV8Ng-/view?usp=sharing
+Aula2_Forms_of_Inheritance_and_Pedigrees - https://drive.google.com/file/d/1UyXiCiVTVmjhz68fs9KHh8DRyJKWUODm/view?usp=sharing
+Viruses of RNA - https://drive.google.com/file/d/1V2MsXvVQl9aWHlLDb6YvrtIojzdx4tIK/view?usp=sharing
+Neuromuscular Junction skeletal Action Potential pt II - https://drive.google.com/file/d/1V3iE_xICRNfE9jP-lcSmrwGTqVgi-TaK/view?usp=sharing
+O que é o OET_ - https://drive.google.com/file/d/1V5VbIm-FWtjDiyuGz1-ugOhewdyCwvr7/view?usp=sharing
+Radiculopathy - https://drive.google.com/file/d/1VNF5Ixq_7sHk9V1qeL_cNg0JsUxjPsvk/view?usp=sharing
+Seizures- - https://drive.google.com/file/d/1VQP9sU_48PEyU4ycNWpdlwq5A5d-2ycE/view?usp=sharing
+Antibiotics and Topoisomerase - https://drive.google.com/file/d/1VRa_09ZPUI5tyj1sWTxaHPnneQBR76Wa/view?usp=sharing
+opioids - https://drive.google.com/file/d/1VVJJ3-QbI0Qp58PXE5poAy-20dnRrrXX/view?usp=sharing
+✅Aula 04 - inicio dos sintomas - https://drive.google.com/file/d/1VaCjj6OG1fBxpRhCv9Lbap_BVZStlwBn/view?usp=sharing
+✅Aula 03 medcof usa - https://drive.google.com/file/d/1VcLBdHom9174GZHnI0fsd5JClp4ReqUU/view?usp=sharing
+Types of Study - https://drive.google.com/file/d/1VrG5lrJ_SYQ3sLeYbslmKb2jYFup3sKu/view?usp=sharing
+Macrocytic Anemia.mp4 - https://drive.google.com/file/d/1VuEVpx_gZXK5m3MUNq4cFxJqIYpjyPES/view?usp=sharing
+Mechanisms of Blood Pressure Regulation - https://drive.google.com/file/d/1WH4wvSEnB9SCc2YPTLFRNiOPnY4sDCGn/view?usp=sharing
+Granulomatous response- - https://drive.google.com/file/d/1WNB-SUnCf5HQaTHgQ1Muu4zdsJYkfyxm/view?usp=sharing
+Physical Exam - https://drive.google.com/file/d/1WS0IzI-iNlZAGPkHer5RdRHBN2Y3B59C/view?usp=sharing
+Onboarding da Plataforma de Aulas - https://drive.google.com/file/d/1WUQGHMAGuMnjNk3MlU1jlE5cufLMCDFq/view?usp=sharing
+Adrenal Disorders - https://drive.google.com/file/d/1WW9v_extYx44TvnRAMkO3r22psw5jbY-/view?usp=sharing
+Bacterial Genetics.mp4 - https://drive.google.com/file/d/1Wf6MtTFpbIwiUsMyHLt_RAxot9n2kgyG/view?usp=sharing
+Gout and hyperuricemia - https://drive.google.com/file/d/1WoYbvyAMN7AepNiaPOTFD3EE1sZbAX9L/view?usp=sharing
+Staphylococcus SPP - https://drive.google.com/file/d/1Wv_1Y91sJLvqnLnxiNs4_EQUVJBghzgq/view?usp=sharing
+Pharyngeal apparatus - https://drive.google.com/file/d/1X3DAznFY4A1WnFfb8uft1gYmh5khA18v/view?usp=sharing
+Hernias - https://drive.google.com/file/d/1X8vgKjX7mfiwznyqxrMsceJk-QmFC95p/view?usp=sharing
+Embryonic Genes - https://drive.google.com/file/d/1X9kYPv5pyiaj-UvQy_B2mUxLbcPWOv-t/view?usp=sharing
+Muscle Structure - https://drive.google.com/file/d/1X9t39nTSkOKwKqYjWOotzHE1pgcVN1Lm/view?usp=sharing
+AV and Bundle Branch Blocks - https://drive.google.com/file/d/1XZNc-ISPSusSqB1cimUQFFkxvHLwLvXk/view?usp=sharing
+exercise and starvation - https://drive.google.com/file/d/1Xaa8WH5ZI-VCRebMVEDQXZwzsKAwh58J/view?usp=sharing
+Aula6_Population_Genetics - https://drive.google.com/file/d/1XuUJEz2-2z_keZVXTu4XQf9KXD2LeEnl/view?usp=sharing
+Neoplastic process - https://drive.google.com/file/d/1XvN6csR0-n1-MSz0CQih3rGzosmyJgvz/view?usp=sharing
+Liver Cirrhosis - https://drive.google.com/file/d/1Y72gqvsVrColj-J3RIgzT46UftwuDOwZ/view?usp=sharing
+Acute Decompensated Heart Failure - https://drive.google.com/file/d/1Y9tiQcGw3lZ3Sx8icPzbtnW0XONx_a3t/view?usp=sharing
+Embryonic development - https://drive.google.com/file/d/1YMlQwgJn6zPfU3PVqdBUHYe1BHZKPy-0/view?usp=sharing
+Asthma and COPD - https://drive.google.com/file/d/1YZ54V7KDPIqpW9wBccKaHU1bJIW7XKzG/view?usp=sharing
+Pulmonary Anatomy Correct - https://drive.google.com/file/d/1YaMYoUcSm9t9KM0aiJoY0eP6PqbKrWod/view?usp=sharing
+Decision-Making - https://drive.google.com/file/d/1YaurBgrSb0PmrXGV0Y5Sd5QjVqhFx7lY/view?usp=sharing
+Principles of Quality and Safety - https://drive.google.com/file/d/1Yceyuqu_Sx3NOUJfR8aL21P8j9hnkc4J/view?usp=sharing
+Tubes and Ovaries.mp4 - https://drive.google.com/file/d/1YlOvcJxZ7pxXBmWBhPUwz0j-VCEb8_NW/view?usp=sharing
+Cutaneous mycoses.mp4 - https://drive.google.com/file/d/1ZAln0wwsFYjLCtSEeKC75ID-U82MQnFg/view?usp=sharing
+MPGN - https://drive.google.com/file/d/1ZBdmFXImSlQs_FFnh6sEVM1NFFsPVhn_/view?usp=sharing
+Blood vessels abnormalities - https://drive.google.com/file/d/1ZGJlFYF0ctzGzxzY-UX05aWVae_wTT0F/view?usp=sharing
+Innate Immunity - https://drive.google.com/file/d/1ZSa56sS4qyE6MUkVGf8CbXWwcUKBRshN/view?usp=sharing
+Bone Tissue - https://drive.google.com/file/d/1ZZAAeGREkBFHzvTySRahI68avxUwAqoR/view?usp=sharing
+Inherited Hemolytic Disorders Part 2 - https://drive.google.com/file/d/1Z_aQySO2FUldlANCXXyuF1W-KgbYjetp/view?usp=sharing
+Cellular Responses to Stimuli - https://drive.google.com/file/d/1Zf3Q44pL2DOdPU_qGsJYWWQWanzuxKps/view?usp=sharing
+Supraventricular Tachycardias AVNRT and WPW - https://drive.google.com/file/d/1Zf_JuaT5iwYNVEAlhqn3Sl5fBY1eGfla/view?usp=sharing
+Filtration Barrier.mp4 - https://drive.google.com/file/d/1ZqHKxeEQeqGs3qjicaYLrNSdzAGcX42p/view?usp=sharing
+Kidney Stones (11 minutes) - https://drive.google.com/file/d/1ZwW8oHTw44Pfkfwnr8xQW89l2ND-QkpM/view?usp=sharing
+Langerhans Cell Histiocytosis - https://drive.google.com/file/d/1ZwoHZ-YPZJk9nimjOezf_q6wduVMmbjh/view?usp=sharing
+Neuroimmunology and Neuromuscular Diseases - https://drive.google.com/file/d/1_0-zod9HBrUxGOkD1XDWtwIGBRunWGi7/view?usp=sharing
+Copper and Iron overload - https://drive.google.com/file/d/1_1wg8bdVesIwOEVUPTqrem6jqA6SjUgv/view?usp=sharing
+Other Gram Negatives.mp4 - https://drive.google.com/file/d/1_DWQdI3WDqJQ8HABrG8eVUt6_8VqU42e/view?usp=sharing
+Hepatitis viruses - https://drive.google.com/file/d/1_Kv383jrdUHMWkjyP_7W8YNUGPOoHtb_/view?usp=sharing
+Malignant Thyroid Diseases - https://drive.google.com/file/d/1_OELAnYcfMOPH-EvUMwSI6rxbeseS4N-/view?usp=sharing
+Congenital disorders of morphogenesis - https://drive.google.com/file/d/1_UazAwPY66_7I9PmzdKl3uBXK8TRVZzF/view?usp=sharing
+Public Health - https://drive.google.com/file/d/1_dmzFI7J2p3EMsNy2UzadSmz-rMMxxbY/view?usp=sharing
+Systemic Sclerosis - https://drive.google.com/file/d/1_juiSeh3ZXYoyiTJ9DPDh4iHe_YYjU8D/view?usp=sharing
+Introduction to Geriatrics - https://drive.google.com/file/d/1_ugTESk4KXQ3IYl6-fzoCq5__IDw9Sjx/view?usp=sharing
+Bilirubin - https://drive.google.com/file/d/1_v_9D5kMECzfLtOcuEnSsRxe_51IVKzF/view?usp=sharing
+other drugs - https://drive.google.com/file/d/1_yrlQAoW1N6nXwxP656nVchtBZdSanW5/view?usp=sharing
+Cerebellum - https://drive.google.com/file/d/1aHFDNTIBCkPTFVYGftJyJFw_6cVYZbJG/view?usp=sharing
+Cyanotic Congenital Heart Disease - https://drive.google.com/file/d/1aHvsGQyiDlkEhe4g4mwD0LC-zclM1adm/view?usp=sharing
+Clostridium SPP - https://drive.google.com/file/d/1aO4Y5ma29Rwjq5FpV6HDxI9f2EK9pXIT/view?usp=sharing
+Endocrine Pancreas - https://drive.google.com/file/d/1aVoeLf-KwFqkR9RVFKjGEOZFinFFlFXm/view?usp=sharing
+Glycogen - https://drive.google.com/file/d/1aaHEo6FfoJxXuujtC7fJGEcDO2BQUxC-/view?usp=sharing
+Superior Member - https://drive.google.com/file/d/1apJsPIVu2Q2G4kaqeRBCemmTJsMmO6Mc/view?usp=sharing
+lithium - https://drive.google.com/file/d/1aut_llcHNC04Z0UWkvff_NTaMGcaf0c-/view?usp=sharing
+Menstrual Cycle - https://drive.google.com/file/d/1awSRhNfUY5oS5qINO-z1y9Uo7J6s8T0B/view?usp=sharing
+Acute Pancreatitis - https://drive.google.com/file/d/1b9yufBqB_qTR25N8SwtXZ3aaKXWLTK7/view?usp=sharing
+alcohol and cns depressants - https://drive.google.com/file/d/1bAR29-vXbEGzb9nBTqfIh9ROC2VkWrKR/view?usp=sharing
+Lymph Nodes and Spleen - https://drive.google.com/file/d/1bOiwjv2yCYjimkYdGmPMRKYLN7wZrPS-/view?usp=sharing
+Valve Disease - https://drive.google.com/file/d/1bZC2hU5HshSiez4ryNZ6lmadql_lgHfE/view?usp=sharing
+B Cells - https://drive.google.com/file/d/1bdSIBsvbu7a3DA1tKaXsd-WqGtMJGbk4/view?usp=sharing
+The Match - https://drive.google.com/file/d/1bi-pM_MxEcUoI8_Lc1Dix-TWVGg_w8M6/view?usp=sharing
+Transfusion Medicine.mp4 - https://drive.google.com/file/d/1bnPnfu1oxUNZ1ec9FPb-RiebG07sxRzF/view?usp=sharing
+Microcytic Anemias - https://drive.google.com/file/d/1cKgjid7P_PhbnPBniXl1X8ambYi4Ll26/view?usp=sharing
+Hepatic Neoplasms - https://drive.google.com/file/d/1cQQc7clYdwUjG6wgtW7mVUPAvAwOE0nK/view?usp=sharing
+Ventilation and Perfusion Final.mp4 - https://drive.google.com/file/d/1cTGd9EoiXA-f9SZSOs7v-A9BnZlR3G9m/view?usp=sharing
+Inscrição no ECFMG e Form 186- - https://drive.google.com/file/d/1ci8IKmttkBz8AiB0Asa7dqD-pEJo1CEA/view?usp=sharing
+Non - Hodgkin Lymphoma - https://drive.google.com/file/d/1ckJxGVh58Bw7a1ka2xlb7muHa5VxEBL6/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Introduction & Structural Disorders of the Eye - https://drive.google.com/file/d/1cnhHPaDovRP15LsuM9Gt3SA8TPc6O-61/view?usp=sharing
+Protein Synthesis Inhibitors - https://drive.google.com/file/d/1csa2CneZxHaajgIGC4g2dh-A0U4vjOfM/view?usp=sharing
+anxiety disorders - https://drive.google.com/file/d/1cuL2h-v1FSffGESj3-GX8Gqo_GJwc1iU/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Retinal Disorders - https://drive.google.com/file/d/1dBzfK5R_7xFtCTe30Jz-jZF-jULLabAK/view?usp=sharing
+Intestinal malabsorption syndromes - https://drive.google.com/file/d/1dD7zcQwpT6hcGzCoqEDWpMlDNT6leLEw/view?usp=sharing
+Endemic mycoses - https://drive.google.com/file/d/1dHwVnAkmMZUkMKBE1amiHzSG8meNSPz8/view?usp=sharing
+Skeletal Dysplasia - https://drive.google.com/file/d/1dRemYfALnqQqJUKfW2k-pezUcxpLgcY-/view?usp=sharing
+Gastrointestinal Blood Supply - https://drive.google.com/file/d/1dx_ofUqueMH3PTH_AGswbl0pLWBGgEeB/view?usp=sharing
+Renal Failure - https://drive.google.com/file/d/1dyImPhgMSTlAPwTYYAfn4bLd5kItMp2S/view?usp=sharing
+Lung Cancer - https://drive.google.com/file/d/1e-8FvwKLj4JNFFhxx28rfDx65B6arZXm/view?usp=sharing
+Ectoparasites - https://drive.google.com/file/d/1e6hT8c68Cpn9TL7rwfNbwkAZ23C7HaUU/view?usp=sharing
+✅Aula 04 - inicio dos sintomas (Duplicata?) - https://drive.google.com/file/d/1eOSuRzk3m9LNkKHQ_k7e4lOdX-wZg0tb/view?usp=sharing
+✅Aula 07 - O exame fisico alterado por sistemas- - https://drive.google.com/file/d/1eS0gedxf_3t5-O1GGXckzBYJOjVENUBu/view?usp=sharing
+Inherited Hemolytic Disorders Part 1 - https://drive.google.com/file/d/1eVW8YQvje3zKb6Jlovnsg1-ihhLyOPyb/view?usp=sharing
+Tuberculosis - https://drive.google.com/file/d/1ecu_Y4xJupnB9_lpPHQ7Steo_Pa7RnTm/view?usp=sharing
+Quantifying Risk - https://drive.google.com/file/d/1eeiJFztsde8ShHApuBBYyVmfRmKKtHB5/view?usp=sharing
+Carcinoid Tumors - https://drive.google.com/file/d/1eogzxrF67D94SuhO7iKrsqy6yP3qylWt/view?usp=sharing
+STEMI (ST-Elevation Myocardial Infarction) - https://drive.google.com/file/d/1erY8BhxQLBk0hYc0QGtw2CLxSidV7Ost/view?usp=sharing
+Biochemical Disorders II - https://drive.google.com/file/d/1etMCdXKnvAr_YCAcarLF3G7_MAkn8deB/view?usp=sharing
+DNA Replication - https://drive.google.com/file/d/1fFTjJgdl7ukI6jT2RYyL-OtC_xiNThgU/view?usp=sharing
+Brainstem and Cranial Nerves Pt II - https://drive.google.com/file/d/1fFywHpmzPcgZfVu2Iwi-Igd_TBC3jLk_/view?usp=sharing
+Hepatic Disorders - https://drive.google.com/file/d/1fIHcOOjoscNWw3sAEhB0aGn0NIwKCnDe/view?usp=sharing
+Pyruvate dehydrogenase - https://drive.google.com/file/d/1fMAQHMIRaGz0QqmWRgss8oKSCooMihI_/view?usp=sharing
+Randomized Clinical Trials - https://drive.google.com/file/d/1ffb2eAbOnVZlYa51mO9d77WRNHZ2gU1Y/view?usp=sharing
+Chronic Pancreatitis and Pancreatic Adenocarcinoma - https://drive.google.com/file/d/1fqDngKCtMCE3k75Tk6kmpKQy23sOQ1id/view?usp=sharing
+Thrombosis and Hypercoagulability - https://drive.google.com/file/d/1g8NYsScSWZ30YSPJY3S75qBff7u0nZaW/view?usp=sharing
+somatic and factitious disorders - https://drive.google.com/file/d/1gFzNvy0RTv4M6XlSzUnrr7enocJq71II/view?usp=sharing
+The Complement System - https://drive.google.com/file/d/1gGYVNblStup6aGb_Pi970EAhKtoiJ7KP/view?usp=sharing
+Bowel disorders Part 1_ Childhood - https://drive.google.com/file/d/1gOhKojTmhvJ-DYrf0NzigdQ_2xRz5lks/view?usp=sharing
+Beta Lactams.mp4 - https://drive.google.com/file/d/1gRGSgcLY6RUPTePGqKb2O0gWo_WDfE6F/view?usp=sharing
+Gallstone Disease - https://drive.google.com/file/d/1gdv8pkRjnw_K2pTph44oIommkle-5w3c/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Glaucoma (AULA SEM FINAL) - https://drive.google.com/file/d/1gnjdDYB2F-urhjWxh0_WvmRa2Y6a7SJZ/view?usp=sharing
+Tipos de Estágios nos EUA - https://drive.google.com/file/d/1gt_Vt8x51FC5OHO8Uig9JBibQTaEWNld/view?usp=sharing
+biochemical_disorders_1 (1080p) - https://drive.google.com/file/d/1hCh2VhsQC7RreyPV5qR58OWiTKN-Q0dm/view?usp=sharing
+Amino Acids II - https://drive.google.com/file/d/1hP7zcyHxgqB0DOUJcbFOpH6_OZbHtlPX/view?usp=sharing
+Gastrointestinal Secretions - https://drive.google.com/file/d/1hdxWQ9TtLvpCYSiIfzG9B9oSGD4MNiJI/view?usp=sharing
+Bias - https://drive.google.com/file/d/1hnMS8hxyrpEMy_uaz7NBPRpaoSZcYpXb/view?usp=sharing
+Aula1_Basic_Genetic_Concepts - https://drive.google.com/file/d/1ho36fxxxl51Fs22xRhxaFUCmJNp5JNj6/view?usp=sharing
+Gastrointestinal Anatomy - https://drive.google.com/file/d/1hoTZM4caTb3prP6qZbEMtrHxTKptwqh_/view?usp=sharing
+Normocytic Anemias.mp4 - https://drive.google.com/file/d/1hxewH61b-mc5z77y5r2K8LnKGcniaFtl/view?usp=sharing
+gabriela garcia vitamina C - https://drive.google.com/file/d/1hz1qdz1FfCHu_bYGzbGUFaHKcxVbER9x/view?usp=sharing
+Knee Injuries - https://drive.google.com/file/d/1hzjJ9GJuuXaFSqfF3h5WILO4THgbbJNp/view?usp=sharing
+Nephritic Syndrome.mp4 - https://drive.google.com/file/d/1i1ZwhbohMQazn4u--yi0mIzK3BiWoyho/view?usp=sharing
+Pulmonary Physiology Part 1N - https://drive.google.com/file/d/1iD8x3ZVEyEFaKrcu6fIUzUwTbxthK_Dr/view?usp=sharing
+Confidentiality - https://drive.google.com/file/d/1iR7Ke35IL0IfSD67j7HNt2gr5ZjddC9P/view?usp=sharing
+✅Aula 05 - O exame fisico normal- - https://drive.google.com/file/d/1iSuEymtgNpMCcoRLxG4K9FrHdmW-h3x-/view?usp=sharing
+Diabetes Management - https://drive.google.com/file/d/1imKThEeULUKymMrWcADWzlOPL0uFLBG7/view?usp=sharing
+Viruses of DNA - https://drive.google.com/file/d/1ish43LqVnIoRRhUvp0gB4i1HVu0geEvR/view?usp=sharing
+Transcription - https://drive.google.com/file/d/1ivnmDJIVdh9UPs3xIyccjCY3bspTrGY4/view?usp=sharing
+Asthma and COPD treatment part 2 - https://drive.google.com/file/d/1j4bsCsoI5uuoDdd99IgHG4ysW5B9uKrA/view?usp=sharing
+Gastrointestinal Hormones_ Master Regulators of Digestion - Part I (primeira parte) - https://drive.google.com/file/d/1jComd1Nw_oViO10ceTX12DxegyAqkudy/view?usp=sharing
+Pulmonary Embryogenesis Part 1 - https://drive.google.com/file/d/1jL3lIiQ6NHaTAQMzlOilggml1-s0VI5S/view?usp=sharing
+Gram Positive Bacilli - Aerobic.mp4 - https://drive.google.com/file/d/1jUQ7gVfdquZD58QD_XSubTBL_ljG20B5/view?usp=sharing
+T Cells.mov - https://drive.google.com/file/d/1jWOkQVcLfkJS1LA3PkehZlkirhkOBfZ1/view?usp=sharing
+Large Vessel Vasculitis - https://drive.google.com/file/d/1jY0pDMBwa_7PEQtwcxkMXKHnP3UQV9SI/view?usp=sharing
+Immunosuppressant - https://drive.google.com/file/d/1jhLn31RMb_8FSQdmYyjdzllmuaAVBdxl/view?usp=sharing
+Streptococcus SPP.mp4 - https://drive.google.com/file/d/1jhZ0y4aR0D9NQlg-YKoa4bx4O08EHKJC/view?usp=sharing
+Reproductive Physiology - https://drive.google.com/file/d/1jnPwagMnAp8oP06K0eBdYRCJWgz8jXQE/view?usp=sharing
+Nocardia and Actinomyces.mp4 - https://drive.google.com/file/d/1jwUaBZrN1PvwUFyZnpnWjDs4nItDL1XY/view?usp=sharing
+Myeloproliferative Disorders - https://drive.google.com/file/d/1k1WR3XdAZBZYcWT_cRPWNRcM7RmQYkgv/view?usp=sharing
+childhood disorders - https://drive.google.com/file/d/1k1YmzTmHv5qud6ngscKMA86m_CqIO5i0/view?usp=sharing
+Fatty Acids - https://drive.google.com/file/d/1kc1VoR76Hsds_Oi0HaHECP5v-uwLyzX-/view?usp=sharing
+Cardiovascular Adaptation During Physical Activity - https://drive.google.com/file/d/1krfjfubuxZVGFCJoDKXudsfg_pAXbzD_/view?usp=sharing
+Antiarrhythmics Classes I–IV, MOA & Toxicities - https://drive.google.com/file/d/1kuq7Y_j4Sj09mVku0sqxCaQyj1CNdqmE/view?usp=sharing
+CO2 physiology good - https://drive.google.com/file/d/1l7obRZq5eDHWVo34Kw1RyA8Ena4Mfeio/view?usp=sharing
+Renal Gross Anatomy - https://drive.google.com/file/d/1lAjEzGufooldY2cv433-Pf5hHJ-1ZS8v/view?usp=sharing
+Vitamins A and D - https://drive.google.com/file/d/1lKQjbRK03A28u0UyiLdm5RTen4-08yKz/view?usp=sharing
+Hypersensitivity - https://drive.google.com/file/d/1lLFA5Ngq2UCTtKs9ZST6P6gwBKUR3q-i/view?usp=sharing
+Cardiac Embryology - https://drive.google.com/file/d/1lawThQ56L0uR_rpC4rV3_Qi5LGLQJKj0/view?usp=sharing
+Vulva & Vagina - https://drive.google.com/file/d/1lkn268fPL_i8biy7vMLyXDKtDS7GN13Z/view?usp=sharing
+Infective Endocarditis - https://drive.google.com/file/d/1lrl_Req7HwamdNgxTNEQKCJnNVFNPE8O/view?usp=sharing
+Transplants - https://drive.google.com/file/d/1luJefetMNVpSU7CC1fgF_dXlmWZWvDKx/view?usp=sharing
+Antiretroviral therapy - https://drive.google.com/file/d/1mIG1L2d-jJtDNX3AjAJuvPmh_5FUUIlm/view?usp=sharing
+Urinary Tract Infections - https://drive.google.com/file/d/1mSoXpbeVjnnA3ZiBOyf9jv4JlHH2dOWO/view?usp=sharing
+Acid Base Questions - https://drive.google.com/file/d/1mV_RT7RX8FQc0Hyo3AMQfYWqqR80mb55/view?usp=sharing
+Must-Know ECG Patterns for Step 1 - https://drive.google.com/file/d/1msu7AbgKCSiI2hawStCv4gZA399xZxml/view?usp=sharing
+Aula Teórica - STEP 1 (Ophthalmology) - Pediatric Ophthalmology (Duplicata?) - https://drive.google.com/file/d/1my4UMHVlfWjtEixrMF5sHil0-8gF5OzZ/view?usp=sharing
+Heart Muscle - https://drive.google.com/file/d/1n9-MMY31DtKnLrXL-7DfFO3a5tBepNB2/view?usp=sharing
+Renal Physiology I - https://drive.google.com/file/d/1nDjYKqOC74vet64ulaZx7_XnRxbWFiMZ/view?usp=sharing
+Seronegative Spondyloarthritis Spondyloarthropathies - https://drive.google.com/file/d/1nVqWKsdL02HH_xRVaKVYkhRVXtbHJRnV/view?usp=sharing
+Bacterial classification - https://drive.google.com/file/d/1nrxDEmP2ToQrnHu2TghmoIE2TI1lNGLT/view?usp=sharing
+Acid base Foundation - https://drive.google.com/file/d/1o0PhxHQGb_TM4Ln5RHxKRNqWBrwV9SRV/view?usp=sharing
+Hip Syndromes - https://drive.google.com/file/d/1o7KphPDZjYTJv-jn9LIoSrMM9cP23VKw/view?usp=sharing
+Fructose and Galactose - https://drive.google.com/file/d/1oHheUohKbGw-m2b8c5B71AFb4q8cGxkQ/view?usp=sharing
+Protozoa II.mp4 - https://drive.google.com/file/d/1odF2q6Nx3IP51KvQIy3H8iB_UNmW_nr_/view?usp=sharing
+Acid Excretion - https://drive.google.com/file/d/1oolopxVHTD2a-Z4X5QZsUe1VgCJuw8Ld/view?usp=sharing
+ipcpgacb - https://drive.google.com/file/d/1ozX5yOjrhBsI1N5IVqfGCpU24vFmkJgh/view?usp=sharing
+Testicular cancer - https://drive.google.com/file/d/1p0SXtyvh8Fgst1_n2qaSRodWXskXsBW9/view?usp=sharing
+Chronic Coronary Syndrome - https://drive.google.com/file/d/1p1mz8juk0DZxAh6GRbCpnP3lk5oDFtvd/view?usp=sharing
+Reproductive Embryology - https://drive.google.com/file/d/1pV6yTW2WoqQQdrClR8R_aYusRZxOqeGc/view?usp=sharing
+Signaling Pathways - https://drive.google.com/file/d/1pdaC-8zY7qK9SNUPiCNSdidaPdbenND1/view?usp=sharing
+Cutaneous Infections - https://drive.google.com/file/d/1ptuwApY0mi53jd9AW4SUl9eLdro6Wfru/view?usp=sharing
+Zoonosis.mp4 - https://drive.google.com/file/d/1q7WS9ibw2SeBSzwpg32-O78P_WmytWbW/view?usp=sharing
+Virulence.mp4 - https://drive.google.com/file/d/1qKP4he-Irmqc9ptSnTSM2ECbFC4Q9Yxb/view?usp=sharing
+Sulfonamides.mp4 - https://drive.google.com/file/d/1qLZBO9ntkrvZaypQxQ5RcPhheOWWgyHd/view?usp=sharing
+Lipid Disorders I.mp4 - https://drive.google.com/file/d/1qQrVJTgpgNMREnNv3rO6FO3uuQDleyoe/view?usp=sharing
+Hypertension - https://drive.google.com/file/d/1qRNng2jVKAUz2nxAFKD9LBN-0Y3FW2GK/view?usp=sharing
+Amenorrhea - https://drive.google.com/file/d/1qXiWjCvseG67_hL18t7dS2yMfz-kI32s/view?usp=sharing
+ETC - https://drive.google.com/file/d/1qYqMbd8xwQuNsV3scxtKq8gWCjQGyw1P/view?usp=sharing
+Cardiac Action Potentials - https://drive.google.com/file/d/1qZ4bp0LxHPwiDgIxFFn5Xyy574Hr-oKK/view?usp=sharing
+Primary Hemostasis Drugs - https://drive.google.com/file/d/1q_EmeJH28g59RnAW72ETfYfOinCfV6uv/view?usp=sharing
+Bile - Rafael Ulysses - https://drive.google.com/file/d/1qh37UDohzKpMJBstZ6pObUlyG4oY-9n2/view?usp=sharing
+Fluoroquinolones and Metronidazole.mp4 - https://drive.google.com/file/d/1qiLqF_pisEucHe1Pz4SgOeCVtagW-xsu/view?usp=sharing
+✅Aula 01 Anatomia de um Caso Clinico - https://drive.google.com/file/d/1qrj20gdp3MUBIk6Hk6G2B2TAjVeFbCGR/view?usp=sharing
+ECG Interpretation Axis, Intervals & Waves - https://drive.google.com/file/d/1qt9q-JLmcu5ok6AK3pb4edS8MuCz-jBm/view?usp=sharing
+Como conseguir estágios nos EUA - https://drive.google.com/file/d/1qy6p07oDgMyB8AKL95bs9gdbk5ae6Pzd/view?usp=sharing
+Secundary Hemostasis Drugs - https://drive.google.com/file/d/1rK6wqOMSoPBkomFldZ24DdXlWPtLUKZB/view?usp=sharing
+Brain Tumors - https://drive.google.com/file/d/1rL6eOcnneWjh6nsRlvBC4UMkVO07kXn8/view?usp=sharing
+Gastrointestinal Embryology_Parte 2 reeditado - https://drive.google.com/file/d/1rNI8sjO6S5dJ4IWXy_rUGnl66GW8Pv7f/view?usp=sharing
+Metabolic Alkalosis - https://drive.google.com/file/d/1rXv-4ThHkdbmluhv_PZ1rtChnFYUAfW1/view?usp=sharing
+Cystic Kidney Disease (7 minutes) - https://drive.google.com/file/d/1rYPWlmwxLM82ctKcFT7BJ9X7MGhwVquw/view?usp=sharing
+Cardiovascular Flow Dynamics - https://drive.google.com/file/d/1r_CQ3Tt2AHJAPJ99ijmIa-Yxk3-bEAmf/view?usp=sharing
+Inherited Hemolytic Disorders Part 2 (Duplicata?) - https://drive.google.com/file/d/1rfhfCupiOpYCwY1Gumu7tSONgk0RBhzg/view?usp=sharing
+Primary Hemostasis Disorders - https://drive.google.com/file/d/1rxMSn8pvC033WdoU76oVqj8tIYjEhVEI/view?usp=sharing
+Basic Principles - https://drive.google.com/file/d/1rxW4c9ZB6AadHw56JFo9mNLNuv6b65EB/view?usp=sharing
+Renal Embryology - https://drive.google.com/file/d/1s4eMBla89dz5ZqmCFJYoDA1YLyL4Afx9/view?usp=sharing
+Lipid Drugs II - https://drive.google.com/file/d/1sBjPPNiKGJOKOQvOb4xbZYCKj5NoqTzz/view?usp=sharing
+Neuromuscular Junction Pathologies pt IIII - https://drive.google.com/file/d/1sKAxo2KbRSMFs-4w9IttbvPlKhMc0bff/view?usp=sharing
+Melanin Disorders - https://drive.google.com/file/d/1sPFoe7fO6oZA14cXynJzRov-Kd7A71Sc/view?usp=sharing
+Diencephalon - https://drive.google.com/file/d/1sT3od60LttSeMgusJCXm0xBc8XsyXhWr/view?usp=sharing
+Measurement and Variables - https://drive.google.com/file/d/1sbatfd2HiaN0rIkA2RVt1UNzQt4ugehq/view?usp=sharing
+Leptospirosis, Syphilis and Lyme disease.mp4 - https://drive.google.com/file/d/1sc5YtcMjgVPi4ae3eJycfcv-xMnlJTHL/view?usp=sharing
+Gram Negative Bacilli.mp4 - https://drive.google.com/file/d/1sq59rLSb8SyrEmHE3tWOkxe2KT6h4wsQ/view?usp=sharing
+Pulmonary Imaging - https://drive.google.com/file/d/1tAmZj8CCTk9vvaxrvQcpKyah7syCLoyj/view?usp=sharing
+eating disorders - https://drive.google.com/file/d/1tBu28ddByIbwdzjndyRoOdP5DH8tBbUJ/view?usp=sharing
+Atrial Fibrillation and Flutter- - https://drive.google.com/file/d/1tJbBExbKsOQ7_ou7QIX7jxYibWwKwJTW/view?usp=sharing
+Introduction to Heart Failure - https://drive.google.com/file/d/1tMRMXxpx7g1fXfcioU7kpJqdPIUwgC0n/view?usp=sharing
+Sensory System - https://drive.google.com/file/d/1tPhmXuxykIW8nqZqE-PzgGuNfpSzyTLU/view?usp=sharing
+Immune Deficiency Syndromes.mov - https://drive.google.com/file/d/1tr0hzC4q3GxVaxz8MOV6yxOcHLNwU6XF/view?usp=sharing
+Physiology pt. 1 - https://drive.google.com/file/d/1trH8-F28Aw44B6IYoXF1Syw6aEYdm4tV/view?usp=sharing
+Gastrointestinal Hormones_ Master Regulators of Digestion - Part II - https://drive.google.com/file/d/1uaggM9PVQSSLQycTs0Mlib547b9BWLQ9/view?usp=sharing
+Cardiac Physiology Introduction - https://drive.google.com/file/d/1umKW7o2tiEgiwNGUhsXD-F8MkMQsbj7A/view?usp=sharing
+Aula3_NonMendelian_Inheritance - https://drive.google.com/file/d/1v2WkYc8R1cXpM5Is_3662s4Y0uvyzA0w/view?usp=sharing
+GI Tract Structure & Histology - https://drive.google.com/file/d/1vP8GyWFRAgYuYWpaisMiBzN1tNY_8ZOV/view?usp=sharing
+O que é o STEP2 CK_ - https://drive.google.com/file/d/1vTP2Inxu0OvUvFQ7hZhlCcRg1CZZmbj1/view?usp=sharing
+ego defenses - https://drive.google.com/file/d/1vVfxLJKhaOh16c8vk7NLJlDGmVVqxJj8/view?usp=sharing
+Microtubule Inhibitors - https://drive.google.com/file/d/1vunOSXrdwQYKjmbS3PASSFePAYMAhwwK/view?usp=sharing
+Shock - https://drive.google.com/file/d/1w8R-7vK0rFZwCYWeGxM2Oegu7JrsW-h2/view?usp=sharing
+Uterus.mp4 - https://drive.google.com/file/d/1wAwA6wLR7hRq3Prn9K8NEdr_3SczBrVt/view?usp=sharing
+mood disorders - https://drive.google.com/file/d/1wkDQbsyQ6c0DRHG_mYulTbEdBSpEHBPO/view?usp=sharing
+Skin Conditions - https://drive.google.com/file/d/1wlKJM8ZGaUiVOTj_wWJQYLoz61YI1T3F/view?usp=sharing
+Neuromuscular blockers (NMBs).mp4 - https://drive.google.com/file/d/1wo0Dmkb57aAE0WHOqyoMrzR5Lfwv2sBj/view?usp=sharing
+B Vitamins - https://drive.google.com/file/d/1wy9cT5OHqqfuFLCn5bNmPeQIDKyLjQPM/view?usp=sharing
+Benign thyroid diseases - https://drive.google.com/file/d/1wycRxWYhRG0dgppgV7847d1VKekiVthn/view?usp=sharing
+Coarctation of the Aorta - https://drive.google.com/file/d/1x-6FbpZpRE4E_bwmpzVvEeR6iiiciSFz/view?usp=sharing
+Bowel disorders Part 2_ Adulthood and General - https://drive.google.com/file/d/1xAGdpnOJlncfSwGOqY-tsDKgzrD8b4FD/view?usp=sharing
+Asthma and COPD treatment part 2 (Duplicata?) - https://drive.google.com/file/d/1xKVXyegvqLQn_jB5Nzwu9qrnGQUa77vu/view?usp=sharing
+Pulmonary Circulation Part 1 - https://drive.google.com/file/d/1xhGkJ_hMSo7au3mejvtDdA82wkAt5Qx0/view?usp=sharing
+Pharmacokinetics parte 1 - https://drive.google.com/file/d/1xhmaZ0_e3eVjfSrJVlv-ijB7KZbQW1bK/view?usp=sharing
+Introduction to the Nervous System - https://drive.google.com/file/d/1xnfrbITXysJhFbVgY8l4F8ghWyIlb-0A/view?usp=sharing
+Neurotransmitters - https://drive.google.com/file/d/1y9NiL-NORALFSsQBuolViunOIh7WrZg8/view?usp=sharing
+Alkylating Agents - https://drive.google.com/file/d/1ySIP53Gx9oYalQtjhYQeCNz_quD6_U_V/view?usp=sharing
+Jugular Venous Pulse waves - https://drive.google.com/file/d/1ySTfDEHv3EXiPM4DJckITov_M-m0UlcX/view?usp=sharing
+Tuberculosis (Duplicata?) - https://drive.google.com/file/d/1yhMF6xgfqauKf-F2a5Q2uO1e7H0xNLr9/view?usp=sharing
+Multiple Myeloma.mp4 - https://drive.google.com/file/d/1ynxnXFNFrXScTSLTcum3-vNys1hrXO7O/view?usp=sharing
+Cardiac Anatomy - https://drive.google.com/file/d/1z4ZK5TozXjmF74SP-ezWoNecWxXIsqGZ/view?usp=sharing
+Enzymes and Enzyme Inhibitors - https://drive.google.com/file/d/1z9WDM6jXyf0pz2kltAsbhHcuphT2krwY/view?usp=sharing
+Programmed Cell Death - https://drive.google.com/file/d/1zEpEOoDe8YvAoluI8s0U8LwoTgSTmocK/view?usp=sharing
+Correlations - https://drive.google.com/file/d/1zO6PqRRaDC3tSIt_qwsRhj9Tv9CKrKSm/view?usp=sharing
+Hypertension Treatment - https://drive.google.com/file/d/1zdw-YYOx0UQGgg2T96WDXGmwMFYq67yM/view?usp=sharing
+Adrenal Glands - https://drive.google.com/file/d/1zsxiaE9FzYso87l-diCxsM3zxL9cyr3N/view?usp=sharing
+
+Congenital disorders of morphogenesis - https://drive.google.com/file/d/1-AiGgAMDV6_VwJ0Iw6PjfdhfmwLLDNWb/view?usp=sharing
+Tipos de estágios nos EUA - Medcof USA - https://drive.google.com/file/d/1-TvnL2cf9wuAqPu0hitsQZgeybypyLBw/view?usp=sharing
+Cardiovascular Adaptation During Physical Activity - https://drive.google.com/file/d/10Cz-Dq1PqqckIaPEqKjtAXX-J2Gcfwq2/view?usp=sharing
+Gastrointestinal Embryology - Part 1 - Medcof USA - https://drive.google.com/file/d/10xRbt_UH6ene_JlpStAvjITATaui5SK5/view?usp=sharing
+Cellular responses to stimuli - https://drive.google.com/file/d/112TE2fsSKlan6nheOgXAY2A8mK38JjPN/view?usp=sharing
+Child Abuse and Neglect - Medcof USA - https://drive.google.com/file/d/11ZnV0kud4VISZfEjC6xXLfEDWOw0-LhJ/view?usp=sharing
+Cardiac Anatomy - https://drive.google.com/file/d/121RC95rfqHMCFgx6vIxhUUTjmCPfRsfl/view?usp=sharing
+Hypothesis Testing - Medcof USA - https://drive.google.com/file/d/131s858VhQz8ho1mrQu6EXDLQ1XE73wAV/view?usp=sharing
+Knee Injuries - Medcof USA - https://drive.google.com/file/d/14jqrcImLKSAbtrFuoEL20zMG7g3cXWX2/view?usp=sharing
+Pulmonary Anatomy - Medcof USA - https://drive.google.com/file/d/15AMpbJfpBx23zzLzHPuJCkU7IoLab1K5/view?usp=sharing
+Gastrointestinal Anatomy - Medcof USA - https://drive.google.com/file/d/15x2dI-8NizZF7kCFiWVNT_er9bAhcvAh/view?usp=sharing
+DNA - https://drive.google.com/file/d/17N6OnmP5MkHvRPjnTHv2VBawtLAE9tZE/view?usp=sharing
+Estágios nos EUA - Medcof USA - https://drive.google.com/file/d/18XyxMh5giDCae5_-GlDJrbM9ygB9Qmqd/view?usp=sharing
+Primary Hemostasis - https://drive.google.com/file/d/19P4t4O4JrHxLy-kHtZdvcc7CA-rY4AJ-/view?usp=sharing
+Overview of Hemostasis - https://drive.google.com/file/d/1BpD9xNHopD-nuGDcAkXZUHIliLs6dal/view?usp=sharing
+Pulmonary Embryogenesis - Medcof USA - https://drive.google.com/file/d/1C6_rEdFa7tB5N0L1cpy5fb6D_XXR1WB_/view?usp=sharing
+The First Responder: an Overview of Innate Immunity - Medcof USA - https://drive.google.com/file/d/1DmhRiRZKqEYnul-Mq4MbS6v183fGkuTw/view?usp=sharing
+Cellular damage - https://drive.google.com/file/d/1E44Rjil6vftyk0WeVz18WdF_xi_X16_g/view?usp=sharing
+Neurotransmitters - Medcof USA - https://drive.google.com/file/d/1Eb1fpFs-i7ygCioCCzyhE81aRKlzRnW_/view?usp=sharing
+Overview of Hemostasis - https://drive.google.com/file/d/1FBAyRmsso3plbyzJXo4fL_mP7RE-6pea/view?usp=sharing
+Pharmacokinetics - https://drive.google.com/file/d/1FWVJmR9j8Q1ilZdTdVsGe3vnP-zFLQhK/view?usp=sharing
+Thyroid Gland - https://drive.google.com/file/d/1FYTI5mv2fpWiH0W9_R5WCMWLOrsSj4_4/view?usp=sharing
+Ego Defenses - Medcof USA - https://drive.google.com/file/d/1G3iMccbY8J_2D0tOe7zxe-UMtfBGZwpZ/view?usp=sharing
+Confidentiality - Medcof USA - https://drive.google.com/file/d/1GV8PMrqgv9VLUDZYRmvWJ5s1nw7oU7Rt/view?usp=sharing
+Bacteria Morphology - Medcof USA - https://drive.google.com/file/d/1HDslRF4Dw-1ID3SFQzyqrgAFCspT8oeL/view?usp=sharing
+Primary Hemostasis Drugs - https://drive.google.com/file/d/1HlswuhVqOpJMaWXWVFoz0C2EDUU9VK8p/view?usp=sharing
+Conditioning and Transference - Medcof USA - https://drive.google.com/file/d/1IaJtEriW3m2kqGCE3raDwdYo-2qmYOO3/view?usp=sharing
+Embryonic Genes - https://drive.google.com/file/d/1JVS5GsAkbgu1Cez3gd0SovfrCppEBGnw/view?usp=sharing
+DNA Repair - Medcof USA - https://drive.google.com/file/d/1KOjG7vX75b91rpIGUsXvh7VyGdvoC-xv/view?usp=sharing
+Embryonic development - https://drive.google.com/file/d/1Ke3gWPfOpwt82nuEXVcQARq27-2Lh4BN/view?usp=sharing
+Basic Principles - Medcof USA - https://drive.google.com/file/d/1L6QEeoY2q99B0D95TvtITTgx9FRh7paW/view?usp=sharing
+Informed Consent - Medcof USA - https://drive.google.com/file/d/1Lq5tdAipnI-RO3gZSVQtvCs0D_4ufL6I/view?usp=sharing
+Como conseguir estágios nos EUA - https://drive.google.com/file/d/1Lxk7iGpLTPSZVe5CMEgb6rsC6YIWeawx/view?usp=sharing
+Pharyngeal apparatus - https://drive.google.com/file/d/1LziHJNycgS8HWQxXJw8QEhbeCJpXHtEh/view?usp=sharing
+Primary Hemostasis Disorders - https://drive.google.com/file/d/1O48g-rATNxgFXQZr2AW3ELBJMq7VoqZq/view?usp=sharing
+Surface cells - https://drive.google.com/file/d/1OFBpnzGNuNpeWOf2c-5mVsKQ_dmEFLgH/view?usp=sharing
+Cardiac Physiology Introduction - Medcof USA - https://drive.google.com/file/d/1OYtEUot0FGiLOWz_nC8IRnGv4bLxEVu5/view?usp=sharing
+Refractive Errors & Cataracts - https://drive.google.com/file/d/1OoY1VPZrCirOvDm8X3kytlKhUMDdc8mO/view?usp=sharing
+Embryonic development - https://drive.google.com/file/d/1PIWKHF3XaMT5hCyYEmkR6jvuDP3FZ2R_/view?usp=sharing
+Surface cells - Medcof USA - https://drive.google.com/file/d/1POrPo9FsVySYVWPa1hLWeJo_-PTD37km/view?usp=sharing
+Pyrimidine Metabolism - https://drive.google.com/file/d/1PaeISjF-8g382zKXstCSoBa-ZcfeIaA3/view?usp=sharing
+Cellular damage - https://drive.google.com/file/d/1St_r9k_iSybLp46RJu4610wSKEQaiJwM/view?usp=sharing
+Benign thyroid diseases - Medcof USA - https://drive.google.com/file/d/1TkhNuc9H4wAqJRPekRyYICtPRDMYtKTi/view?usp=sharing
+Brachial Plexus - Medcof USA - https://drive.google.com/file/d/1U1Nv4Le8iLik-Jiy4oNd97_dqWfTg8b-/view?usp=sharing
+Introduction & Structural Disorders of the Eye - https://drive.google.com/file/d/1UzAOBCbCQzgAgeugPkRPxLmkVMFPXqIM/view?usp=sharing
+Superior Member - Medcof USA - https://drive.google.com/file/d/1W3lXRVte2y-X4tDWuj3K5KYvIc5_v2cR/view?usp=sharing
+Primary Hemostasis Drugs - https://drive.google.com/file/d/1WZyw39N_cjSEGbN6OuMaptSIcwXHh00A/view?usp=sharing
+Pulmonary Anatomy - https://drive.google.com/file/d/1XR2-EguMpbFimbRLdFUNG70Jzj1xb_J1/view?usp=sharing
+Reproductive Embryology - Medcof USA - https://drive.google.com/file/d/1XSnXHBByJUm0BSPrHa88D3m5l9LGlR7T/view?usp=sharing
+Neuromuscular Blockers - https://drive.google.com/file/d/1YI4oo4YmQl04JfPUiHtkapgVKXE53CVD/view?usp=sharing
+(1) - https://drive.google.com/file/d/1ZpjPSeY-WdjVTu4xbIkoCPDeMwi2DmHD/view?usp=sharing
+Conditioning and Transference - https://drive.google.com/file/d/1_IqluWqENWAS6l4Id4cp3HucdUuUquJo/view?usp=sharing
+B-cells - https://drive.google.com/file/d/1_zRrQ7sESKPtWqUTgzC1Vkv5e-lDpp1M/view?usp=sharing
+DNA Replication - Medcof USA - https://drive.google.com/file/d/1a62v5jIQbpz3RvsYpbB_gjxd5Ikee_2c/view?usp=sharing
+Guia dos primeiros passos - https://drive.google.com/file/d/1a8dv_3X_sgHySrIIRDHz9S6tLHscUxbp/view?usp=sharing
+General Anesthesia - https://drive.google.com/file/d/1aNrhBhcvnDGhODwn4cnoZhkzX4IPxjtp/view?usp=sharing
+Renal Embryology - Medcof USA - https://drive.google.com/file/d/1aVGveI1V3ifzOtUREZwcyy0Jkhtr_lL_/view?usp=sharing
+Childhood Disorders - https://drive.google.com/file/d/1at9gaGPP634R8fwMAHMxAbRyoCpJkcf5/view?usp=sharing
+Pulmonary Embryogenesis - https://drive.google.com/file/d/1bTuSNvtaedl6GQm-0FyBw5s04yZ2OUg1/view?usp=sharing
+Embryonic Genes - Medcof USA - https://drive.google.com/file/d/1cIgP550RoTwoYLWwH-WrwRBTfpNcdyhQ/view?usp=sharing
+(Arquivo sem nome/Genérico) - https://drive.google.com/file/d/1cWFqkWfDkq_3eCefiZ9M8QqHuNWuORlt/view?usp=sharing
+DNA Mutations - Medcof USA - https://drive.google.com/file/d/1dmZdmDvi5XS9No3DbrsgMb7L2VfLC8Wu/view?usp=sharing
+Purine Metabolism - https://drive.google.com/file/d/1fRbDSJeZBN53wucSrwaSgSP7baLCyy5N/view?usp=sharing
+Cellular responses to stimuli - Medcof USA - https://drive.google.com/file/d/1fWuSKf-pm_5qHEd8fyln7thZDAiFpXS3/view?usp=sharing
+Malignant Thyroid Diseases - Medcof USA - https://drive.google.com/file/d/1gGCLL0X0ImARzKzMcZisanYrHoxKUrlf/view?usp=sharing
+Gastrointestinal Embryology - Part 2 - Medcof USA - https://drive.google.com/file/d/1iHdAMWeF9YJKfeUjrb3157vEAP2VL1dt/view?usp=sharing
+Cardiac Physiology Introduction - https://drive.google.com/file/d/1ik3a_aW_PVSd8AvJsun3gvwrneYlwOm5/view?usp=sharing
+Forms of Inheritance & Pedigrees - Medcof USA - https://drive.google.com/file/d/1im12acdZXMHdttUK1K6a9Kobg5YRGBUd/view?usp=sharing
+Cardiac Anatomy - https://drive.google.com/file/d/1jDwfOLj5rVS6rmBBgbDUu9wVjz4O7RUb/view?usp=sharing
+Measurements and Variables - https://drive.google.com/file/d/1lMWaryMaIFfdf0EWsFOElZ9mGoFBEkBI/view?usp=sharing
+Pyrimidine Metabolism - Medcof USA - https://drive.google.com/file/d/1l_c0RUrE4bsHMusfEdPOWWNsjIuCNVNC/view?usp=sharing
+Statistics - Medcof USA - https://drive.google.com/file/d/1m0tWxIvqipJjrV0fpmxGJc_ivLgRjoN_/view?usp=sharing
+Child Abuse and Neglect - https://drive.google.com/file/d/1mAaJehNTOgg4XaX2Of5Aza6J1IKpFibF/view?usp=sharing
+Renal Anatomy - Medcof USA - https://drive.google.com/file/d/1n6MuCxUnp4gXp6k3BCqoWinXIw6_21G4/view?usp=sharing
+Refractive Errors and Cataracts - https://drive.google.com/file/d/1nA6tQOnjDgUg0RMOh4KGHV4u2-_ZJu1k/view?usp=sharing
+Local Anesthesia - https://drive.google.com/file/d/1nNPzM3JrG0z7HR--Db78MhwgM028MXD_/view?usp=sharing
+DNA Structure - https://drive.google.com/file/d/1ndbW0LGDBdUsoC9so9qBblWYnSbRGA0i/view?usp=sharing
+T-cells - https://drive.google.com/file/d/1o74j1d57auZj6B__ChA98a3dtdcjmPMX/view?usp=sharing
+Bacterial Culture - Medcof USA - https://drive.google.com/file/d/1oP8UXVkaFAl8g8sq2iatulYQjOuiEa_3/view?usp=sharing
+BASIC PRINCIPLES - https://drive.google.com/file/d/1ofRYEwwSI1kMcczXhwFDrkveS_zYSrst/view?usp=sharing
+(Arquivo sem nome/Genérico) - https://drive.google.com/file/d/1ofUVOejqsZ4TQp0wHlWTSMy7vSUolRkq/view?usp=sharing
+Basic Genetic Concepts - Medcof USA - https://drive.google.com/file/d/1pG1LjyMIhvE1TrMoRyYMDguSdaKkDbEI/view?usp=sharing
+Ego Defenses - https://drive.google.com/file/d/1qM_KuacPYCHMlKp8dX4PtgEtv4FP-yOH/view?usp=sharing
+Pharmacokinetics - https://drive.google.com/file/d/1qYN45tQoAputQSqDCslwME19RNr7_l5I/view?usp=sharing
+Microbiology Introduction - Medcof USA - https://drive.google.com/file/d/1rck47DzYlN54kkI5e_9qkQVPlWpdC8-L/view?usp=sharing
+Cardiovascular Adaptation During Physical Activity - https://drive.google.com/file/d/1s0rhqeUwtahnLmjagdkC-K9d3SV1bQKn/view?usp=sharing
+Primary Hemostasis - Medcof USA - https://drive.google.com/file/d/1sHFX0rwN9PIgMcDgz4E6q1ZvcRTscSk_/view?usp=sharing
+Ethics Principles - https://drive.google.com/file/d/1tF7ufarz4CSFgvFY1PTBLHQ9JoQUByvW/view?usp=sharing
+Introduction & Structural Disorders of the Eye - https://drive.google.com/file/d/1tNhkPfKfScd7FWDWJYqxI2C7gVMCFtT8/view?usp=sharing
+Primary Hemostasis Disorders - https://drive.google.com/file/d/1tWCBvIHVdAFzEavzR-_g_Qytiolu8fma/view?usp=sharing
+Introduction to the Nervous System - Medcof USA - https://drive.google.com/file/d/1tiAb6P30r2ghdOlIspMAhSkmQH_-jvDk/view?usp=sharing
+Purine Metabolism - Medcof USA - https://drive.google.com/file/d/1vZVwVX4dsud7CegLoBXuJQoW-XDzhT0l/view?usp=sharing
+Childhood Disorders - Medcof USA - https://drive.google.com/file/d/1wKk-0y-UDMi542XYpteedC4JoJ9ZSs-D/view?usp=sharing
+Reactive molecules - https://drive.google.com/file/d/1wRE_1JQ-uLnPLEljntNxyfjZ87IsQ3T7/view?usp=sharing
+Congenital disorders of morphogenesis - https://drive.google.com/file/d/1xjV4wE3k_CjmJKw4UzY5oq823PRfSxTP/view?usp=sharing
+Reactive molecules - Medcof USA - https://drive.google.com/file/d/1yTmGvVaCMVzsWwYD-8ZfFV8yo8n4rBBc/view?usp=sharing
+`;
+
+        // --- PROCESSAMENTO E MAPA DE LINKS ---
+        const linkMap = {};
+        
+        // Função para normalizar strings (remover acentos, minúsculas, remover pontuações e palavras-chave irrelevantes)
+        function normalizeKey(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, "");
+        }
+
+        // Função para normalizar e limpar títulos para comparação com as chaves do Drive
+        function cleanTitle(title) {
+            let cleaned = title.replace(/^Aula \d+ - (CofExpress: )?/, "").replace(/^PDF de Slides - /, "").replace(/ - Medcof USA$/, "").trim();
+            cleaned = cleaned.replace(/Part \d+/i, "").replace(/\(part \d+\)/i, "").replace(/\(part \d+ \)/i, "").trim();
+            return cleaned;
+        }
+
+        // Popular o mapa de links (chave normalizada -> URL)
+        rawLinks.trim().split('\n').forEach(line => {
+            const parts = line.split(' - https');
+            if (parts.length >= 2) {
+                const title = parts[0].trim();
+                const url = 'https' + parts[1].trim();
+                linkMap[normalizeKey(title)] = url;
+            }
+        });
+
+        // Função para encontrar o melhor link
+        function findLink(title, isMaterial) {
+            let coreTitle = cleanTitle(title);
+            
+            // 1. Tenta a correspondência exata ou a mais próxima do título original
+            const attempts = [];
+            
+            // Títulos originais (para materiais, tenta nomes de PDF)
+            if (isMaterial) {
+                 attempts.push(`PDF de Slides - ${coreTitle}`);
+                 attempts.push(`PDF de Slides - ${coreTitle} - Medcof USA`);
+                 attempts.push(coreTitle);
+                 attempts.push(`${coreTitle} - Medcof USA`);
+                 attempts.push(coreTitle.replace(/:/g, "")); // remove :
+                 attempts.push(coreTitle.replace(/ - Medcof USA/i, "")); // Versão sem Medcof USA
+                 attempts.push(coreTitle.replace(/\s/g, "")); // Sem espaços
+                 attempts.push(`${coreTitle} - Medcof USA.pdf`);
+            } else {
+                 // Para Aulas, tenta títulos de vídeos comumente sufixados (.mp4, _Regravação, etc.)
+                 attempts.push(coreTitle);
+                 attempts.push(`${coreTitle} - Medcof USA`);
+                 attempts.push(`${coreTitle}.mp4`);
+                 attempts.push(`${coreTitle}_Regravação`);
+                 attempts.push(coreTitle.replace(/:/g, ""));
+                 attempts.push(coreTitle.replace(/ - Medcof USA/i, ""));
+            }
+
+            for (let attempt of attempts) {
+                let key = normalizeKey(attempt);
+                if (linkMap[key]) return linkMap[key];
+            }
+            
+            // 2. Tenta uma correspondência mais flexível (reorganizando palavras)
+            let coreKey = normalizeKey(coreTitle);
+            for (const key in linkMap) {
+                if (key.includes(coreKey) || coreKey.includes(key)) {
+                    // Evita falsos positivos muito curtos, exceto se for material
+                    if (isMaterial || coreKey.length > 10) {
+                         return linkMap[key];
+                    }
+                }
+            }
+
+            return isMaterial ? PLACEHOLDER_MATERIAL : PLACEHOLDER_VIDEO;
+        }
+
+
+        // Dados estruturados do curso USMLE
+        const rawCourseData = [
+            {
+                title: "Módulo 01 - Primeiros passos no USMLE",
+                subs: [
+                    { t: "O que é o STEP1? - Medcof USA", l: ["Aula 01 - O que é o STEP1? - Medcof USA"] , m: ["Guia dos primeiros passos"] },
+                    { t: "Checagem de Sponsor Notes - Medcof USA", l: ["Aula 01 - Checagem de Sponsor Notes - Medcof USA"] },
+                    { t: "Inscrição no ECFMG e Form 186 - Medcof USA", l: ["Aula 01 - Inscrição no ECFMG e Form 186 - Medcof USA"] },
+                    { t: "Agendamento da Prova - Medcof USA", l: ["Aula 01 - Agendamento da Prova - Medcof USA"] },
+                    { t: "O que é o STEP2 CK? - Medcof USA", l: ["Aula 01 - O que é o STEP2 CK? - Medcof USA"] },
+                    { t: "O que é o OET? - Medcof USA", l: ["Aula 01 - O que é o OET? - Medcof USA"] },
+                    { t: "O que é o STEP3? - Medcof USA", l: ["Aula 01 - O que é o STEP3? - Medcof USA"] },
+                    { t: "The Match - Medcof USA", l: ["Aula 01 - The Match - Medcof USA"] }
+                ]
+            },
+            {
+                title: "Módulo 02 - 01. Onboarding",
+                subs: [
+                    { t: "Vídeo de Boas-vindas e Apresentação Geral do Curso - Medcof USA", l: ["Aula 01 - Vídeo de Boas-vindas e Apresentação Geral do Curso - Medcof USA"] },
+                    { t: "Cronograma do Curso - Medcof USA", l: ["Aula 01 - Cronograma do Curso - Medcof USA"] },
+                    { t: "Metodologia de Estudo para Garantir Sua Aprovação - Medcof USA", l: ["Aula 01 - Metodologia de Estudo para Garantir Sua Aprovação - Medcof USA"] },
+                    { t: "Onboarding da Plataforma de Aulas - Medcof USA", l: ["Aula 01 - Onboarding da Plataforma de Aulas - Medcof USA"] },
+                    { t: "Onboarding da Plataforma do Qbank - Medcof USA", l: ["Aula 01 - Onboarding da Plataforma do Qbank - Medcof USA"] }
+                ]
+            },
+            {
+                title: "Módulo 03 - Estágios Médicos Internacionais",
+                subs: [
+                    { t: "Estágios nos EUA - Medcof USA", l: ["Aula 01 - Estágios nos EUA - Medcof USA"], m: ["PDF de Slides - Estágios nos EUA - Medcof USA", "Estágios nos EUA - Medcof USA"] },
+                    { t: "Tipos de estágios nos EUA - Medcof USA", l: ["Aula 01 - Tipos de estágios nos EUA - Medcof USA"], m: ["PDF de Slides - Tipos de estágios nos EUA - Medcof USA"] },
+                    { t: "Como conseguir estágios nos EUA - Medcof USA", l: ["Aula 01 - Como conseguir estágios nos EUA - Medcof USA"], m: ["PDF de Slides - Como conseguir estágios nos EUA", "Como conseguir estágios nos EUA"] },
+                    { t: "Documentos comuns para realização dos Estágios - Medcof USA", l: ["Aula 01 - Documentos comuns para realização dos Estágios - Medcof USA"], m: ["Documentos comuns para a realização dos Estágios"] }
+                ]
+            },
+            {
+                title: "Módulo 04 - Inglês Médico",
+                subs: [
+                    { t: "Anatomia de um caso clínico - Medcof USA", l: ["Aula 01 - Anatomia de um caso clínico - Medcof USA"] },
+                    { t: "Verbos mais comuns - Medcof USA", l: ["Aula 01 - Verbos mais comuns - Medcof USA"] },
+                    { t: "Sintomas - Medcof USA", l: ["Aula 01 - Sintomas - Medcof USA"] },
+                    { t: "Inicio dos sintomas - Medcof USA", l: ["Aula 01 - Inicio dos sintomas - Medcof USA"] },
+                    { t: "Exame Físico Normal - Medcof USA", l: ["Aula 01 - Exame Físico Normal - Medcof USA"] },
+                    { t: "Exame Físico Geral Alterado - Medcof USA", l: ["Aula 01 - Exame Físico Geral Alterado - Medcof USA"] },
+                    { t: "Exame Físico Alterado - Por Sistemas - Medcof USA", l: ["Aula 01 - Exame Físico Alterado - Por Sistemas - Medcof USA"] }
+                ]
+            },
+            {
+                title: "Módulo 05 - Cardiology",
+                subs: [
+                    { t: "Cardiac Anatomy", l: ["Aula 01 - Cardiac Anatomy - Medcof USA"], m: ["PDF de Slides - Cardiac Anatomy", "Cardiac Anatomy"] },
+                    { t: "Cardiac Physiology Introduction", l: ["Aula 01 - Cardiac Physiology Introduction - Medcof USA"], m: ["PDF de Slides - Cardiac Physiology Introduction - Medcof USA", "Cardiac Physiology Introduction"] },
+                    { t: "Cardiovascular Adaptation During Physical Activity", l: ["Aula 01 - Cardiovascular Adaptation During Physical Activity"], m: ["PDF de Slides - Cardiovascular Adaptation During Physical Activity", "Cardiovascular Adaptation During Physical Activity"] },
+                    { t: "Cardiovascular Flow Dynamics", l: ["Aula 01 - Cardiovascular Flow Dynamics"], m: ["Cardiovascular Flow Dynamics"] },
+                    { t: "Mechanisms of Blood Pressure Regulation", l: ["Aula 01 - Mechanisms of Blood Pressure Regulation"], m: ["Mechanisms of Blood Pressure Regulation"] },
+                    { t: "Frank-Staring Relationship and Ventricular Function", l: ["Aula 01 - Frank-Staring Relationship and Ventricular Function"], m: ["Regravção Frank-Starling Relationship and Ventricular Function"] },
+                    { t: "Cardiac Cycle Dynamics: PV Loops and the Wiggers Diagram", l: ["Aula 01 - Cardiac Cycle Dynamics: PV Loops and the Wiggers Diagram"], m: ["Regravção Cardiac Cycle Dynamics PV Loops and the Wiggers Diagram"] },
+                    { t: "Venous Pressure Tracings", l: ["Aula 01 - Venous Pressure Tracings - Medcof USA"], m: ["Jugular Venous Pulse waves"] },
+                    { t: "Cardiac Action Potentials", l: ["Aula 01 - Cardiac Action Potentials - Medcof USA"], m: ["Cardiac Action Potentials"] },
+                    { t: "AV and Bundle Branch Blocks", l: ["Aula 01 - AV and Bundle Branch Blocks - Medcof USA"], m: ["AV and Bundle Branch Blocks"] },
+                    { t: "Antiarrhythmics: Classes I–IV, MOA & Toxicities", l: ["Aula 01 - Antiarrhythmics: Classes I–IV, MOA & Toxicities - Medcof USA"], m: ["Antiarrhythmics Classes I–IV, MOA & Toxicities"] },
+                    { t: "ECG Interpretation: Axis, Intervals & Waves", l: ["Aula 01 - ECG Interpretation: Axis, Intervals & Waves - Medcof USA"], m: ["ECG Interpretation Axis, Intervals & Waves"] },
+                    { t: "Must-Know ECG Patterns for Step 1", l: ["Aula 01 - Must-Know ECG Patterns for Step 1 - Medcof USA"], m: ["Must-Know ECG Patterns for Step 1"] },
+                    { t: "Atherosclerosis", l: ["Aula 01 - Atherosclerosis - Medcof USA"], m: ["Atherosclerosys"] },
+                    { t: "Myocardial Ischemia", l: ["Aula 01 - Myocardial Ischemia - Medcof USA"], m: ["Myocardial Ischemia"] },
+                    { t: "STEMI (ST-Elevation Myocardial Infarction)", l: ["Aula 01 - STEMI (ST-Elevation Myocardial Infarction) - Medcof USA"], m: ["STEMI (ST-Elevation Myocardial Infarction)"] },
+                    { t: "Non-ST Elevation Acute Coronary Syndromes", l: ["Aula 01 - Non-ST Elevation Acute Coronary Syndromes"], m: ["Non-ST Elevation Acute Coronary Syndromes"] },
+                    { t: "Chronic Coronary Syndrome", l: ["Aula 01 - Chronic Coronary Syndrome"], m: ["Chronic Coronary Syndrome"] },
+                    { t: "Cardiac Embriology", l: ["Aula 01 - Cardiac Embriology - Medcof USA"], m: ["Cardiac Embryology"] },
+                    { t: "Congenital Cardiac Shunts", l: ["Aula 01 - Congenital Cardiac Shunts - Medcof USA"], m: ["Congenital Cardiac Shunts_Regravação"] },
+                    { t: "Cyanotic Congenital Heart Disease", l: ["Aula 01 - Cyanotic Congenital Heart Disease - Medcof USA"], m: ["Cyanotic Congenital Heart Disease"] },
+                    { t: "Coarctation of the Aorta", l: ["Aula 01 - Coarctation of the Aorta - Medcof USA"], m: ["Coarctation of the Aorta"] },
+                    { t: "Introduction to Heart Failure", l: ["Aula 01 - Introduction to Heart Failure - Medcof USA"], m: ["Introduction to Heart Failure"] },
+                    { t: "HFpEF vs HFrEF", l: ["Aula 01 - HFpEF vs HFrEF - Medcof USA"], m: ["HFpEF vs HFrEF"] },
+                    { t: "Restrictive CMP: Causes and Hemodynamic Findings", l: ["Aula 01 - Restrictive CMP: Causes and Hemodynamic Findings - Medcof USA"], m: ["Restrictive CMP Causes and Hemodynamic Findings"] },
+                    { t: "Acute Decompensated Heart Failure", l: ["Aula 01 - Acute Decompensated Heart Failure - Medcof USA"], m: ["Acute Decompensated Heart Failure"] },
+                    { t: "Chronic Heart Failure", l: ["Aula 01 - Chronic Heart Failure - Medcof USA"], m: ["Chronic Heart Failure"] },
+                    { t: "Endocarditis", l: ["Aula 01 - Endocarditis - Medcof USA"], m: ["Infective Endocarditis"] },
+                    { t: "Cardiac Auscultation", l: ["Aula 01 - Cardiac Auscultation - Medcof USA"], m: ["Cardiac Auscultation"] },
+                    { t: "Hypertrophic Cardiomyopathy", l: ["Aula 01 - Hypertrophic Cardiomyopathy - Medcof USA"], m: ["Hyperthrophic Cardiomyopathy"] },
+                    { t: "Cardiac Tumors", l: ["Aula 01 - Cardiac Tumors - Medcof USA"], m: ["Cardiac Tumors"] },
+                    { t: "Aortic Disease", l: ["Aula 01 - Aortic Disease - Medcof USA"], m: ["Aortic Disease"] },
+                    { t: "Pericardial Disease", l: ["Aula 01 - Pericardial Disease - Medcof USA"], m: ["Pericardial Disease"] },
+                    { t: "Shock", l: ["Aula 01 - Shock - Medcof USA"], m: ["Shock"] },
+                    { t: "Valve Disease", l: ["Aula 01 - Valve Disease - Medcof USA"], m: ["Valve Disease"] },
+                    { t: "Hypertension", l: ["Aula 01 - Hypertension - Medcof USA"], m: ["Hypertension"] },
+                    { t: "Hypertension Treatment", l: ["Aula 01 - Hypertension Treatment - Medcof USA"], m: ["Hypertension Treatment"] }
+                ]
+            },
+            {
+                title: "Módulo 06 - Hematology",
+                subs: [
+                    { t: "Overview of Hemostasis", l: ["Aula 01 - Overview of Hemostasis - Medcof USA"], m: ["PDF de Slides - Overview of Hemostasis", "Overview of Hemostasis"] },
+                    { t: "Primary Hemostasis", l: ["Aula 01 - Primary Hemostasis - Medcof USA"], m: ["PDF de Slides - Primary Hemostasis", "Primary Hemostasis - Medcof USA"] },
+                    { t: "Primary Hemostasis Disorders", l: ["Aula 01 - Primary Hemostasis Disorders - Medcof USA"], m: ["PDF de Slides - Primary Hemostasis Disorders", "Primary Hemostasis Disorders"] },
+                    { t: "Primary Hemostasis Drugs", l: ["Aula 01 - Primary Hemostasis Drugs - Medcof USA"], m: ["PDF de Slides - Primary Hemostasis Drugs", "Primary Hemostasis Drugs"] },
+                    { t: "Secondary Hemostasis", l: ["Aula 01 - Secondary Hemostasis - Medcof USA"], m: ["Secundary Hemostasis"] },
+                    { t: "Secondary Hemostasis Disorders", l: ["Aula 01 - Secondary Hemostasis Disorders - Medcof USA"], m: ["Secundary Hemostasis Disorders"] },
+                    { t: "Secondary Hemostasis Drugs", l: ["Aula 01 - Secondary Hemostasis Drugs - Medcof USA"], m: ["Secundary Hemostasis Drugs"] },
+                    { t: "Fibrinolysis", l: ["Aula 01 - Fibrinolysis - Medcof USA"], m: ["Fibrinolysis"] },
+                    { t: "Thrombosis and Hypercoagulability", l: ["Aula 01 - Thrombosis and Hypercoagulability - Medcof USA"], m: ["Thrombosis and Hypercoagulability"] },
+                    { t: "Microcytic Anemias", l: ["Aula 01 - Microcytic Anemias - Medcof USA"], m: ["Microcytic Anemias"] },
+                    { t: "Normocytic Anemias", l: ["Aula 01 - Normocytic Anemias - Medcof USA"], m: ["Normocytic Anemias.mp4"] },
+                    { t: "Macrocytic Anemia", l: ["Aula 01 - Macrocytic Anemia - Medcof USA"], m: ["Macrocytic Anemia.mp4"] },
+                    { t: "Hemolysis", l: ["Aula 01 - Hemolysis - Medcof USA"], m: ["Hemolysis.mp4"] },
+                    { t: "Acquired Hemolytic Disorders", l: ["Aula 01 - Acquired Hemolytic Disorders - Medcof USA"], m: ["Acquired Hemolytic Disorders.mp4"] },
+                    { t: "Inherited Hemolytic Disorders", l: ["Aula 01 - Inherited Hemolytic Disorders"], m: ["Inherited Hemolytic Disorders Part 1"] },
+                    { t: "Inherited Hemolytic Disorders (Part 2)", l: ["Aula 01 - Inherited Hemolytic Disorders (Part 2)"], m: ["Inherited Hemolytic Disorders Part 2"] },
+                    { t: "Transfusion Medicine", l: ["Aula 01 - Transfusion Medicine - Medcof USA"], m: ["Transfusion Medicine.mp4"] },
+                    { t: "Porphyrias", l: ["Aula 01 - Porphyrias - Medcof USA"], m: ["Porphyrias.mp4"] },
+                    { t: "Leukemias", l: ["Aula 01 - Leukemias - Medcof USA"], m: ["Leukemias.mp4"] },
+                    { t: "Multiple Myeloma", l: ["Aula 01 - Multiple Myeloma - Medcof USA"], m: ["Multiple Myeloma.mp4"] },
+                    { t: "Hodgkin Lymphoma", l: ["Aula 01 - Hodgkin Lymphoma - Medcof USA"], m: ["Hodgkin Lymphoma - Parte I"] },
+                    { t: "Non-Hodgkin Lymphoma", l: ["Aula 01 - Non-Hodgkin Lymphoma - Medcof USA"], m: ["Non - Hodgkin Lymphoma"] },
+                    { t: "Langerhans Cell Histiocytosis", l: ["Aula 01 - Langerhans Cell Histiocytosis - Medcof USA"], m: ["Langerhans Cell Histiocytosis"] },
+                    { t: "Amyloidosis", l: ["Aula 01 - Amyloidosis - Medcof USA"], m: ["Amyloidosis"] },
+                    { t: "Myeloproliferative Disorders", l: ["Aula 01 - Myeloproliferative Disorders - Medcof USA"], m: ["Myeloproliferative Disorders"] },
+                    { t: "Antimetabolites", l: ["Aula 01 - Antimetabolites - Medcof USA"], m: ["Antimetabolites"] },
+                    { t: "Alkylating Agents", l: ["Aula 01 - Alkylating Agents - Medcof USA"], m: ["Alkylating Agents"] },
+                    { t: "Microtubule Inhibitors", l: ["Aula 01 - Microtubule Inhibitors - Medcof USA"], m: ["Microtubule Inhibitors"] },
+                    { t: "Antibiotics and Topoisomerase", l: ["Aula 01 - Antibiotics and Topoisomerase - Medcof USA"], m: ["Antibiotics and Topoisomerase"] },
+                    { t: "Hormonal Agents", l: ["Aula 01 - Hormonal Agents - Medcof USA"], m: ["Hormonal"] },
+                    { t: "Immunotherapy and target", l: ["Aula 01 - Immunotherapy and target - Medcof USA"], m: ["Immunotherapy and target"] }
+                ]
+            },
+            {
+                title: "Módulo 07 - Pathology",
+                subs: [
+                    { t: "Cellular responses to stimuli", l: ["Aula 01 - Cellular responses to stimuli - Medcof USA"], m: ["PDF de Slides - Cellular responses to stimuli - Medcof USA", "Cellular responses to stimuli"] },
+                    { t: "Cellular damage", l: ["Aula 01 - Cellular damage - Medcof USA"], m: ["PDF de Slides - Cellular damage", "Cellular damage"] },
+                    { t: "Reactive molecules", l: ["Aula 01 - Reactive molecules - Medcof USA"], m: ["PDF de Slides - Reactive molecules", "Reactive molecules - Medcof USA"] },
+                    { t: "Programmed cell death", l: ["Aula 01 - Programmed cell death - Medcof USA"], m: ["Programmed Cell Death"] },
+                    { t: "Pathological cell death", l: ["Aula 01 - Pathological cell death - Medcof USA"], m: ["Patological cell death"] },
+                    { t: "Core concepts of inflammation", l: ["Aula 01 - Core concepts of inflammation - Medcof USA"], m: ["Core Concepts of Inflammation"] },
+                    { t: "Initial and ongoing inflammatory reaction", l: ["Aula 01 - Initial and ongoing inflammatory reaction - Medcof USA"], m: ["Initial and ongoing"] },
+                    { t: "Granulomatous response", l: ["Aula 01 - Granulomatous response - Medcof USA"], m: ["Granulomatous response-"] },
+                    { t: "Tissue repair and scarring", l: ["Aula 01 - Tissue repair and scarring - Medcof USA"], m: ["Tissue repair and scarring"] },
+                    { t: "Neoplastic process", l: ["Aula 01 - Neoplastic process - Medcof USA"], m: ["Neoplastic process"] }
+                ]
+            },
+            {
+                title: "Módulo 08 - Psychiatry",
+                subs: [
+                    { t: "Conditioning and Transference", l: ["Aula 01 - Conditioning and Transference - Medcof USA"], m: ["PDF de Slides - Conditioning and Transference", "Conditioning and Transference - Medcof USA"] },
+                    { t: "Childhood Disorders", l: ["Aula 01 - Childhood Disorders - Medcof USA"], m: ["PDF de Slides - Childhood Disorders", "Childhood Disorders - Medcof USA"] },
+                    { t: "Ego Defenses", l: ["Aula 01 - Ego Defenses - Medcof USA"], m: ["PDF de Slides - Ego Defenses - Medcof USA", "Ego Defenses"] },
+                    { t: "Child Abuse and Neglect", l: ["Aula 01 - Child Abuse and Neglect - Medcof USA"], m: ["PDF de Slides - Child Abuse and Neglect - Medcof USA", "Child Abuse and Neglect"] },
+                    { t: "ADHD and Autism", l: ["Aula 01 - ADHD and Autism - Medcof USA"], m: ["ADHD autism (1)"] },
+                    { t: "Cognitive Disorders e Dissociative Disorders", l: ["Aula 01 - Cognitive Disorders e Dissociative Disorders - Medcof USA"], m: ["cognitive and dissociative disorders"] },
+                    { t: "Psychosis", l: ["Aula 01 - Psychosis - Medcof USA"], m: ["Psychosis"] },
+                    { t: "Psychotic Disorders", l: ["Aula 01 - Psychotic Disorders - Medcof USA"], m: ["Psychotic disorders"] },
+                    { t: "Somatic and Factitious Disorders", l: ["Aula 01 - Somatic and Factitious Disorders - Medcof USA"], m: ["somatic and factitious disorders"] },
+                    { t: "Personality Disorders", l: ["Aula 01 - Personality Disorders - Medcof USA"], m: ["personality disorders"] },
+                    { t: "Mood Disorders", l: ["Aula 01 - Mood Disorders - Medcof USA"], m: ["mood disorders"] },
+                    { t: "Anxiety Disorders", l: ["Aula 01 - Anxiety Disorders - Medcof USA"], m: ["anxiety disorders"] },
+                    { t: "Eating Disorders", l: ["Aula 01 - Eating Disorders - Medcof USA"], m: ["eating disorders"] },
+                    { t: "Sleep Disorders", l: ["Aula 01 - Sleep Disorders - Medcof USA"], m: ["sleep disorders"] },
+                    { t: "Alcohol and CNS Depressants", l: ["Aula 01 - Alcohol and CNS Depressants - Medcof USA"], m: ["alcohol and cns depressants"] },
+                    { t: "Opioids", l: ["Aula 01 - Opioids - Medcof USA"], m: ["opioids"] },
+                    { t: "Stimulants", l: ["Aula 01 - Stimulants - Medcof USA"], m: ["stimulants"] },
+                    { t: "Other Drugs", l: ["Aula 01 - Other Drugs - Medcof USA"], m: ["other drugs"] },
+                    { t: "Antidepressants", l: ["Aula 01 - Antidepressants - Medcof USA"], m: ["antidepressants"] },
+                    { t: "Lithium", l: ["Aula 01 - Lithium - Medcof USA"], m: ["lithium"] },
+                    { t: "Antipsychotics", l: ["Aula 01 - Antipsychotics - Medcof USA"], m: ["antipsychotics"] }
+                ]
+            },
+            {
+                title: "Módulo 09 - Pulmonary",
+                subs: [
+                    { t: "Pulmonary Embryogenesis", l: ["Aula 01 - Pulmonary Embryogenesis - Medcof USA"], m: ["PDF de Slides - Pulmonary Embryogenesis - Medcof USA", "Pulmonary Embryogenesis Part 1"] },
+                    { t: "Pulmonary Anatomy", l: ["Aula 01 - Pulmonary Anatomy - Medcof USA"], m: ["PDF de Slides - Pulmonary Anatomy - Medcof USA", "Pulmonary Anatomy Correct"] },
+                    { t: "Pulmonary Physiology: Part 1", l: ["Aula 01 - Pulmonary Physiology: Part 1 - Medcof USA"], m: ["Pulmonary Physiology Part 1N"] },
+                    { t: "Pulmonary Physiology: Part 2", l: ["Aula 01 - Pulmonary Physiology: Part 2 - Medcof USA"], m: ["Pulmonary Physiology Part 2n"] },
+                    { t: "Oxygen Transport and Hemoglobin", l: ["Aula 01 - Oxygen Transport and Hemoglobin - Medcof USA"], m: ["Oxygen Transport and Hemoglobin Part 1"] },
+                    { t: "Pulmonary Circulation: Part 1", l: ["Aula 01 - Pulmonary Circulation: Part 1 - Medcof USA"], m: ["Pulmonary Circulation Part 1"] },
+                    { t: "Pulmonary Circulation: Part 2", l: ["Aula 01 - Pulmonary Circulation: Part 2 - Medcof USA"], m: ["Pulmonary Circulation part 2n"] },
+                    { t: "Ventilation and Perfusion", l: ["Aula 01 - Ventilation and Perfusion - Medcof USA"], m: ["Ventilation and Perfusion Final.mp4"] },
+                    { t: "Respiratory Failure", l: ["Aula 01 - Respiratory Failure - Medcof USA"], m: ["Respiratory Failure(Hypoxemia)"] },
+                    { t: "CO2 Physiology", l: ["Aula 01 - CO2 Physiology - Medcof USA"], m: ["CO2 physiology good"] },
+                    { t: "Physical Exam", l: ["Aula 01 - Physical Exam - Medcof USA"], m: ["Physical Exam"] },
+                    { t: "Pulmonary Function Tests (PFTs)", l: ["Aula 01 - Pulmonary Function Tests (PFTs) - Medcof USA"], m: ["PFT.mp4"] },
+                    { t: "Asthma and COPD", l: ["Aula 01 - Asthma and COPD - Medcof USA"], m: ["Asthma and COPD"] },
+                    { t: "Treatment of COPD and Asthma: Outpatient Management", l: ["Aula 01 - Treatment of COPD and Asthma: Outpatient Management - Medcof USA"], m: ["Asthma and COPD treatment part 2"] },
+                    { t: "Treatment of COPD and Asthma: Inpatient Management", l: ["Aula 01 - Treatment of COPD and Asthma: Inpatient Management - Medcof USA"], m: ["Asthma and COPD treatment part 2 (Duplicata?)"] },
+                    { t: "Restrictive Diseases", l: ["Aula 01 - Restrictive Diseases - Medcof USA"], m: ["Restrictive Disease.mp4"] },
+                    { t: "Pleural Effusion", l: ["Aula 01 - Pleural Effusion - Medcof USA"], m: ["Pleural EFfusion"] },
+                    { t: "Lung Cancer", l: ["Aula 01 - Lung Cancer - Medcof USA"], m: ["Lung Cancer"] },
+                    { t: "Cystic Fibrosis", l: ["Aula 01 - Cystic Fibrosis - Medcof USA"], m: ["Cystic Fibrosis"] },
+                    { t: "Pulmonary Imaging", l: ["Aula 01 - Pulmonary Imaging - Medcof USA"], m: ["Pulmonary Imaging"] },
+                    { t: "Pneumonia", l: ["Aula 01 - Pneumonia - Medcof USA"], m: ["Pneumonia"] },
+                    { t: "Sarcoidosis", l: ["Aula 01 - Sarcoidosis - Medcof USA"], m: ["Sarcoidosis.mp4"] },
+                    { t: "Pulmonary Embolism", l: ["Aula 01 - Pulmonary Embolism - Medcof USA"], m: ["Acute Pulmonary Embolism"] },
+                    { t: "Sleep Apnea", l: ["Aula 01 - Sleep Apnea - Medcof USA"], m: ["Sleep Apnea.mp4"] },
+                    { t: "Tuberculosis", l: ["Aula 01 - Tuberculosis - Medcof USA"], m: ["Tuberculosis"] }
+                ]
+            },
+            {
+                title: "Módulo 10 - Reproductive",
+                subs: [
+                    { t: "Embryonic development", l: ["Aula 01 - Embryonic development - Medcof USA"], m: ["PDF de Slides - Embryonic development", "Embryonic development"] },
+                    { t: "Congenital disorders of morphogenesis", l: ["Aula 01 - Congenital disorders of morphogenesis - Medcof USA"], m: ["PDF de Slides - Congenital disorders of morphogenesis", "Congenital disorders of morphogenesis"] },
+                    { t: "Pharyngeal apparatus", l: ["Aula 01 - Pharyngeal apparatus - Medcof USA"], m: ["PDF de Slides - Pharyngeal apparatus", "Pharyngeal apparatus"] },
+                    { t: "Reproductive Embryology", l: ["Aula 01 - Reproductive Embryology - Medcof USA"], m: ["PDF de Slides - Reproductive Embryology - Medcof USA", "Reproductive Embryology"] },
+                    { t: "Embryonic Genes", l: ["Aula 01 - Embryonic Genes - Medcof USA"], m: ["PDF de Slides - Embryonic Genes", "Embryonic Genes - Medcof USA"] },
+                    { t: "Vulva & Vagina", l: ["Aula 01 - Vulva & Vagina - Medcof USA"], m: ["Vulva & Vagina"] },
+                    { t: "Cervix", l: ["Aula 01 - Cervix - Medcof USA"], m: ["Cervix"] },
+                    { t: "Uterus", l: ["Aula 01 - Uterus - Medcof USA"], m: ["Uterus.mp4"] },
+                    { t: "Breast", l: ["Aula 01 - Breast - Medcof USA"], m: ["Breast"] },
+                    { t: "Tubes and Ovaries", l: ["Aula 01 - Tubes and Ovaries - Medcof USA"], m: ["Tubes and Ovaries.mp4"] },
+                    { t: "Reproductive Physiology", l: ["Aula 01 - Reproductive Physiology - Medcof USA"], m: ["Reproductive Physiology"] },
+                    { t: "Amenorrhea", l: ["Aula 01 - Amenorrhea - Medcof USA"], m: ["Amenorrhea"] },
+                    { t: "Early pregnancy", l: ["Aula 01 - Early pregnancy - Medcof USA"], m: ["Early pregnancy.mp4"] },
+                    { t: "Late Pregnancy", l: ["Aula 01 - Late Pregnancy - Medcof USA"], m: ["Late Pregnancy"] },
+                    { t: "Pregnancy: Pathology", l: ["Aula 01 - Pregnancy: Pathology - Medcof USA"], m: ["Pregnancy Pathology"] },
+                    { t: "Torches and Teratogens", l: ["Aula 01 - Torches and Teratogens - Medcof USA"], m: ["Torches and Teratogens"] },
+                    { t: "Penile Disorders", l: ["Aula 01 - Penile Disorders - Medcof USA"], m: ["Penile Disorders"] },
+                    { t: "Scrotum disorders", l: ["Aula 01 - Scrotum disorders - Medcof USA"], m: ["Scrotum introducao"] },
+                    { t: "Testicular Cancer", l: ["Aula 01 - Testicular Cancer - Medcof USA"], m: ["Testicular cancer"] },
+                    { t: "Prostate", l: ["Aula 01 - Prostate - Medcof USA"], m: ["Aula prostate"] },
+                    { t: "Disorders of Sexual Development", l: ["Aula 01 - Disorders of Sexual Development - Medcof USA"], m: ["Disorders of Sexual Development-"] }
+                ]
+            },
+            {
+                title: "Módulo 11 - Basic Pharmacology",
+                subs: [
+                    { t: "Pharmacokinetics", l: ["Aula 01 - Pharmacokinetics - Medcof USA"], m: ["PDF de Slides - Pharmacokinetics", "Pharmacokinetics parte 1"] },
+                    { t: "Pharmacodynamics", l: ["Aula 01 - Pharmacodynamics - Medcof USA"], m: ["Pharmacodynamics parte 2"] },
+                    { t: "Enzymes/ Enzyme Inhibitors", l: ["Aula 01 - Enzymes/ Enzyme Inhibitors - Medcof USA"], m: ["Enzymes and Enzyme Inhibitors"] }
+                ]
+            },
+            {
+                title: "Módulo 12 - Immunology",
+                subs: [
+                    { t: "The First Responder: an Overview of Innate Immunity", l: ["Aula 01 - The First Responder: an Overview of Innate Immunity - Medcof USA"], m: ["PDF de Slides - The First Responder: an Overview of Innate Immunity - Medcof USA", "Innate Immunity"] },
+                    { t: "T-cells", l: ["Aula 01 - T-cells - Medcof USA"], m: ["PDF de Slides - T-cells", "T-cells"] },
+                    { t: "B-cells", l: ["Aula 01 - B-cells - Medcof USA"], m: ["PDF de Slides - B-cells", "B Cells"] },
+                    { t: "The Complement System", l: ["Aula 01 - The Complement System - Medcof USA"], m: ["The Complement System"] },
+                    { t: "Lymph Nodes and Spleen", l: ["Aula 01 - Lymph Nodes and Spleen - Medcof USA"], m: ["Lymph Nodes and Spleen"] },
+                    { t: "Hypersensitivity", l: ["Aula 01 - Hypersensitivity - Medcof USA"], m: ["Hypersensitivity"] },
+                    { t: "Transplants", l: ["Aula 01 - Transplants - Medcof USA"], m: ["Transplants"] },
+                    { t: "Immune Deficiency Syndromes", l: ["Aula 01 - Immune Deficiency Syndromes - Medcof USA"], m: ["Immune Deficiency Syndromes.mov"] },
+                    { t: "NSAIDs, Aspirin, and Acetaminophen", l: ["Aula 01 - NSAIDs, Aspirin, and Acetaminophen - Medcof USA"], m: ["NSAIDs, Aspirin and Acetaminophen.mp4"] },
+                    { t: "Immunosuppressive Drugs", l: ["Aula 01 - Immunosuppressive Drugs - Medcof USA"], m: ["Immunosuppressant"] },
+                    { t: "Systemic Lupus Erythematous", l: ["Aula 01 - Systemic Lupus Erythematous"], m: ["Systemic Lupus Erythematosus"] },
+                    { t: "Rheumatoid Arthritis", l: ["Aula 01 - Rheumatoid Arthritis - Medcof USA"], m: ["Rheumatoid arthritis"] },
+                    { t: "Systemic sclerosis", l: ["Aula 01 - Systemic sclerosis - Medcof USA"], m: ["Systemic Sclerosis"] },
+                    { t: "Sjogren Syndrome", l: ["Aula 01 - Sjogren Syndrome - Medcof USA"], m: ["Sjogren Syndrome"] },
+                    { t: "Large Vessel Vasculitis", l: ["Aula 01 - Large Vessel Vasculitis - Medcof USA"], m: ["Large Vessel Vasculitis"] },
+                    { t: "Medium Vessel Vasculitis", l: ["Aula 01 - Medium Vessel Vasculitis - Medcof USA"], m: ["Medium Vessel Vasculitis"] },
+                    { t: "Small vessel vasculitis", l: ["Aula 01 - Small vessel vasculitis - Medcof USA"], m: ["Small Vessel Vasculitis"] }
+                ]
+            },
+            {
+                title: "Módulo 13 - Dermatology",
+                subs: [
+                    { t: "Basic Principles", l: ["Aula 01 - Basic Principles - Medcof USA"], m: ["PDF de Slides - Basic Principles - Medcof USA", "BASIC PRINCIPLES"] },
+                    { t: "Surface cells", l: ["Aula 01 - Surface cells - Medcof USA"], m: ["PDF de Slides - Surface cells", "Surface Cells"] },
+                    { t: "Skin conditions", l: ["Aula 01 - Skin conditions - Medcof USA"], m: ["Skin Conditions"] },
+                    { t: "Melanin disorders", l: ["Aula 01 - Melanin disorders - Medcof USA"], m: ["Melanin Disorders"] },
+                    { t: "Blood vessels abnormalities", l: ["Aula 01 - Blood vessels abnormalities - Medcof USA"], m: ["Blood vessels abnormalities"] },
+                    { t: "Cutaneos infections", l: ["Aula 01 - Cutaneos infections - Medcof USA"], m: ["Cutaneous Infections"] },
+                    { t: "Vesiculobullous conditions", l: ["Aula 01 - Vesiculobullous conditions - Medcof USA"], m: ["Vesiculobullous conditions"] },
+                    { t: "Immune hypersensitivity conditions", l: ["Aula 01 - Immune hypersensitivity conditions - Medcof USA"], m: ["Immune hypersensitivity conditions"] },
+                    { t: "Skin neoplasia", l: ["Aula 01 - Skin neoplasia - Medcof USA"], m: ["Skin neoplasia"] },
+                    { t: "Phakomatoses", l: ["Aula 01 - Phakomatoses - Medcof USA"], m: ["Phakomatoses"] }
+                ]
+            },
+            {
+                title: "Módulo 14 - Biochemistry",
+                subs: [
+                    { t: "DNA", l: ["Aula 01 - DNA - Medcof USA"], m: ["PDF de Slides - DNA", "DNA Structure"] },
+                    { t: "Purine Metabolism", l: ["Aula 01 - Purine Metabolism - Medcof USA"], m: ["PDF de Slides - Purine Metabolism", "Purine Metabolism"] },
+                    { t: "Pyrimidine Metabolism", l: ["Aula 01 - Pyrimidine Metabolism - Medcof USA"], m: ["PDF de Slides - Pyrimidine Metabolism", "Pyrimidine Metabolism"] },
+                    { t: "Glucose", l: ["Aula 01 - Glucose - Medcof USA"], m: ["Glucose"] },
+                    { t: "Glucose breakdown: glycolysis", l: ["Aula 01 - Glucose breakdown: glycolysis - Medcof USA"], m: ["Glycolysis"] },
+                    { t: "Glucose synthesis: gluconeogenesis", l: ["Aula 01 - Glucose synthesis: gluconeogenesis - Medcof USA"], m: ["Gluconeogenesis"] },
+                    { t: "Glycogen", l: ["Aula 01 - Glycogen - Medcof USA"], m: ["Glycogen"] },
+                    { t: "HMP Shunt", l: ["Aula 01 - HMP Shunt - Medcof USA"], m: ["HMP Shunt"] },
+                    { t: "Fructose and Galactose", l: ["Aula 01 - Fructose and Galactose - Medcof USA"], m: ["Fructose and Galactose"] },
+                    { t: "Pyruvate Dehydrogenase", l: ["Aula 01 - Pyruvate Dehydrogenase - Medcof USA"], m: ["Pyruvate dehydrogenase"] },
+                    { t: "TCA Cycle", l: ["Aula 01 - TCA Cycle - Medcof USA"], m: ["TCA Cycle"] },
+                    { t: "ETC", l: ["Aula 01 - ETC - Medcof USA"], m: ["ETC"] },
+                    { t: "Fatty Acids", l: ["Aula 01 - Fatty Acids - Medcof USA"], m: ["Fatty Acids"] },
+                    { t: "Ketone Bodies", l: ["Aula 01 - Ketone Bodies - Medcof USA"], m: ["Ketone Bodies"] },
+                    { t: "Ethanol Metabolism", l: ["Aula 01 - Ethanol Metabolism - Medcof USA"], m: ["Ethanol metabolism"] },
+                    { t: "Exercise and Starvation", l: ["Aula 01 - Exercise and Starvation - Medcof USA"], m: ["exercise and starvation"] },
+                    { t: "Amino Acids I", l: ["Aula 01 - Amino Acids I - Medcof USA"], m: ["Amino Acids"] },
+                    { t: "Amino Acids II", l: ["Aula 01 - Amino Acids II - Medcof USA"], m: ["Amino Acids II"] },
+                    { t: "Amino Acids III", l: ["Aula 01 - Amino Acids III - Medcof USA"], m: ["Amino Acids III.mp4"] },
+                    { t: "Amino Acids IV", l: ["Aula 01 - Amino Acids IV - Medcof USA"], m: ["Amino Acids IV.mp4"] },
+                    { t: "B Vitamins", l: ["Aula 01 - B Vitamins - Medcof USA"], m: ["B Vitamins"] },
+                    { t: "B Vitamins II", l: ["Aula 01 - B Vitamins II"], m: ["B Vitamins II"] },
+                    { t: "Vitamin C", l: ["Aula 01 - Vitamin C - Medcof USA"], m: ["gabriela garcia vitamina C"] },
+                    { t: "Vitamins A and D", l: ["Aula 01 - Vitamins A and D - Medcof USA"], m: ["Vitamins A and D"] },
+                    { t: "Vitamins E, K and Zinc", l: ["Aula 01 - Vitamins E, K and Zinc - Medcof USA"], m: ["Vitamins E, K and zinc"] },
+                    { t: "Lipid Metabolism", l: ["Aula 01 - Lipid Metabolism - Medcof USA"], m: ["Lipid Metabolism.mp4"] },
+                    { t: "Lipid Disorders I", l: ["Aula 01 - Lipid Disorders I - Medcof USA"], m: ["Lipid Disorders I.mp4"] },
+                    { t: "Lipid Disorders II", l: ["Aula 01 - Lipid Disorders II - Medcof USA"], m: ["Lipid Drugs II"] },
+                    { t: "Biochemical Disorders I", l: ["Aula 01 - Biochemical Disorders I - Medcof USA"], m: ["biochemical_disorders_1 (1080p)"] },
+                    { t: "Biochemical Disorders II", l: ["Aula 01 - Biochemical Disorders II - Medcof USA"], m: ["Biochemical Disorders II"] }
+                ]
+            },
+            {
+                title: "Módulo 15 - Ophthalmology",
+                subs: [
+                    { t: "Introduction & Structural Disorders of the Eye", l: ["Aula 01 - Introduction & Structural Disorders of the Eye - Medcof USA"], m: ["PDF de Slides - Introduction & Structural Disorders of the Eye", "Introduction & Structural Disorders of the Eye"] },
+                    { t: "Refractive Errors and Cataracts", l: ["Aula 01 - Refractive Errors and Cataracts - Medcof USA"], m: ["PDF de Slides - Refractive Errors and Cataracts", "Aula Teórica - STEP 1 (Ophthalmology) - Refractive Errors & Cataracts"] },
+                    { t: "Pupillary Abnormalities", l: ["Aula 01 - Pupillary Abnormalities - Medcof USA"], m: ["Aula Teórica - STEP 1 (Ophthalmology) - Pupillary Abnormalities"] },
+                    { t: "Glaucoma", l: ["Aula 01 - Glaucoma - Medcof USA"], m: ["Aula Teórica - STEP 1 (Ophthalmology) - Glaucoma (AULA SEM FINAL)"] },
+                    { t: "Retinal Disorders", l: ["Aula 01 - Retinal Disorders - Medcof USA"], m: ["Aula Teórica - STEP 1 (Ophthalmology) - Retinal Disorders"] },
+                    { t: "Infectious Ocular Diseases", l: ["Aula 01 - Infectious Ocular Diseases - Medcof USA"], m: ["Aula Teórica - STEP 1 (Ophthalmology) - Infectious Ocular Diseases-"] },
+                    { t: "Pediatric Ophthalmology", l: ["Aula 01 - Pediatric Ophthalmology - Medcof USA"], m: ["Aula Teórica - STEP 1 (Ophthalmology) - Pediatric Ophthalmology"] },
+                    { t: "Neuro-Ophthalmology", l: ["Aula 01 - Neuro-Ophthalmology - Medcof USA"], m: ["Aula Teórica - STEP 1 (Ophthalmology) - Neuro Ophthalmology"] }
+                ]
+            },
+            {
+                title: "Módulo 16 - Cell Biology",
+                subs: [
+                    { t: "DNA Replication", l: ["Aula 01 - DNA Replication - Medcof USA"], m: ["PDF de Slides - DNA Replication - Medcof USA", "DNA Replication"] },
+                    { t: "DNA Mutations", l: ["Aula 01 - DNA Mutations - Medcof USA"], m: ["PDF de Slides - DNA Mutations - Medcof USA", "DNA Mutations"] },
+                    { t: "DNA Repair", l: ["Aula 01 - DNA Repair - Medcof USA"], m: ["PDF de Slides - DNA Repair - Medcof USA", "DNA Repair"] },
+                    { t: "Transcription", l: ["Aula 01 - Transcription - Medcof USA"], m: ["Transcription"] },
+                    { t: "Translation", l: ["Aula 01 - Translation - Medcof USA"], m: ["Translation"] },
+                    { t: "Experimental Techniques", l: ["Aula 01 - Experimental Techniques - Medcof USA"], m: ["Experimental Techniques"] },
+                    { t: "Cell Cycle", l: ["Aula 01 - Cell Cycle - Medcof USA"], m: ["Cell Cycle"] },
+                    { t: "Cell Structure", l: ["Aula 01 - Cell Structure - Medcof USA"], m: ["Cell Structure"] },
+                    { t: "Cytoskeleton", l: ["Aula 01 - Cytoskeleton - Medcof USA"], m: ["Cytoskeleton"] },
+                    { t: "Connective Tissue", l: ["Aula 01 - Connective Tissue - Medcof USA"], m: ["Connective Tissue"] }
+                ]
+            },
+            {
+                title: "Módulo 17 - Endocrinology",
+                subs: [
+                    { t: "Thyroid Gland", l: ["Aula 01 - Thyroid Gland - Medcof USA"], m: ["PDF de Slides - Thyroid Gland", "Thyroid Gland"] },
+                    { t: "Malignant Thyroid Diseases", l: ["Aula 01 - Malignant Thyroid Diseases - Medcof USA"], m: ["PDF de Slides - Malignant Thyroid Diseases - Medcof USA", "Malignant Thyroid Diseases"] },
+                    { t: "Benign thyroid diseases", l: ["Aula 01 - Benign thyroid diseases - Medcof USA"], m: ["PDF de Slides - Benign thyroid diseases - Medcof USA", "Benign thyroid diseases"] },
+                    { t: "Adrenal Glands", l: ["Aula 01 - Adrenal Glands - Medcof USA"], m: ["Adrenal Glands"] },
+                    { t: "Congenital Adrenal Hyperplasia", l: ["Aula 01 - Congenital Adrenal Hyperplasia - Medcof USA"], m: ["Congenital Adrenal Hyperplasia"] },
+                    { t: "Adrenal Disorders", l: ["Aula 01 - Adrenal Disorders - Medcof USA"], m: ["Adrenal Disorders"] },
+                    { t: "Endocrine Pancreas", l: ["Aula 01 - Endocrine Pancreas - Medcof USA"], m: ["Endocrine Pancreas"] },
+                    { t: "Diabetes", l: ["Aula 01 - Diabetes - Medcof USA"], m: ["Diabetes"] },
+                    { t: "Diabetes Management", l: ["Aula 01 - Diabetes Management - Medcof USA"], m: ["Diabetes Management"] },
+                    { t: "Reproductive Hormones", l: ["Aula 01 - Reproductive Hormones - Medcof USA"], m: ["Reproductive Hormones"] },
+                    { t: "Male Reproductive Hormones", l: ["Aula 01 - Male Reproductive Hormones - Medcof USA"], m: ["Male Reproductive Hormones"] },
+                    { t: "Female Reproductive Hormones", l: ["Aula 01 - Female Reproductive Hormones - Medcof USA"], m: ["Female Reproductive Hormones"] },
+                    { t: "Menstrual Cycle", l: ["Aula 01 - Menstrual Cycle - Medcof USA"], m: ["Menstrual Cycle"] },
+                    { t: "Pituitary Gland Anatomy and Physiology", l: ["Aula 01 - Pituitary Gland Anatomy and Physiology - Medcof USA"], m: ["Pituitary Gland Anatomy and Physiology"] },
+                    { t: "Pituitary Gland Pathology", l: ["Aula 01 - Pituitary Gland Pathology - Medcof USA"], m: ["Pituitary Gland Pathology"] },
+                    { t: "Parathyroid Glands", l: ["Aula 01 - Parathyroid Glands - Medcof USA"], m: ["Parathyroid Glands"] },
+                    { t: "MEN Syndromes", l: ["Aula 01 - MEN Syndromes - Medcof USA"], m: ["Multiple Endocrine Neoplasia"] },
+                    { t: "Signaling Pathways", l: ["Aula 01 - Signaling Pathways - Medcof USA"], m: ["Signaling Pathways"] }
+                ]
+            },
+            {
+                title: "Módulo 18 - Renal",
+                subs: [
+                    { t: "Renal Anatomy", l: ["Aula 01 - Renal Anatomy - Medcof USA"], m: ["PDF de Slides - Renal Anatomy - Medcof USA", "Renal Gross Anatomy"] },
+                    { t: "Renal Embryology", l: ["Aula 01 - Renal Embryology - Medcof USA"], m: ["PDF de Slides - Renal Embryology - Medcof USA", "Renal Embryology"] },
+                    { t: "Nephron Physiology I", l: ["Aula 01 - Nephron Physiology I - Medcof USA"], m: ["Physiology pt. 1"] },
+                    { t: "Nephron Physiology II", l: ["Aula 01 - Nephron Physiology II - Medcof USA"], m: ["Physiology pt.II"] },
+                    { t: "Renal Physiology I", l: ["Aula 01 - Renal Physiology I - Medcof USA"], m: ["Renal Physiology I"] },
+                    { t: "Renal Physiology II", l: ["Aula 01 - Renal Physiology II - Medcof USA"], m: ["Renal Physiology II"] },
+                    { t: "Renal Endocrine Function", l: ["Aula 01 - Renal Endocrine Function - Medcof USA"], m: ["Endocrine Response"] },
+                    { t: "Acid base foundation", l: ["Aula 01 - Acid base foundation - Medcof USA"], m: ["Acid base Foundation"] },
+                    { t: "Respiratory Disorders", l: ["Aula 01 - Respiratory Disorders - Medcof USA"], m: ["Respiratory Disorders"] },
+                    { t: "Metabolic Alkalosis", l: ["Aula 01 - Metabolic Alkalosis - Medcof USA"], m: ["Metabolic Alkalosis"] },
+                    { t: "Metabolic Acidosis", l: ["Aula 01 - Metabolic Acidosis - Medcof USA"], m: ["Metabolic Acidosis"] },
+                    { t: "Acid Base Questions", l: ["Aula 01 - Acid Base Questions - Medcof USA"], m: ["Acid Base Questions"] },
+                    { t: "Renal Tubular Acidosis", l: ["Aula 01 - Renal Tubular Acidosis - Medcof USA"], m: ["Renal Tubular Acidosis"] },
+                    { t: "Acid Excretion", l: ["Aula 01 - Acid Excretion - Medcof USA"], m: ["Acid Excretion"] },
+                    { t: "Ca, K, P, Mg", l: ["Aula 01 - Ca, K, P, Mg - Medcof USA"], m: ["Ca, K, P, Mg"] },
+                    { t: "Na and H2O Equilibrium", l: ["Aula 01 - Na and H2O Equilibrium - Medcof USA"], m: ["Na and H2O Equilibrium"] },
+                    { t: "Sodium Disorders", l: ["Aula 01 - Sodium Disorders - Medcof USA"], m: ["Sodium Disorders"] },
+                    { t: "Filtration Barrier", l: ["Aula 01 - Filtration Barrier - Medcof USA"], m: ["Filtration Barrier.mp4"] },
+                    { t: "Nephritic Syndrome", l: ["Aula 01 - Nephritic Syndrome - Medcof USA"], m: ["Nephritic Syndrome.mp4"] },
+                    { t: "Nephrotic Syndrome", l: ["Aula 01 - Nephrotic Syndrome - Medcof USA"], m: ["Nephrotic Syndrome"] },
+                    { t: "MPGN", l: ["Aula 01 - MPGN - Medcof USA"], m: ["MPGN"] },
+                    { t: "Tubulointerstitial Disease", l: ["Aula 01 - Tubulointerstitial Disease - Medcof USA"], m: ["Tubulointerstitial Disease"] },
+                    { t: "Renal Failure", l: ["Aula 01 - Renal Failure - Medcof USA"], m: ["Renal Failure"] },
+                    { t: "Urinary Tract Infections", l: ["Aula 01 - Urinary Tract Infections - Medcof USA"], m: ["Urinary Tract Infections"] },
+                    { t: "Cystic Kidney Disease", l: ["Aula 01 - Cystic Kidney Disease - Medcof USA"], m: ["Cystic Kidney Disease (7 minutes)"] },
+                    { t: "Diuretics", l: ["Aula 01 - Diuretics - Medcof USA"], m: ["Diuretics (22 minutes)"] },
+                    { t: "Kidney Stones", l: ["Aula 01 - Kidney Stones - Medcof USA"], m: ["Kidney Stones (11 minutes)"] },
+                    { t: "Renal and Bladder Tumors", l: ["Aula 01 - Renal and Bladder Tumors - Medcof USA"], m: ["Renal and Bladder Tumors (12 minutes)"] },
+                    { t: "Rhabdomyolysis", l: ["Aula 01 - Rhabdomyolysis - Medcof USA"], m: ["Rhabdomyolysis (7 minutes)"] }
+                ]
+            },
+            {
+                title: "Módulo 19 - Genetics",
+                subs: [
+                    { t: "Basic Genetic Concepts", l: ["Aula 01 - Basic Genetic Concepts - Medcof USA"], m: ["PDF de Slides - Basic Genetic Concepts - Medcof USA", "Aula1_Basic_Genetic_Concepts"] },
+                    { t: "Forms of Inheritance & Pedigrees", l: ["Aula 01 - Forms of Inheritance & Pedigrees - Medcof USA"], m: ["PDF de Slides - Forms of Inheritance & Pedigrees - Medcof USA", "Aula2_Forms_of_Inheritance_and_Pedigrees"] },
+                    { t: "Non-Mendelian Inheritance", l: ["Aula 01 - Non-Mendelian Inheritance - Medcof USA"], m: ["Aula3_NonMendelian_Inheritance"] },
+                    { t: "Muscular Dystrophy", l: ["Aula 01 - Muscular Dystrophy - Medcof USA"], m: ["Aula4_Muscular_Dystrophies"] },
+                    { t: "Chromosomal Abnormalities", l: ["Aula 01 - Chromosomal Abnormalities - Medcof USA"], m: ["Aula5_Chromosomal_Abnormalities"] },
+                    { t: "Population Genetics", l: ["Aula 01 - Population Genetics - Medcof USA"], m: ["Aula6_Population_Genetics"] },
+                    { t: "The Genetics of Cancer", l: ["Aula 01 - The Genetics of Cancer - Medcof USA"], m: ["Aula7_The_Genetics_Of_Cancer"] }
+                ]
+            },
+            {
+                title: "Módulo 20 - Infectious Disease",
+                subs: [
+                    { t: "Microbiology Introduction", l: ["Aula 01 - Microbiology Introduction - Medcof USA"], m: ["PDF de Slides - Microbiology Introduction - Medcof USA", "Microbiology Introduction.mp4"] },
+                    { t: "Bacteria Morphology", l: ["Aula 01 - Bacteria Morphology - Medcof USA"], m: ["PDF de Slides - Bacteria Morphology - Medcof USA", "Bacteria Morphology.mp4"] },
+                    { t: "Bacterial Culture", l: ["Aula 01 - Bacterial Culture - Medcof USA"], m: ["PDF de Slides - Bacterial Culture - Medcof USA", "Bacterial Culture"] },
+                    { t: "Bacterial Metabolism", l: ["Aula 01 - Bacterial Metabolism - Medcof USA"], m: ["Bacterial Metabolism"] },
+                    { t: "Virulence", l: ["Aula 01 - Virulence - Medcof USA"], m: ["Virulence.mp4"] },
+                    { t: "Bacterial Genetics", l: ["Aula 01 - Bacterial Genetics - Medcof USA"], m: ["Bacterial Genetics.mp4"] },
+                    { t: "Bacterial classification", l: ["Aula 01 - Bacterial classification - Medcof USA"], m: ["Bacterial classification"] },
+                    { t: "Staphylococcus SPP", l: ["Aula 01 - Staphylococcus SPP - Medcof USA"], m: ["Staphylococcus SPP"] },
+                    { t: "Streptococcus SPP", l: ["Aula 01 - Streptococcus SPP - Medcof USA"], m: ["Streptococcus SPP.mp4"] },
+                    { t: "Nocardia and Actinomyces", l: ["Aula 01 - Nocardia and Actinomyces - Medcof USA"], m: ["Nocardia and Actinomyces.mp4"] },
+                    { t: "Clostridium SPP", l: ["Aula 01 - Clostridium SPP - Medcof USA"], m: ["Clostridium SPP"] },
+                    { t: "Gram Positive Bacilli - Aerobic", l: ["Aula 01 - Gram Positive Bacilli - Aerobic - Medcof USA"], m: ["Gram Positive Bacilli - Aerobic.mp4"] },
+                    { t: "Gram Negative Bacilli", l: ["Aula 01 - Gram Negative Bacilli - Medcof USA"], m: ["Gram Negative Bacilli.mp4"] },
+                    { t: "Other Gram Negatives", l: ["Aula 01 - Other Gram Negatives - Medcof USA"], m: ["Other Gram Negatives.mp4"] },
+                    { t: "Leptospirosis, Syphilis and Lyme disease", l: ["Aula 01 - Leptospirosis, Syphilis and Lyme disease - Medcof USA"], m: ["Leptospirosis, Syphilis and Lyme disease.mp4"] },
+                    { t: "Zoonosis", l: ["Aula 01 - Zoonosis - Medcof USA"], m: ["Zoonosis.mp4"] },
+                    { t: "Tuberculosis", l: ["Aula 01 - Tuberculosis - Medcof USA"], m: ["Tuberculosis (Duplicata?)"] },
+                    { t: "Penicillins", l: ["Aula 01 - Penicillins - Medcof USA"], m: ["Penicillins"] },
+                    { t: "Beta Lactams", l: ["Aula 01 - Beta Lactams - Medcof USA"], m: ["Beta Lactams.mp4"] },
+                    { t: "Sulfonamides", l: ["Aula 01 - Sulfonamides - Medcof USA"], m: ["Sulfonamides.mp4"] },
+                    { t: "Protein Synthesis Inhibitors", l: ["Aula 01 - Protein Synthesis Inhibitors - Medcof USA"], m: ["Protein Synthesis Inhibitors"] },
+                    { t: "Fluoroquinolones and Metronidazole", l: ["Aula 01 - Fluoroquinolones and Metronidazole - Medcof USA"], m: ["Fluoroquinolones and Metronidazole.mp4"] },
+                    { t: "Endemic mycoses", l: ["Aula 01 - Endemic mycoses - Medcof USA"], m: ["Endemic mycoses"] },
+                    { t: "Opportunistic mycoses", l: ["Aula 01 - Opportunistic mycoses"], m: ["Opportunistic mycoses"] },
+                    { t: "Cutaneous mycoses", l: ["Aula 01 - Cutaneous mycoses - Medcof USA"], m: ["Cutaneous mycoses.mp4"] },
+                    { t: "Antifungals", l: ["Aula 01 - Antifungals - Medcof USA"], m: ["Antifungals.mp4"] },
+                    { t: "Protozoa I", l: ["Aula 01 - Protozoa I - Medcof USA"], m: ["Protozoa I.mp4"] },
+                    { t: "Protozoa II", l: ["Aula 01 - Protozoa II - Medcof USA"], m: ["Protozoa II.mp4"] },
+                    { t: "Worms I", l: ["Aula 01 - Worms I - Medcof USA"], m: ["Worms I"] },
+                    { t: "Worms II", l: ["Aula 01 - Worms II - Medcof USA"], m: ["Worms II"] },
+                    { t: "Ectoparasites", l: ["Aula 01 - Ectoparasites - Medcof USA"], m: ["Ectoparasites"] },
+                    { t: "Virology", l: ["Aula 01 - Virology - Medcof USA"], m: ["Virology"] },
+                    { t: "Viruses of DNA", l: ["Aula 01 - Viruses of DNA - Medcof USA"], m: ["Viruses of DNA"] },
+                    { t: "Viruses of DNA II", l: ["Aula 01 - Viruses of DNA II - Medcof USA"], m: ["Viruses of DNA II"] },
+                    { t: "Viruses of RNA", l: ["Aula 01 - Viruses of RNA - Medcof USA"], m: ["Viruses of RNA"] },
+                    { t: "Hepatitis viruses", l: ["Aula 01 - Hepatitis viruses - Medcof USA"], m: ["Hepatitis viruses"] },
+                    { t: "The HIV virus", l: ["Aula 01 - The HIV virus"], m: ["The HIV virus"] },
+                    { t: "Antiretroviral therapy", l: ["Aula 01 - Antiretroviral therapy - Medcof USA"], m: ["Antiretroviral therapy"] },
+                    { t: "Antivirals", l: ["Aula 01 - Antivirals - Medcof USA"], m: ["Antivirals"] }
+                ]
+            },
+            {
+                title: "Módulo 21 - Neurology",
+                subs: [
+                    { t: "Introduction to the Nervous System", l: ["Aula 01 - Introduction to the Nervous System - Medcof USA"], m: ["PDF de Slides - Introduction to the Nervous System - Medcof USA", "Introduction to the Nervous System"] },
+                    { t: "Neurotransmitters", l: ["Aula 01 - Neurotransmitters - Medcof USA"], m: ["PDF de Slides - Neurotransmitters - Medcof USA", "Neurotransmitters"] },
+                    { t: "Motor System", l: ["Aula 01 - Motor System - Medcof USA"], m: ["Motor System"] },
+                    { t: "Sensory System", l: ["Aula 01 - Sensory System - Medcof USA"], m: ["Sensory System"] },
+                    { t: "Embryology of the Nervous System", l: ["Aula 01 - Embryology of the Nervous System - Medcof USA"], m: ["Embryology of the Nervous System"] },
+                    { t: "Spinal Cord", l: ["Aula 01 - Spinal Cord - Medcof USA"], m: ["Spinal Cord"] },
+                    { t: "Brainstem and Cranial Nerves (part I)", l: ["Aula 01 - Brainstem and Cranial Nerves (part I)"], m: ["Brainstem and Cranial Nerves Pt I"] },
+                    { t: "Brainstem and Cranial Nerves (part II)", l: ["Aula 01 - Brainstem and Cranial Nerves (part II)"], m: ["Brainstem and Cranial Nerves Pt II"] },
+                    { t: "Diencephalon", l: ["Aula 01 - Diencephalon - Medcof USA"], m: ["Diencephalon"] },
+                    { t: "Basal Nuclei", l: ["Aula 01 - Basal Nuclei - Medcof USA"], m: ["Basal Nuclei"] },
+                    { t: "Cerebellum", l: ["Aula 01 - Cerebellum - Medcof USA"], m: ["Cerebellum"] },
+                    { t: "Telencephalon", l: ["Aula 01 - Telencephalon - Medcof USA"], m: ["Telencephalon"] },
+                    { t: "Vascularization", l: ["Aula 01 - Vascularization - Medcof USA"], m: ["Vascularization"] },
+                    { t: "Intracranial Hypertension and Hemorrhage", l: ["Aula 01 - Intracranial Hypertension and Hemorrhage - Medcof USA"], m: ["Intracranial Hypertension and Hemorrhage"] },
+                    { t: "Brain Tumors", l: ["Aula 01 - Brain Tumors - Medcof USA"], m: ["Brain Tumors"] },
+                    { t: "Neuro-infectious Diseases", l: ["Aula 01 - Neuro-infectious Diseases"], m: ["Neuro-infectious Diseases"] },
+                    { t: "Seizures and Epilepsy", l: ["Aula 01 - Seizures and Epilepsy"], m: ["Seizures-"] },
+                    { t: "Headaches", l: ["Aula 01 - Headaches - Medcof USA"], m: ["Headaches"] },
+                    { t: "Delirium, Dementia and Coma", l: ["Aula 01 - Delirium, Dementia and Coma - Medcof USA"], m: ["Delirium Dementia and Coma.mp4"] },
+                    { t: "Movement Disorders", l: ["Aula 01 - Movement Disorders - Medcof USA"], m: ["Parkinson’s, Huntington’s, and Movement Disorders"] },
+                    { t: "Neuroimmunology and Neuromuscular Diseases", l: ["Aula 01 - Neuroimmunology and Neuromuscular Diseases"], m: ["Neuroimmunology and Neuromuscular Diseases"] },
+                    { t: "Autonomic System (part I)", l: ["Aula 01 - Autonomic System (part I)"], m: ["Autonomic System pt I"] },
+                    { t: "Autonomic System (part II)", l: ["Aula 01 - Autonomic System (part II)"], m: ["Autonomic System pt II"] }
+                ]
+            },
+            {
+                title: "Módulo 22 - Musculoskeletal",
+                subs: [
+                    { t: "Knee Injuries", l: ["Aula 01 - Knee Injuries - Medcof USA"], m: ["PDF de Slides - Knee Injuries - Medcof USA", "Knee Injuries"] },
+                    { t: "Superior Member", l: ["Aula 01 - Superior Member - Medcof USA"], m: ["PDF de Slides - Superior Member - Medcof USA", "Superior Member"] },
+                    { t: "Brachial Plexus", l: ["Aula 01 - Brachial Plexus - Medcof USA"], m: ["PDF de Slides - Brachial Plexus - Medcof USA", "Brachial Plexus"] },
+                    { t: "Carpal Bones", l: ["Aula 01 - Carpal Bones - Medcof USA"], m: ["Carpal Bones"] },
+                    { t: "Forearm and Hand", l: ["Aula 01 - Forearm and Hand - Medcof USA"], m: ["Forearm and Hand"] },
+                    { t: "Lumbosacral Plexus", l: ["Aula 01 - Lumbosacral Plexus - Medcof USA"], m: ["Lumbosacral Plexus"] },
+                    { t: "Hip Syndromes", l: ["Aula 01 - Hip Syndromes - Medcof USA"], m: ["Hip Syndromes"] },
+                    { t: "Muscle Structure", l: ["Aula 01 - Muscle Structure - Medcof USA"], m: ["Muscle Structure"] },
+                    { t: "The Sarcomere", l: ["Aula 01 - The Sarcomere - Medcof USA"], m: ["The Sarcomere"] },
+                    { t: "Heart Muscle", l: ["Aula 01 - Heart Muscle - Medcof USA"], m: ["Heart Muscle"] },
+                    { t: "Smooth Muscle", l: ["Aula 01 - Smooth Muscle - Medcof USA"], m: ["Smooth Muscle"] },
+                    { t: "Neuromuscular Junction: Axon Terminal (part I)", l: ["Aula 01 - Neuromuscular Junction: Axon Terminal (part I)"], m: ["Neuromuscular Junction Axon terminal pt I"] },
+                    { t: "Neuromuscular Junction: Skeletal Action Potential (part II)", l: ["Aula 01 - Neuromuscular Junction: Skeletal Action Potential (part II)"], m: ["Neuromuscular Junction skeletal Action Potential pt II"] },
+                    { t: "Neuromuscular Junction: Muscle Contraction (part III)", l: ["Aula 01 - Neuromuscular Junction: Muscle Contraction (part III)"], m: ["Neuromuscular Junction Muscle Contraction pt III"] },
+                    { t: "Neuromuscular Junction: Diseases (part IV)", l: ["Aula 01 - Neuromuscular Junction: Diseases (part IV) - Medcof USA"], m: ["Neuromuscular Junction Pathologies pt IIII"] },
+                    { t: "Bone Tissue", l: ["Aula 01 - Bone Tissue - Medcof USA"], m: ["Bone Tissue"] },
+                    { t: "Rickets and Osteomalacia", l: ["Aula 01 - Rickets and Osteomalacia - Medcof USA"], m: ["Rickets and Osteomalacia"] },
+                    { t: "Osteoporosis", l: ["Aula 01 - Osteoporosis - Medcof USA"], m: ["Osteoporosis"] },
+                    { t: "Arthiris", l: ["Aula 01 - Arthiris - Medcof USA"], m: ["Arthiris"] },
+                    { t: "Malignant Bone tumors", l: ["Aula 01 - Malignant Bone tumors - Medcof USA"], m: ["Malignant Bone tumors"] },
+                    { t: "Benign Bone tumors", l: ["Aula 01 - Benign Bone tumors - Medcof USA"], m: ["Benign Bone tumors"] },
+                    { t: "Skeletal Dysplasia", l: ["Aula 01 - Skeletal Dysplasia - Medcof USA"], m: ["Skeletal Dysplasia"] },
+                    { t: "Gout and Hyperuricemia", l: ["Aula 01 - Gout and Hyperuricemia - Medcof USA"], m: ["Gout and hyperuricemia"] },
+                    { t: "Pseudogout", l: ["Aula 01 - Pseudogout - Medcof USA"], m: ["Pseudogout"] },
+                    { t: "Spondyloarthropathies", l: ["Aula 01 - Spondyloarthropathies - Medcof USA"], m: ["Seronegative Spondyloarthritis Spondyloarthropathies"] },
+                    { t: "Radiculopathy", l: ["Aula 01 - Radiculopathy - Medcof USA"], m: ["Radiculopathy"] }
+                ]
+            },
+            {
+                title: "Módulo 23 - Gastroenterology",
+                subs: [
+                    { t: "Gastrointestinal Embryology - Part 1", l: ["Aula 01 - Gastrointestinal Embryology - Part 1"], m: ["PDF de Slides - Gastrointestinal Embryology - Part 1 - Medcof USA", "Gastrointestinal Embryology - Part 1 - Medcof USA"] },
+                    { t: "Gastrointestinal Embryology", l: ["Aula 01 - Gastrointestinal Embryology"], m: ["PDF de Slides - Gastrointestinal Embryology - Part 2 - Medcof USA", "Gastrointestinal Embryology - Part 2 - Medcof USA"] },
+                    { t: "Gastrointestinal Anatomy", l: ["Aula 01 - Gastrointestinal Anatomy - Medcof USA"], m: ["PDF de Slides - Gastrointestinal Anatomy - Medcof USA", "Gastrointestinal Anatomy"] },
+                    { t: "Gastrointestinal Blood Supply", l: ["Aula 01 - Gastrointestinal Blood Supply - Medcof USA"], m: ["Gastrointestinal Blood Supply"] },
+                    { t: "GI Tract: Structure & Histology", l: ["Aula 01 - GI Tract: Structure & Histology - Medcof USA"], m: ["GI Tract Structure & Histology"] },
+                    { t: "Liver & Gallbladder", l: ["Aula 01 - Liver & Gallbladder - Medcof USA"], m: ["Liver & Gallbender"] },
+                    { t: "Pancreas", l: ["Aula 01 - Pancreas - Medcof USA"], m: ["Pancreas"] },
+                    { t: "Salivary Glands: Structure, Secretion, and Pathology", l: ["Aula 01 - Salivary Glands: Structure, Secretion, and Pathology - Medcof USA"], m: ["Salivary Glands Structure, Secretion, and Pathology"] },
+                    { t: "Hernias", l: ["Aula 01 - Hernias - Medcof USA"], m: ["Hernias"] },
+                    { t: "Bile", l: ["Aula 01 - Bile - Medcof USA"], m: ["Bile - Rafael Ulysses"] },
+                    { t: "Bilirubin Metabolism & Clinical Patterns", l: ["Aula 01 - Bilirubin Metabolism & Clinical Patterns - Medcof USA"], m: ["Bilirubin"] },
+                    { t: "Hyperbilirubinemia Special Causes, Neonatal Jaundice & Workup", l: ["Aula 01 - Hyperbilirubinemia Special Causes, Neonatal Jaundice & Workup - Medcof USA"], m: ["Hyperbilirubinemia Special Causes, Neonatal Jaundice & Workup"] },
+                    { t: "Gastrointestinal Secretions", l: ["Aula 01 - Gastrointestinal Secretions - Medcof USA"], m: ["Gastrointestinal Secretions"] },
+                    { t: "Gastrointestinal Hormones: Master Regulators of Digestion - Part I", l: ["Aula 01 - Gastrointestinal Hormones: Master Regulators of Digestion - Part I - Medcof USA"], m: ["Gastrointestinal Hormones_ Master Regulators of Digestion - Part I (primeira parte)"] },
+                    { t: "Gastrointestinal Hormones: Master Regulators of Digestion - Part II", l: ["Aula 01 - Gastrointestinal Hormones: Master Regulators of Digestion - Part II - Medcof USA"], m: ["Gastrointestinal Hormones_ Master Regulators of Digestion - Part II"] },
+                    { t: "Exocrine Pancreas", l: ["Aula 01 - Exocrine Pancreas - Medcof USA"], m: ["Exocrine Pancreas"] },
+                    { t: "Esophageal Disorders", l: ["Aula 01 - Esophageal Disorders - Medcof USA"], m: ["Esophageal Disorders"] },
+                    { t: "Hepatic Disorders", l: ["Aula 01 - Hepatic Disorders - Medcof USA"], m: ["Hepatic Disorders"] },
+                    { t: "Liver Cirrhosis", l: ["Aula 01 - Liver Cirrhosis"], m: ["Liver Cirrhosis"] },
+                    { t: "Hepatic Neoplasms", l: ["Aula 01 - Hepatic Neoplasms - Medcof USA"], m: ["Hepatic Neoplasms"] },
+                    { t: "Copper and Iron overload", l: ["Aula 01 - Copper and Iron overload - Medcof USA"], m: ["Copper and Iron overload"] },
+                    { t: "Gallstone disease", l: ["Aula 01 - Gallstone disease"], m: ["Gallstone Disease"] },
+                    { t: "Biliary Disorders", l: ["Aula 01 - Biliary Disorders - Medcof USA"], m: ["Biliary Disorders"] },
+                    { t: "Stomach Diseases", l: ["Aula 01 - Stomach Diseases - Medcof USA"], m: ["Stomach Diseases"] },
+                    { t: "Intestinal malabsorption syndromes", l: ["Aula 01 - Intestinal malabsorption syndromes"], m: ["Intestinal malabsorption syndromes"] },
+                    { t: "Acute Pancreatitis", l: ["Aula 01 - Acute Pancreatitis - Medcof USA"], m: ["Acute Pancreatitis"] },
+                    { t: "Chronic Pancreatitis and Pancreatic Adenocarcinoma", l: ["Aula 01 - Chronic Pancreatitis and Pancreatic Adenocarcinoma - Medcof USA"], m: ["Chronic Pancreatitis and Pancreatic Adenocarcinoma"] },
+                    { t: "Bowel disorders Part 1: Childhood", l: ["Aula 01 - Bowel disorders Part 1: Childhood - Medcof USA"], m: ["Bowel disorders Part 1_ Childhood"] },
+                    { t: "Bowel disorders Part 2: Adulthood and General", l: ["Aula 01 - Bowel disorders Part 2: Adulthood and General - Medcof USA"], m: ["Bowel disorders Part 2_ Adulthood and General"] },
+                    { t: "Inflammatory Bowel Disease", l: ["Aula 01 - Inflammatory Bowel Disease - Medcof USA"], m: ["Inflammatory Bowel Disease"] },
+                    { t: "Colon Polyps and Cancer", l: ["Aula 01 - Colon Polyps and Cancer - Medcof USA"], m: ["Colon Polyps and Cancer"] },
+                    { t: "Carcinoid Tumors", l: ["Aula 01 - Carcinoid Tumors - Medcof USA"], m: ["Carcinoid Tumors"] },
+                    { t: "GI Pharm", l: ["Aula 01 - GI Pharm - Medcof USA"], m: ["GI Pharm"] }
+                ]
+            },
+            {
+                title: "Módulo 24 - Biostatistics & Epidemiology",
+                subs: [
+                    { t: "Statistics", l: ["Aula 01 - Statistics - Medcof USA"], m: ["PDF de Slides - Statistics - Medcof USA", "Statistics"] },
+                    { t: "Hypothesis Testing", l: ["Aula 01 - Hypothesis Testing - Medcof USA"], m: ["PDF de Slides - Hypothesis Testing - Medcof USA", "Hypothesis Testing"] },
+                    { t: "Measurements and Variables", l: ["Aula 01 - Measurements and Variables"], m: ["PDF de Slides - Measurements and Variables", "Measurement and Variables"] },
+                    { t: "Correlations", l: ["Aula 01 - Correlations - Medcof USA"], m: ["Correlations"] },
+                    { t: "Type of Study", l: ["Aula 01 - Type of Study"], m: ["Types of Study"] },
+                    { t: "Quantifying Risk", l: ["Aula 01 - Quantifying Risk"], m: ["Quantifying Risk"] },
+                    { t: "Metas-Analysis", l: ["Aula 01 - Metas-Analysis"], m: ["Meta-Analysis"] },
+                    { t: "Diagnostic Tests of Accuracy I", l: ["Aula 01 - Diagnostic Tests of Accuracy I"], m: ["Diagnostic Tests of Accuracy I"] },
+                    { t: "Diagnostic test of Accuracy II", l: ["Aula 01 - Diagnostic test of Accuracy II"], m: ["Diagnostic Tests of Accuracy II"] },
+                    { t: "Bias", l: ["Aula 01 - Bias - Medcof USA"], m: ["Bias"] },
+                    { t: "Randomized Clinical Trials", l: ["Aula 01 - Randomized Clinical Trials - Medcof USA"], m: ["Randomized Clinical Trials"] }
+                ]
+            },
+            {
+                title: "Módulo 25 - Behavioral Science",
+                subs: [
+                    { t: "Ethics Principles", l: ["Aula 01 - Ethics Principles - Medcof USA"], m: ["PDF de Slides - Ethics Principles", "Ethics Principles"] },
+                    { t: "Informed Consent", l: ["Aula 01 - Informed Consent - Medcof USA"], m: ["PDF de Slides - Informed Consent - Medcof USA", "Informed Consent"] },
+                    { t: "Confidentiality", l: ["Aula 01 - Confidentiality - Medcof USA"], m: ["PDF de Slides - Confidentiality - Medcof USA", "Confidentiality"] },
+                    { t: "Decision-Making Capacity", l: ["Aula 01 - Decision-Making Capacity - Medcof USA"], m: ["Decision-Making"] },
+                    { t: "Public Health", l: ["Aula 01 - Public Health - Medcof USA"], m: ["Public Health"] },
+                    { t: "Quality and Safety", l: ["Aula 01 - Quality and Safety - Medcof USA"], m: ["Principles of Quality and Safety"] },
+                    { t: "The Healthy Patient", l: ["Aula 01 - The Healthy Patient - Medcof USA"], m: ["The Healthy Patient"] },
+                    { t: "Introduction to Geriatrics", l: ["Aula 01 - Introduction to Geriatrics - Medcof USA"], m: ["Introduction to Geriatrics"] },
+                    { t: "Pediatrics", l: ["Aula 01 - Pediatrics - Medcof USA"], m: ["Intro to pediatrics"] }
+                ]
+            },
+            {
+                title: "Módulo 26 - Anesthesiology",
+                subs: [
+                    { t: "Intravenous Anesthetics", l: ["Aula 01 - Intravenous Anesthetics - Medcof USA"], m: ["General Anesthesia"] },
+                    { t: "Local Anesthesia", l: ["Aula 01 - Local Anesthesia - Medcof USA"], m: ["PDF de Slides - Local Anesthesia", "Local Anesthetics"] },
+                    { t: "Neuromuscular Blockers", l: ["Aula 01 - Neuromuscular Blockers - Medcof USA"], m: ["PDF de Slides - Neuromuscular Blockers", "Neuromuscular blockers (NMBs).mp4"] }
+                ]
+            }
+        ];
+
+        // --- PROCESSAMENTO DOS MÓDULOS ---
+        const modulesData = [];
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Função auxiliar para criar estrutura de um sub-módulo
+        function createSubmoduleStructure(subTitle, lessons, materials) {
+            const videos = lessons.map(title => {
+                const link = findLink(title, false);
+                const id = extractIdFromGoogleDriveLink(link) || PLACEHOLDER_VIDEO;
+                return {
+                    id: id,
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-play-circle'
+                };
+            });
+
+            const materialsList = materials ? materials.map(title => {
+                const link = findLink(title, true);
+                return {
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-file-pdf',
+                    link: link // Usando o link encontrado ou o placeholder
+                };
+            }) : [];
+
+            return {
+                title: subTitle,
+                videos: videos,
+                materials: materialsList
+            };
+        }
+
+        // Popula os dados do curso
+        rawCourseData.forEach((mod, index) => {
+            const moduleId = `mod_${String(index + 1).padStart(2, '0')}`;
+            const moduleObj = {
+                id: moduleId,
+                title: mod.title,
+                videos: [],
+                materials: []
+            };
+
+            mod.subs.forEach(sub => {
+                // Tenta mapear os títulos de aulas e materiais para os links reais antes de criar a estrutura
+                const lessonsWithLinks = sub.l.map(title => ({
+                    title: title,
+                    link: findLink(title, false)
+                }));
+                
+                const materialsWithLinks = sub.m ? sub.m.map(title => ({
+                    title: title,
+                    link: findLink(title, true)
+                })) : [];
+
+
+                const structure = {
+                    title: sub.t,
+                    videos: lessonsWithLinks.map(l => ({
+                        id: extractIdFromGoogleDriveLink(l.link) || PLACEHOLDER_VIDEO,
+                        title: l.title,
+                        description: sub.t,
+                        icon: 'fas fa-play-circle'
+                    })),
+                    materials: materialsWithLinks.map(m => ({
+                        title: m.title,
+                        description: sub.t,
+                        icon: 'fas fa-file-pdf',
+                        link: m.link
+                    }))
+                };
+                
+                // Adiciona Categoria de Vídeo (Sub-módulo)
+                moduleObj.videos.push({
+                    type: 'category',
+                    title: structure.title,
+                    items: structure.videos
+                });
+
+                // Adiciona Categoria de Material (Sub-módulo) se houver materiais
+                if (structure.materials.length > 0) {
+                    moduleObj.materials.push({
+                        type: 'category',
+                        title: structure.title,
+                        items: structure.materials
+                    });
+                }
+            });
+
+            modulesData.push(moduleObj);
+        });
+
+
+        // --- FUNÇÕES DE INTERFACE (UI) ---
+
+        function loadVideo(videoId, lessonTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && videoId && videoId !== PLACEHOLDER_VIDEO) {
+                contentPlayer.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else if (contentPlayer) {
+                contentPlayer.src = '';
+            }
+            
+            if (titleElement) titleElement.textContent = lessonTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            selectedItemId = videoId;
+            const currentSelected = document.querySelector(`[data-id="${videoId}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const contentPlayer = document.getElementById('contentPlayer');
+            const titleElement = document.getElementById('lessonTitle');
+
+            if (contentPlayer && link && link !== PLACEHOLDER_MATERIAL && link !== '#') {
+                const previewLink = link.includes('drive.google.com') 
+                    ? link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview')
+                    : link;
+                contentPlayer.src = previewLink;
+            } else if (contentPlayer) {
+                contentPlayer.src = '';
+            }
+            
+            if (titleElement) titleElement.textContent = materialTitle;
+
+            if (selectedItemId) {
+                const prevSelected = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prevSelected) prevSelected.classList.remove('selected-lesson');
+            }
+
+            selectedItemId = link;
+            const currentSelected = document.querySelector(`[data-id="${link}"]`);
+            if (currentSelected) currentSelected.classList.add('selected-lesson');
+        }
+
+        function renderModuleContent(moduleId) {
+            const videosContainer = document.getElementById('videosContainer');
+            const materialsContainer = document.getElementById('materialsContainer');
+            const lessonTitleElement = document.getElementById('lessonTitle');
+
+            if (!videosContainer || !materialsContainer || !lessonTitleElement) return;
+
+            const module = modulesData.find(m => m.id === moduleId);
+            if (!module) return;
+
+            let videosHtml = '';
+            let materialsHtml = '';
+            let firstItem = null;
+
+            // Renderiza Vídeos (Agrupados por Sub-módulo)
+            module.videos.forEach(category => {
+                if (category.type === 'category') {
+                    videosHtml += `
+                        <details>
+                            <summary>${category.title}</summary>
+                            <div class="px-4 py-2 space-y-2">
+                                ${category.items.map(item => {
+                                    if (!firstItem && item.id !== PLACEHOLDER_VIDEO) firstItem = { type: 'video', data: item };
+                                    
+                                    return `
+                                    <div class="material-item" onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                                        <div class="item-thumbnail-placeholder">
+                                            <i class="${item.icon}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-white">${item.title}</p>
+                                        </div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </details>
+                    `;
+                }
+            });
+
+            // Renderiza Materiais (Agrupados por Sub-módulo)
+            if (module.materials.length > 0) {
+                module.materials.forEach(category => {
+                    if (category.type === 'category') {
+                        materialsHtml += `
+                            <details>
+                                <summary>${category.title}</summary>
+                                <div class="px-4 py-2 space-y-2">
+                                    ${category.items.map(item => `
+                                        <div class="material-item" onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                                            <div class="item-thumbnail-placeholder">
+                                                <i class="${item.icon}"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-white">${item.title}</p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        `;
+                    }
+                });
+            } else {
+                materialsHtml = '<p class="text-gray-400 text-sm italic">Nenhum material disponível para este módulo.</p>';
+            }
+
+            videosContainer.innerHTML = videosHtml;
+            materialsContainer.innerHTML = materialsHtml;
+
+            // Abre o primeiro detalhe de vídeo por padrão para facilitar a navegação
+            const firstDetails = videosContainer.querySelector('details');
+            if (firstDetails) firstDetails.open = true;
+
+            // Carrega o primeiro item automaticamente
+            if (firstItem) {
+                loadVideo(firstItem.data.id, firstItem.data.title);
+            } else {
+                document.getElementById('contentPlayer').src = '';
+                lessonTitleElement.textContent = 'Selecione um item';
+                selectedItemId = null;
+            }
+        }
+
+        // Inicialização
+        function initializeModuleSelector() {
+            const moduleSelector = document.getElementById('moduleSelector');
+            if (!moduleSelector) return;
+
+            modulesData.forEach(module => {
+                const option = document.createElement('option');
+                option.value = module.id;
+                option.textContent = module.title;
+                moduleSelector.appendChild(option);
+            });
+
+            moduleSelector.addEventListener('change', (event) => {
+                renderModuleContent(event.target.value);
+            });
+
+            // Carrega o primeiro módulo ao iniciar
+            if (modulesData.length > 0) {
+                moduleSelector.value = modulesData[18].id;
+                renderModuleContent(modulesData[18].id);
+            }
+        }
+
+        window.onload = initializeModuleSelector;
+    </script>
+</body>
+</html>
