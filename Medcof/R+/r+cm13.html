@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extensivo TEEM 2026 - Plataforma de Aulas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a202c; color: #e2e8f0; }
+        .selected-lesson { background-color: #4299e1; border: 2px solid #63b3ed; }
+        .item-thumbnail-placeholder { width: 80px; height: 45px; background-color: #4a5568; display: flex; justify-content: center; align-items: center; border-radius: 0.375rem; flex-shrink: 0; }
+        .item-thumbnail-placeholder i { font-size: 1.8rem; color: #CBD5E0; }
+        details { background-color: #2d3748; border-radius: 0.375rem; overflow: hidden; margin-bottom: 0.75rem; }
+        summary { padding: 0.5rem 0.75rem 0.5rem 2rem; cursor: pointer; font-weight: 600; color: #e2e8f0; position: relative; list-style: none; user-select: none; }
+        summary::-webkit-details-marker { display: none; }
+        summary::before { content: '\25B6'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); transition: transform 0.2s; color: #a0aec0; font-size: 0.8rem; }
+        details[open] summary::before { transform: translateY(-50%) rotate(90deg); }
+        .material-item { display: flex; align-items: center; gap: 0.75rem; background-color: #4a5568; border-radius: 0.375rem; padding: 0.5rem; margin-top: 0.5rem; cursor: pointer; transition-colors: 0.2s; margin-left: 0.5rem; margin-right: 0.5rem; }
+        .material-item:hover { background-color: #2d3748; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Extensivo TEEM 2026</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs md:max-w-md"></select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-md" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3"></div>
+            </div>
+        </section>
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas e Módulos</h3>
+            <div id="videosContainer" class="space-y-3 mb-6"></div>
+        </aside>
+    </main>
+
+    <script>
+        // Variável global para rastrear o item selecionado
+        let selectedItemId = null;
+
+        // --- DADOS BRUTOS DOS LINKS (Mantidos da versão anterior para compatibilidade) ---
+        // Nota: Os links atuais cobrem principalmente Endocrinologia.
+        // Os novos módulos (Neurologia, etc.) usarão placeholders até que os links sejam atualizados.
+        const rawLinks = `
+Antidiabéticos Orais e Subcutâneos - Parte 1_COFEXPRESS - https://drive.google.com/file/d/1-1bP3uMCjZpBLMdMXHlKHse50b0vhvoi/view?usp=sharing
+Vasculites de Grandes e Médios Vasos - https://drive.google.com/file/d/1-eUP2roWT8n-LfE2CVbxjAD6y3vDbe0S/view?usp=sharing
+Distúrbios do Cálcio - https://drive.google.com/file/d/1-y517rPX4VgD2cpS_a--CSqkLS2OIRF1/view?usp=sharing
+Doença hepática esteatótica Metabólica (DHEM)_COFEXPRESS - https://drive.google.com/file/d/10KG5k6cvX2IPS3iQYIpa-i7PxcYAPGMv/view?usp=sharing
+Atualização em DislipidemiaEDITADO - https://drive.google.com/file/d/10nTCBXaQC4QYLE3UuX1wQ1Arcc9B9Iek/view?usp=sharing
+Transtorno de Humor II Antidepressivos_cofexpress - https://drive.google.com/file/d/10uurbhie5211oxnAZ2GYl5T4ApmFGVG7/view?usp=sharing
+Tireoidites & Síndrome do Eutireoidiano Doente_COFEXPRESS - https://drive.google.com/file/d/11DEOu20K6H8CovrVwcgQ45W8GlODyins/view?usp=sharing
+Anemias Hipoproliferativas II_COFEXPRESS - https://drive.google.com/file/d/11JXLJ2WBWRpjhoc5NPNwEgdBmHm2RlUB/view?usp=sharing
+Derrame Pleural - https://drive.google.com/file/d/11ta7Ul1CKxXkDqW0r_TizJIjrAFbGc-f/view?usp=sharing
+Anticoagulação I_COFEXPRESS - https://drive.google.com/file/d/12E0oNwAFdDm_S8FJFHVm2vF8JGJ80JyA/view?usp=sharing
+Tabagismo_COFEXPRESS - https://drive.google.com/file/d/12PeOzsP5KR-Tgova0JBm-j8uD8Ud6BG8/view?usp=sharing
+Espirometria_COFEXPRESS (CORTAR O FINAL) - https://drive.google.com/file/d/12rtiR9QrIDyAJLeKFXfei-KhtPGvsZiq/view?usp=sharing
+Discussão R+ Nefrologia - Módulo 2 - https://drive.google.com/file/d/14EVNZDWG5G8LONlHbsiSTeSr7KtRea-J/view?usp=sharing
+Imunobiológicos - Situações Especiais _COFEXPRESS - https://drive.google.com/file/d/14J2kKHTFpKP47kjXOyOabhuHdMy_EhBF/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 1_COFEXPRESS - https://drive.google.com/file/d/15CA-jvLjFLZ0kkyauQcUozrr1VtGzVx4/view?usp=sharing
+Hiperaldosteronismo Primário_COFEXPRESS - https://drive.google.com/file/d/15awnFkjK8dyTXn_zOqd9-ENCfux8mNEF/view?usp=sharing
+Imunobiológicos - Situações Especiais - https://drive.google.com/file/d/15hDWD7Px9j2nltUla_WEA_2kq5_Jq26M/view?usp=sharing
+Doença de Behçet - https://drive.google.com/file/d/15jVl_RxDWPpYDxVWHkcjw8k5oYsNTte2/view?usp=sharing
+Anemias Hemolíticas Hereditárias_COFEXPRESS - https://drive.google.com/file/d/162bDePgoiZ7BVZDaPh6Y5OOfwhsxNtxN/view?usp=sharing
+Doença Pulmonar Obstrutiva Crônica (DPOC)_COFEXPRESS - https://drive.google.com/file/d/169Ws-e6lmbWk5nxoIpp_XKzm01QrvNDw/view?usp=sharing
+Doença de Sjögren_COFEXPRESS - https://drive.google.com/file/d/16CKULi0LemKNXy_WNj2EfyBbElx07jUE/view?usp=sharing
+Emergências Oncológicas - https://drive.google.com/file/d/16Ew2Izk9qdJEPPrVKgkStxErWPYuULMn/view?usp=sharing
+Vacinação do Idoso_COFEXPRESS - https://drive.google.com/file/d/16ouuJ7fw1OaB3Lz3ZM6wd0BhS9f7MPeE/view?usp=sharing
+Transtorno Psicótico_COFEXPRESS - https://drive.google.com/file/d/17NlhfaC5X3r2skAswT-7aTGSzBBQp4gm/view?usp=sharing
+Distúrbios da Hemostasia_COFEXPRESS - https://drive.google.com/file/d/17azvfU-hEEC6XBnePYEeDSs4EBmDY92u/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 3_COFEXPRESS - https://drive.google.com/file/d/18C89iZPlBahrrkBT_BiRnlIO8cg15ort/view?usp=sharing
+Avaliação Geriátrica Ampla - https://drive.google.com/file/d/18Ix2c9u_QFSOlXgtNPSTXzYKISuhtrho/view?usp=sharing
+Nódulo Pulmonar_COFEXPRESS - https://drive.google.com/file/d/18teGAu7ybQkgDo_sJtzro-briNQXp0vj/view?usp=sharing
+Hiperaldosteronismo Primário - https://drive.google.com/file/d/18tu5TQE6WqzCxHMt49Xuh7jBUSl4xJnS/view?usp=sharing
+Miopatias Autoimunes Sistêmicas - Clínica Médica - https://drive.google.com/file/d/19Cjq3ro72tyR6dIVEWSQGl9oFktxFXpD/view?usp=sharing
+Discussão R+ - Parte 1 - https://drive.google.com/file/d/19FmJDsjT1bJP8q8mkFOeop8ChpX1sG5Z/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 1 - https://drive.google.com/file/d/19HHegVmGoevs0ZnqnU4W8AXXTO30Q2vg/view?usp=sharing
+Insuficiência Cognitiva Demências - https://drive.google.com/file/d/19SDXZQwIJd8d1GgiibZ-hMYbn6129jHo/view?usp=sharing
+Nódulo Pulmonar - https://drive.google.com/file/d/19rrnV29cBllZ5mk87_RjPbO9Ak_0MlVZ/view?usp=sharing
+Insulinoterapia - https://drive.google.com/file/d/19zUmScFVtmx4VzoegDxRyMNztG0m1JpX/view?usp=sharing
+Dermatoses Bolhosas_COFEXPRESS - https://drive.google.com/file/d/1AAapKPVNXJi78RqvESV0H6Uxwxf2hqLJ/view?usp=sharing
+Doença Renal Crônica I - https://drive.google.com/file/d/1AIroZSnMGwZCzK-m1QUojgw9zcxCKU0Z/view?usp=sharing
+Infecção do Trato Urinário (ITU) - https://drive.google.com/file/d/1AR3qFMbsCtzDsYxP2oWxxAsITwopRT8w/view?usp=sharing
+Obesidade Tratamento Farmacológico e Cirúrgico _COFEXPRESS - https://drive.google.com/file/d/1AUkEHQJZobAilKObpyzSF1dYxnsNAuFI/view?usp=sharing
+Transtorno de Ansiedade - https://drive.google.com/file/d/1B2s5EDogTuJPAMdA0HJeZHswQdeQBQ9p/view?usp=sharing
+Dislipidemia - Classificação e Diagnóstico _COFEXPRESS - https://drive.google.com/file/d/1BwuXfm7y0eAunM4OzE1lM5X4doUfvJht/view?usp=sharing
+VISÃO DO ESPECIALISTA Glomerulopatias I- - https://drive.google.com/file/d/1C5fp9YIUizbGNxk9t9wdQhV2m6ggmrRS/view?usp=sharing
+Anemias Hemolíticas Adquiridas_COFEXPRESS - https://drive.google.com/file/d/1CVgybdxAPrkQkjjNxh_K-v1_4jJv8p2y/view?usp=sharing
+Espirometria - https://drive.google.com/file/d/1CxxwSUG-yNYeyOpOomAUkO7dQkMJevhr/view?usp=sharing
+Discussão R+ Hematologia - Módulo 2 - https://drive.google.com/file/d/1D580iaskFvjzxrwAaD4Ol88zAfoxC4vT/view?usp=sharing
+Leucemias - https://drive.google.com/file/d/1DBlVgpyiHX9gQTM0uZToiX7JkFbdPpjZ/view?usp=sharing
+Derrame Pleural_COFEXPRESS - https://drive.google.com/file/d/1DJP76XwDROQDF1x74J_GJV-uVeghvdoK/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 2_COFEXPRESS - https://drive.google.com/file/d/1DYoLnY21pWx5I7K_2Ix_uZqH7CGWibki/view?usp=sharing
+Insulinoterapia_COFEXPRESS - https://drive.google.com/file/d/1DZKfJ7VqfLNhP4VOd62KZfjt7kQTSYgZ/view?usp=sharing
+Artrites Microcristalinas (Gota e CPPD)_COFEXPRESS - https://drive.google.com/file/d/1DuaA92IYVvLW2nR0awZSbZDcXz4AJHxw/view?usp=sharing
+Insuficiência Cognitiva Demências_COFEXPRESS - https://drive.google.com/file/d/1DwYKbJyIOC6t4QOHvSAcJeTyVmzPO_9r/view?usp=sharing
+Hiperglicemia Hospitalar - https://drive.google.com/file/d/1E-xVts0LGnNnblLO8-dE6F-CFtBjGAgr/view?usp=sharing
+Transtorno de Humor III Mania e Transtorno Bipolar_COFEXPRESS - https://drive.google.com/file/d/1ELx2Lc94ckzUzNjz9k5LSkTcJwiq7rfz/view?usp=sharing
+Gasometria Arterial II - https://drive.google.com/file/d/1EMjmgwIpG0yLTGLOmUbxr0t9qtS_Cou1/view?usp=sharing
+Discussão R+ - Parte 1_COFEXPRESS- - https://drive.google.com/file/d/1FG35vmHWsMXxl-tAnRl91U7Wv4l7TBc0/view?usp=sharing
+Osteoporose_COFEXPRESS - https://drive.google.com/file/d/1FwNAoPb5kJIBgUUHerk0XUbcfhosi-uE/view?usp=sharing
+Vasculites de Grandes e Médios Vasos_COFEXPRESS - https://drive.google.com/file/d/1GCY7cRvUijgGyHlnnCiYLMOp4vrwyWT7/view?usp=sharing
+Obesidade Introdução e Tratamento Não Farmacológico - https://drive.google.com/file/d/1GMh3zwTtJrLlfFvu_AGqgaMzIerQvcf2/view?usp=sharing
+Meta Terapêutica, Manejo do pré-DM e Tratamento Não Farmacológico do DM- - https://drive.google.com/file/d/1G_Pmb_fx771Q61SqKjGy4YsBlZutiMWK/view?usp=sharing
+Insuficiência Cognitiva Delirium no Idoso - https://drive.google.com/file/d/1Gch0F0yH01WxSlQmxNVgRhnVTA-jVBC3/view?usp=sharing
+Discussão R+ Pneumologia - Módulo 2 - https://drive.google.com/file/d/1GqO3GzhU0APlvBGO2fgOgnJSE6mRQxMd/view?usp=sharing
+Discrasias Plasmocitárias_COFEXPRESS - https://drive.google.com/file/d/1HGCBaNprnmbaLd6DkDzVw5KaIjsGw5Pa/view?usp=sharing
+Antidiabéticos Orais e Subcutâneos - Parte 1 - https://drive.google.com/file/d/1HPDZYyT3Co8EamtGWFFtE_8pbrzPanX2/view?usp=sharing
+Doença Pulmonar Intersticial (DPI)_COFEXPRESS - https://drive.google.com/file/d/1Ht0IuBAsrRuvO86QFDraPSM81x96HnCD/view?usp=sharing
+Distúrbios da Hemostasia - https://drive.google.com/file/d/1I6SrS6v8ZgfAv_pmCsGqxDUMMkhcWjxW/view?usp=sharing
+Vacinação do Idoso - https://drive.google.com/file/d/1I7WCBt-IBq10YTMSvCD2Y1fmnNPBnwN3/view?usp=sharing
+Diabetes Classificação, Fisiopatologia e Diagnóstico- - https://drive.google.com/file/d/1IAUn07GewDfKe76WLveR9G53OqI5UkgP/view?usp=sharing
+Incidentaloma Adrenal - https://drive.google.com/file/d/1ICeAnc8Wz1tmPYZK8wCEetLDVS9ZKvlz/view?usp=sharing
+Anemias Hipoproliferativas II - https://drive.google.com/file/d/1IJAHQR30ev9-7BlQQQbQMevD6voVWh7v/view?usp=sharing
+Púrpura Trombocitopênica Trombótica (PTT). - https://drive.google.com/file/d/1IcpNT5jKF3X5a0SX60Kv7yIFw-HO5H1U/view?usp=sharing
+Anticoagulação II_COFEXPRESS - https://drive.google.com/file/d/1JT-nZyKImXiySTTChvehQXh_UGX1l08j/view?usp=sharing
+Lúpus Eritematoso Sistêmico - Clínica Médica - https://drive.google.com/file/d/1Jtbh2zrTgkysa1tOC_MempPk9XIQQBtu/view?usp=sharing
+Hipertensão pulmonar_COFEXPRESS - https://drive.google.com/file/d/1Jubh6KNYWdiH4VaANEPLivqBtmiz1otG/view?usp=sharing
+Efeitos colaterais de quimioterápicos.mp4 - https://drive.google.com/file/d/1JyAPgJs4HCfI4bMTGZg9DFg9wUqafNgf/view?usp=sharing
+Tabagismo - https://drive.google.com/file/d/1Jz1b0D1Jdy3zu41MFsDKsDM0rlS7ekiC/view?usp=sharing
+Fisiologia da Coagulação - https://drive.google.com/file/d/1K8trET_4ck6IuPFm6wWffqmt_h-wxuPK/view?usp=sharing
+Emergências psiquiátricas - https://drive.google.com/file/d/1KRLC_FWecDKaYDObFaRCzE2fienwX1AU/view?usp=sharing
+Efeitos colaterais de quimioterápicos_COFEXPRESS.mp4 - https://drive.google.com/file/d/1KSsFZqk_2ecSgDWkdYXcDwK22Bgx4xq4/view?usp=sharing
+Esclerose Sistêmica - https://drive.google.com/file/d/1KYR5JZbBBbMksfq-67Jk-65n0eNPF9jp/view?usp=sharing
+Antidiabéticos Orais e Subcutâneos - Parte 2_COFEXPRESS - https://drive.google.com/file/d/1KrBIDvuAYzew0DuhhM_ZLe-3TFJWf8FJ/view?usp=sharing
+Hipogonadismo Masculino - https://drive.google.com/file/d/1KtOOgIHZRRs9yZOy6Z8FgjZs3FXaR5OB/view?usp=sharing
+Hanseníase - https://drive.google.com/file/d/1L4-hhCcCfA03HL3yUz4LUFQX5PR2SUc9/view?usp=sharing
+Discussão R+ Hematologia - Módulo 1- - https://drive.google.com/file/d/1L65SJSa_KsB2vFCA4Ud3mlF6YfSHujca/view?usp=sharing
+Vasculites de Pequenos Vasos_COFEXPRESS - https://drive.google.com/file/d/1LmFMM5WZHISws2egBaUpjf3X44sZbHRq/view?usp=sharing
+COFEXPRESS Glomerulopatias I- - https://drive.google.com/file/d/1M9dURB3i41snMDYHzLkNgnFy6-V67_Jc/view?usp=sharing
+Outros Distúrbios Hipofisários - https://drive.google.com/file/d/1MCXYgheMKBQK9OkzzI34qMQWiluYThZt/view?usp=sharing
+Transtorno de Humor III Mania e Transtorno Bipolar - https://drive.google.com/file/d/1MdH93bmndPsCjHbtYUXVaO6l75jhNZ0o/view?usp=sharing
+Hipertensão pulmonar - https://drive.google.com/file/d/1MqhIX0GQK3dpW0PQbWdzJPIqm1lCjnhd/view?usp=sharing
+Lúpus Eritematoso Sistêmico - Clínica Médica_COFEXPRESS - https://drive.google.com/file/d/1N4m4EMZcioyIXJ-qznO4NmQEMTf6SD43/view?usp=sharing
+Pneumonia Adquirida na Comunidade_COFEXPRESS - https://drive.google.com/file/d/1NLNu3FyGeNzhDzIdanvJMXAl8ajfsEmp/view?usp=sharing
+Distúrbios Hidroeletrolíticos - Outros (Magnésio e Fósforo)_COFEXPRESS - https://drive.google.com/file/d/1NMzZn2YUaS8mwDZbQpfCEhCPwFMEUSob/view?usp=sharing
+Transtorno de personalidade_COFEXPRESS - https://drive.google.com/file/d/1NWgDHibW9QxzOaUw1bKTGHZ_XihZA5m8/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 2_COFEXPRESS - https://drive.google.com/file/d/1NZOIVs2jFFxTbr_jXdjWHg9_eOLnQXwm/view?usp=sharing
+Fragilidade_COFEXPRESS - https://drive.google.com/file/d/1NyfPXuksECZr_WC5R7-rk4_HjVh5o1RQ/view?usp=sharing
+Hipercalcemias - https://drive.google.com/file/d/1O5kwcS1IQe21dHM3qrPhcEziV-EODn4s/view?usp=sharing
+Emergências psiquiátricas_COFEXPRESS - https://drive.google.com/file/d/1O7BA67oL2vKHlyRTh_1Bi-CqITCXoLkI/view?usp=sharing
+Lesões Elementares_COFEXPRESS- - https://drive.google.com/file/d/1OChHixPoLGRQWAkG_FPxeMiPNYGR0856/view?usp=sharing
+Distúrbios do Sono_COFEXPRESS - https://drive.google.com/file/d/1OU8ZaMplxU4yqtGacFWExa7JoksPWy6y/view?usp=sharing
+Anemias Hipoproliferativas I_COFEXPRESS - https://drive.google.com/file/d/1P8moCLTQ1E_KQNb5HOIdswkZ0mrSGiLs/view?usp=sharing
+Linfomas - https://drive.google.com/file/d/1PZOx7vODcxGoeffhWUHm8Gk38U72UGsO/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 3] - https://drive.google.com/file/d/1PvQS3WqJ6q8E_OcV9syat9Ylrz76WgIg/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 1 parte 1 - https://drive.google.com/file/d/1QA_VcwXgn8BKVSAsXS5nDySIRdZyhP2r/view?usp=sharing
+Anemias Hipoproliferativas I - https://drive.google.com/file/d/1QHN_iTp8efYTo9d8TmQU9X8ksD1Yvvtx/view?usp=sharing
+Instabilidade Postural, Quedas e Imobilidade. - https://drive.google.com/file/d/1QdFGxJVUGTv9_1wwLwire6rcQa8fB2Oj/view?usp=sharing
+Doença hepática esteatótica Metabólica (DHEM) - https://drive.google.com/file/d/1Qi54kAY29Swwb6J6KHfREbFhZszrDGRq/view?usp=sharing
+Artrites e Artrite Reumatoide (AR) - https://drive.google.com/file/d/1QmgPIlUsKWeW55z20B6p066m5XEinKnB/view?usp=sharing
+Fibromialgia_COFEXPRESS - https://drive.google.com/file/d/1Qp6aBeTO7bAVgp3KUQOgYxOIH36590Gs/view?usp=sharing
+Fisiologia da Tireoide - https://drive.google.com/file/d/1QpAbnW1YN3hrwf3CrNXSdrczmhpZiysS/view?usp=sharing
+Feocromocitoma - https://drive.google.com/file/d/1Qsbc6IEZI2hb_HHKnWhMSGxLZ2zKKfOk/view?usp=sharing
+Hemoterapia_COFEXPRESS - https://drive.google.com/file/d/1R2VsQ01SStEIna0ynZokq4nKv-CfRW9A/view?usp=sharing
+Avaliação Geriátrica Ampla_COFEXPRESS - https://drive.google.com/file/d/1RJx36zQm1orbUpTS-WZrfULRZnnpg1DP/view?usp=sharing
+Dermatoses Bolhosas - https://drive.google.com/file/d/1RVj5XRWO0Y2TXPdmRrHoT4fagOyA8EHr/view?usp=sharing
+Complicações Crônicas do Diabetes Mellitus (DM)_COFEXPRESS- - https://drive.google.com/file/d/1SRGEXiowwIfIrz2BwfBCe5dPQqq0pckI/view?usp=sharing
+Discrasias Plasmocitárias - https://drive.google.com/file/d/1SjSWbgqTl9sa8yfjpf7Uzm8Vj_AV3Mwf/view?usp=sharing
+Anticoagulação I - https://drive.google.com/file/d/1SobW0yQDVnjyfml_XjTshlxo-ZDh4f9q/view?usp=sharing
+Transtorno de personalidade - https://drive.google.com/file/d/1T_Cj_6HGT6PePEkydr00EF0qOVfklSlF/view?usp=sharing
+Introdução à Geriatria_COFEXPRESS - https://drive.google.com/file/d/1U-QVHMVhBU8iQFDeCBAoL29J1v_XFdjU/view?usp=sharing
+TEP - https://drive.google.com/file/d/1UHyJWfENu-fUlEb7UAHdqBXlN2eRMC6E/view?usp=sharing
+Anticoagulação II - https://drive.google.com/file/d/1UMKowZZUbdfurePZIMC_QvtPfTSSCw_Z/view?usp=sharing
+Doença de Behçet_COFEXPRESS - https://drive.google.com/file/d/1VKIPUnP_c64ib8ghzdJrwyESvgyUbe5r/view?usp=sharing
+Introdução à Geriatria - https://drive.google.com/file/d/1VUTRjTZyULGGDZNPYV8QUisavTaGh4Kp/view?usp=sharing
+Síndrome de Cushing - https://drive.google.com/file/d/1VhX99KHJrThhHMLikWLJ4CMIkv11MQ9a/view?usp=sharing
+Discussão R+ Hematologia - Módulo 3 - https://drive.google.com/file/d/1WBk73aT0hJ_eiW085dzA47u-yHBNbc5N/view?usp=sharing
+Vasculites de Pequenos Vasos - https://drive.google.com/file/d/1WN8IULxLUoJ3Xc3Ts6xne0mGINg32wQJ/view?usp=sharing
+Infecção do Trato Urinário (ITU)_COFEXPRESS - https://drive.google.com/file/d/1WOiQo453SvjhDNJdzYk398C87HuOJVHj/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 1 parte 2 - https://drive.google.com/file/d/1WYCWOpeTjGwT5S8C7c8FXYR-Hd1cc_xW/view?usp=sharing
+Introdução às Artrites e Artrite Reumatoide (AR) - https://drive.google.com/file/d/1Y-EX2bbdiyijcKTW7S78gx2h4Vjwa6Qe/view?usp=sharing
+Outros Distúrbios Hipofisários_COFEXPRESS - https://drive.google.com/file/d/1Y9EgKNNbpXJEiD5BJ32Etueu8bLACZ17/view?usp=sharing
+Psoríase- - https://drive.google.com/file/d/1YE_yiT5fPpYDxzBxTlC-61GJe8aEgw7x/view?usp=sharing
+Púrpura Trombocitopênica Trombótica (PTT)_COFEXPRESS. - https://drive.google.com/file/d/1YKG_JthaK0s_vo5jyNRhTPyCOak_G0L5/view?usp=sharing
+Neoplasias Específicas e Miscelânea_COFEXPRESS - https://drive.google.com/file/d/1YsCAgiA4M3qel2kivsne2yy3DXvpboSN/view?usp=sharing
+COFEXPRESS Glomerulopatias II- - https://drive.google.com/file/d/1Z35IFpUfS892FxLlTWPQ_VhbD2DhXl5E/view?usp=sharing
+Iantrogenia no Idoso - https://drive.google.com/file/d/1ZTDkQ60EvdoZeeE0oHZmN-uCpagDqvMY/view?usp=sharing
+Hiperglicemia Hospitalar_COFEXPRESS - https://drive.google.com/file/d/1Zo9NrBuVBVO6I1Q01IG7lFfQIX-AwdNK/view?usp=sharing
+Doença de Sjögren - https://drive.google.com/file/d/1_1vPQ08HocOzcp03tM6yD_nVEuH7C-Tj/view?usp=sharing
+Hipotireoidismo_COFEXPRESS - https://drive.google.com/file/d/1_ASN6v2GX2qFVNj7zQE_8_MdJ8ozNbWZ/view?usp=sharing
+Gasometria Arterial I_COFEXPRESS - https://drive.google.com/file/d/1_UPT5_IS2R_8qxdAEiR9r9RgtxrcMv_z/view?usp=sharing
+Síndrome Metabólica_COFEXPRESS - https://drive.google.com/file/d/1_aOEfwAOU1xfsk-QX-n-hIWlNkQuPZFb/view?usp=sharing
+Anemias Hemolíticas Adquiridas- - https://drive.google.com/file/d/1ahUetpzbVmoT1K7YWZYA9vspQPr-y1Cf/view?usp=sharing
+Síndromes Medulares _COFEXPRESS - https://drive.google.com/file/d/1aiqGWux4GXQkNvrGXAeA2yYHuszifjvQ/view?usp=sharing
+Hipocalcemias_COFEXPRESS - https://drive.google.com/file/d/1alizyh0C69DOFgYsOMsrQ3Nj3UomTv8K/view?usp=sharing
+Transtornos Relacionados a Substâncias - Álcool - https://drive.google.com/file/d/1azafeGmjm3cEXEiklWs6p1lKR-wAelBy/view?usp=sharing
+Discussão R+ Geriatria - Módulo 2 - https://drive.google.com/file/d/1bVbYHMuXAekFmvX15G-X-s2zeE2F1Ciw/view?usp=sharing
+Depressão no Idoso - https://drive.google.com/file/d/1bhCfQCtkxe21z-a8epU798EFbYZjCgFU/view?usp=sharing
+Iantrogenia no Idoso_COFEXPRESS - https://drive.google.com/file/d/1c95TbxUwdfYnDi19BprDmSlVxhk5p7rR/view?usp=sharing
+Emergências Oncológicas_COFEXPRESS - https://drive.google.com/file/d/1cT3xRJ2USSiRndZOqkFZUkpma97ehDV6/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 1_COFEXPRESS - https://drive.google.com/file/d/1ceerjjYQMi09iHG53nxsNqhb_v88TJ6i/view?usp=sharing
+Tireoidites & Síndrome do Eutireoidiano Doente - https://drive.google.com/file/d/1cffvrCdQSa0Q3MZoqwgqDphkvFIZsqC8/view?usp=sharing
+Distúrbios do Sódio_COFEXPRESS- - https://drive.google.com/file/d/1cnxObpkwPhMm96MgWAL2arMNEp9JQFCI/view?usp=sharing
+Neoplasias Específicas e Miscelânea - https://drive.google.com/file/d/1cx8zYaV_yIxs9twxkN-FiSIi8LdYdHb-/view?usp=sharing
+Tratamento das Dislipidemias.mp4 - https://drive.google.com/file/d/1dDfIj9LfDdU9qT8PlmAa5hBIlyyg1L8j/view?usp=sharing
+Incontinência Urinária no Idoso - https://drive.google.com/file/d/1dN2F338pv0j5s55id7qCgPqNUkwRs79g/view?usp=sharing
+Distúrbios do Sono - https://drive.google.com/file/d/1dSdierz-o46U--L3WJlZgSwn6i4KmcEG/view?usp=sharing
+Espondiloartrites_COFEXPRESS - https://drive.google.com/file/d/1dWAq3OVGwYQoa9-OAFrwg7yy3tioPrHL/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 2 - https://drive.google.com/file/d/1dq_psUpbXuAMmMdsThdYGo0VOKReoubi/view?usp=sharing
+Prolactinomas - https://drive.google.com/file/d/1dwtoci3PE6SAaNUd6IQWzCMEYWYuuVup/view?usp=sharing
+Instabilidade Postural, Quedas e Imobilidade_COEXPRESS - https://drive.google.com/file/d/1eLg_U4ZMnFLK--vxH4FWhaukY5pY9H-M/view?usp=sharing
+Hipogonadismo Masculino_COFEXPRESS - https://drive.google.com/file/d/1eZgKMMNmTsmqMWcrcMTaT5DWNjX4pthi/view?usp=sharing
+Meta Terapêutica, Manejo do pré-DM e Tratamento Não Farmacológico do DM_COFEXPRESS- - https://drive.google.com/file/d/1edme9jQ4a_mjK69c3DuenVANQAOcfQTc/view?usp=sharing
+Hipertireoidismo_COFEXPRESS - https://drive.google.com/file/d/1f5QjdJSPkVXGbmLQfUfrXU1WQkNzhcoF/view?usp=sharing
+Doença Renal Crônica I_COFEXPRESS - https://drive.google.com/file/d/1hUXLoK2AJ6toOgMbqSUmYN_1bcRqrwgo/view?usp=sharing
+Espondiloartrites - https://drive.google.com/file/d/1heNwNl98-S038wYD5U28lWMWD5tU6iuZ/view?usp=sharing
+Obesidade Tratamento Farmacológico e Cirúrgico - https://drive.google.com/file/d/1iGAraH_0HQb7W3yHjaYOsLYwz9nIb604/view?usp=sharing
+Fragilidade - https://drive.google.com/file/d/1iO7DneTsp6fO34sqSGqxW8qVCmB96C0f/view?usp=sharing
+Transtornos Relacionados a Substâncias - Álcool_COFEXPRESS - https://drive.google.com/file/d/1igFVgdBn8AgfVES7PHVc2zehioBVFC-_/view?usp=sharing
+Transtorno de Humor I_COFEXPRESS - https://drive.google.com/file/d/1j7u_QcxaRosQ36WUOC9BwDcHqMHTgPT7/view?usp=sharing
+Insuficiência Adrenal_COFEXPRESS - https://drive.google.com/file/d/1jAO_Jjk9OloVMjAoElhDStKpaqTDXKB8/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 2 - https://drive.google.com/file/d/1jPTUKWgoYhvxu6mMgYlLMCH_huW8D66p/view?usp=sharing
+Linfomas_COFEXPRESS - https://drive.google.com/file/d/1jfCanQre5c6ozK8HzL_MQuP1vOMqTQGq/view?usp=sharing
+Distúrbios do Potássio.mp4 - https://drive.google.com/file/d/1jsOnafuHwaHS7GRjsurGa9XvtBLMmHJ0/view?usp=sharing
+Discussão R+ Pneumologia - Módulo 1_COFEXPRESS - https://drive.google.com/file/d/1jx1hyFuaYh9k0DKlKyvbt0w35vBAepzz/view?usp=sharing
+Prolactinomas_COFEXPRESS - https://drive.google.com/file/d/1k-bInCKZHQGVufHRiyAm0CSThIwtV8jA/view?usp=sharing
+Doença Pulmonar Obstrutiva Crônica (DPOC) - https://drive.google.com/file/d/1k87lwWyqUAfz_SUHORrEWyDSg6RfZq7t/view?usp=sharing
+Leucemias_COFEXPRESS - https://drive.google.com/file/d/1kHSucjmLvbTfLerZA_axJCXUVCCQdsmU/view?usp=sharing
+Fisiologia da Tireoide_COFEXPRESS - https://drive.google.com/file/d/1kW4A6Umwhe1X9HHFqcspbqVBODA1qLjG/view?usp=sharing
+VISÃO DO ESPECIALISTA Glomerulopatias II. - https://drive.google.com/file/d/1kX4JEG2fyDI_5NrL0IxqZEoryszq5nxb/view?usp=sharing
+Distúrbios Hidroeletrolíticos - Outros (Magnésio e Fósforo) - https://drive.google.com/file/d/1l5IJ6jTjBTWQRPLHFYnV00WYlnbCC3Kf/view?usp=sharing
+Transtorno Psicótico - https://drive.google.com/file/d/1l6nfCOd5q8wdjCHcTE8VhcF2E-V0m5zi/view?usp=sharing
+Fisiologia e Anatomia da Adrenal - https://drive.google.com/file/d/1lE07PqX3vx-pEOO8EG7OpqeVVF4ix0cC/view?usp=sharing
+Discussão R+ Reumatologia - Módulo 3_COFEXPRESS - https://drive.google.com/file/d/1lPzRcHz9ooY4K-wYwHDjQCc9mZu3TMKE/view?usp=sharing
+Distúrbios do Sódio.mp4 - https://drive.google.com/file/d/1lQBIJ7zitIsRCsb-go_SFfccTFu0s3JV/view?usp=sharing
+Fibromialgia - https://drive.google.com/file/d/1mZnNsTmsmdGkWkBw0x7qZsIc57jwUuiK/view?usp=sharing
+Avaliação Global do Hemograma - https://drive.google.com/file/d/1mbRBM5q7A-OzO0GOrKPtnxIif0jTbkTe/view?usp=sharing
+Fisiologia da Coagulação_COFEXPRESS - https://drive.google.com/file/d/1mhAINvc3ePL8cE-KCoWWMvEJlh0EC5hP/view?usp=sharing
+Oncologia Cuidados paliativos - https://drive.google.com/file/d/1mpNsB0bL7QCx6EXGehv58OW_gL1oy-A-/view?usp=sharing
+Discussão R+ Pneumologia - Módulo 2_COFEXPRESS - https://drive.google.com/file/d/1n2lic61TSdyGWfwb3V1_sv8MKfBU3SaT/view?usp=sharing
+ASMA - https://drive.google.com/file/d/1nKxG8pxbOAS3grKRrl1kHQYbUgNrdRQl/view?usp=sharing
+Incidentaloma Adrenal_COFEXPRESS - https://drive.google.com/file/d/1o5mXIR-73_VkTc90EFsm8QocrOEdTFV3/view?usp=sharing
+Insuficiência Adrenal - https://drive.google.com/file/d/1o7FgcUrNsF00A9nmRrXRMK5UL-laaKVW/view?usp=sharing
+Depressão no Idoso_COFEXPRESS - https://drive.google.com/file/d/1oMe5YWo4HSpmmhHSJT_Vlk1_uCNi0f_U/view?usp=sharing
+Obesidade Introdução e Tratamento Não Farmacológico_COFEXPRESS - https://drive.google.com/file/d/1ojmpxPgUTezXYf9TU6GedvOFms7-oYjf/view?usp=sharing
+Discussão R+ Geriatria - Módulo 1 - https://drive.google.com/file/d/1oldiL0B7PvwGG_PGRVybqfT77H-V_gsy/view?usp=sharing
+Anemias Hemolíticas Hereditárias - https://drive.google.com/file/d/1owLrFthThoIuheXljnMnKF06CXbJJJI3/view?usp=sharing
+Dislipidemia - Classificação e Diagnóstico - https://drive.google.com/file/d/1p42p1gubsQ7JrWtkoUQfc2PIcgBGcX2x/view?usp=sharing
+Asma_COFEXPRESS - https://drive.google.com/file/d/1pFbd-VxpIBQFvW3OWbi878LHMWnUK8sj/view?usp=sharing
+Doença Renal Crônica II_COFEXPRESS - https://drive.google.com/file/d/1pbhthQQhIJDpUvkcC6Gis6g-irZAy0Ul/view?usp=sharing
+Lesões Elementares- - https://drive.google.com/file/d/1qdMIbvM7GGkLVOf66qT-PXEKHo4J5Xen/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 3 - https://drive.google.com/file/d/1qkWpt_EAhqFHTKhRlLL-MOK1xpvJEKky/view?usp=sharing
+Feocromocitoma_COFEXPRESS - https://drive.google.com/file/d/1qtIp7ZYzRzo3rEKK63bBYpqosqqWWOpF/view?usp=sharing
+Oncologia Cuidados paliativos_COFEXPRESS- - https://drive.google.com/file/d/1r0FWP8dsgvp93JUbS09eoOUKcrOfpLn4/view?usp=sharing
+Transtorno de Humor II Antidepressivos - https://drive.google.com/file/d/1r9o1Z3kKlDMxTXGnWQyL8819S-pIakTC/view?usp=sharing
+TEP_COFEXPRESS - https://drive.google.com/file/d/1rFoY6vjCxCIAzUOM9BPKZ1nhTr_NfukA/view?usp=sharing
+Artrites Microcristalinas (Gota e CPPD) parte 1 - https://drive.google.com/file/d/1rN2HmV50WqtFAFJJX40pZBZ1za3m7DWB/view?usp=sharing
+Doença Renal Crônica II - https://drive.google.com/file/d/1rWJIdoPEC6uYDukvHVGb_fgOwh91Cu65/view?usp=sharing
+Diabetes Classificação, Fisiopatologia e Diagnóstico_COFEXPRESS- - https://drive.google.com/file/d/1rdBXzFs0aJk8lMAprQBlsWQNGq66Aqth/view?usp=sharing
+Nódulos e Câncer de Tireoide_COFEXPRESS - https://drive.google.com/file/d/1reEpeCfwB4zARTluPT-50Zts1_u0acOV/view?usp=sharing
+Discussão R+ Nefrologia - Módulo 2_COFEXPRESS - https://drive.google.com/file/d/1rpnGRUmTTNjyl2wUcM1uh_hy5MwOPz1N/view?usp=sharing
+Hipotireoidismo- - https://drive.google.com/file/d/1rxL6FuHlBUXnLmbV6X-wB8s7yR8Q_a3K/view?usp=sharing
+Complicações Crônicas do Diabetes Mellitus (DM). - https://drive.google.com/file/d/1s9LABQM4owSjKgWR7yRALA2YEZxs2CMV/view?usp=sharing
+Discussão R+ Pneumologia - Módulo 1 - https://drive.google.com/file/d/1sSxpq_-uKTFOMN7fHw8ZS1nHhwjnJ0zO/view?usp=sharing
+Incontinência Urinária no Idoso_COFEXPRESS - https://drive.google.com/file/d/1sijgLBzkBTPCHpIVugesyskZccV-jbRK/view?usp=sharing
+Atualização em DislipidemiaEDITADO - https://drive.google.com/file/d/1sjyjBWx9A4XYYYLk02i-EWQWQ_M1xnQl/view?usp=sharing
+Hipercalcemias_COFEXPRESS - https://drive.google.com/file/d/1snUAMwECX4JBewQrD9rZsnC4AUm9Q-My/view?usp=sharing
+Artrites e Artrite Reumatoide (AR)_COFEXPRESS parte 1 - https://drive.google.com/file/d/1t1ALWjASo-ZxxvKYeO0XQcR0NWjNVcNt/view?usp=sharing
+Osteoartrite - https://drive.google.com/file/d/1t3nmtX1EsAfcVlicg-89eljCNgQgvKf2/view?usp=sharing
+Osteoporose - https://drive.google.com/file/d/1tDfKV-ZEpWkVtigaCbK4HWRK4D0rDaXr/view?usp=sharing
+Transtorno de Ansiedade _COFEXPRES - https://drive.google.com/file/d/1tE1rL0goe9_drVu8-uJ1ujRPoSlOptBy/view?usp=sharing
+Esclerose Sistêmica _COFEXPRESS - https://drive.google.com/file/d/1tRAf-OhoPNVYR22BVtfFfA952-c6GsVe/view?usp=sharing
+Gasometria Arterial I - https://drive.google.com/file/d/1tXdMqo71S3Kx0UI-_pV-tGD1PyzAh-D9/view?usp=sharing
+Síndrome de Cushing_COFEXPRESS - https://drive.google.com/file/d/1tjU3OhVY6_nuU64ZN0Fes3tTsf_tZyuB/view?usp=sharing
+Transtorno alimentares e somatoformes_COFEXPRESS - https://drive.google.com/file/d/1tvYjuxoJG2UB7KcHI7838QTMXABe0qXe/view?usp=sharing
+Distúrbios do Potássio_COFEXPRESS- - https://drive.google.com/file/d/1u2_7rNkFuQihXNdkVx01RxndezgsGTgZ/view?usp=sharing
+Transtorno de Humor I - https://drive.google.com/file/d/1uAkePsFQwB1ZIf3yGG798NNTbTM18IeM/view?usp=sharing
+Transtorno alimentares e somatoformes - https://drive.google.com/file/d/1uORcq-N2Ip2gVet2fUcZNkbaRjW59Ac-/view?usp=sharing
+Hipocalcemias - https://drive.google.com/file/d/1uuvXY7Wg7iKlNjCUd1gJ8ni9VCAF04Pv/view?usp=sharing
+Síndromes Medulares (2) - https://drive.google.com/file/d/1vSADtRhLQBvCmLXNojS3U7DC5yh-WC04/view?usp=sharing
+Hipertireoidismo - https://drive.google.com/file/d/1vgvMflGstE9wC4SFWl-86p7VWVKd9gtq/view?usp=sharing
+Teste diagnósticos exercícios - https://drive.google.com/file/d/1vkEVfyEWKShfgyhBssdwzSNA1-__XuXb/view?usp=sharing
+Gasometria Arterial II_COFEXPRESS - https://drive.google.com/file/d/1wYs-o58FodQ-rBeK3FYF2jTZCY2XVFP1/view?usp=sharing
+Fisiologia e Anatomia da Adrenal_COFEXPRESS - https://drive.google.com/file/d/1wcE1ycyDhKqqO7kvdnvqKQ8Snk_4idfZ/view?usp=sharing
+Hemoterapia - https://drive.google.com/file/d/1wffb9jaTcDR07X6te0aWwC8sK3XLNavq/view?usp=sharing
+Hanseníase_COFEXPRESS - https://drive.google.com/file/d/1wiYq4VZyEy8mRUPERWmHfmmi1IKY1X9C/view?usp=sharing
+Psoríase_COFEXPRESS- - https://drive.google.com/file/d/1wt-nNjP9o1czBRJ1oaRp20v2Qq_ik86I/view?usp=sharing
+Antidiabéticos Orais e Subcutâneos - Parte 2 - https://drive.google.com/file/d/1x8Rx1ZpLzVTwXiaj1tEZF_m-2LAqu5vf/view?usp=sharing
+Nódulos e Câncer de Tireoide - https://drive.google.com/file/d/1xEAwVL4It0zvuSvdW_xkgSQiahhkb01Z/view?usp=sharing
+Pneumonia Adquirida na Comunidade - https://drive.google.com/file/d/1xV-GaUJ2EQ1OZowtdAbizpicF3RkKqmk/view?usp=sharing
+Tratamento das Dislipidemias _COFEXPRESS - https://drive.google.com/file/d/1xzZeQbv9l5M6b0_4QS_ZQsBi_CiZJxRj/view?usp=sharing
+Distúrbios do Cálcio_COFEXPRESS - https://drive.google.com/file/d/1yVjWWP4F0oYxFmDo_-nobQEpxTBzP1ZO/view?usp=sharing
+Osteoartrite_COFEXPRESS - https://drive.google.com/file/d/1ys6g2OLCw2CbHPWO6UvtjT_rPuKlIxZc/view?usp=sharing
+Insuficiência Cognitiva Delirium no Idoso_COFEXPRES - https://drive.google.com/file/d/1z1bBfb0HfYviaO5Kby_wtEGT5NPCC9Xm/view?usp=sharing
+Doença Pulmonar Intersticial (DPI) - https://drive.google.com/file/d/1z3KCy2_zEOqdM47Q49ExpcgkMjChEmvU/view?usp=sharing
+Miopatias Autoimunes Sistêmicas - Clínica Médica_COFEXPRESS - https://drive.google.com/file/d/1zdDajI6jTaLzNZpm0QDzBOr5tKNI4x_A/view?usp=sharing
+
+Ficha Resumo - Hipotireoidismo - Clinica Medica.pdf - https://drive.google.com/file/d/1-1bP3uMCjZpBLMdMXHlKHse50b0vhvoi/view?usp=sharing
+Ficha Resumos - Infeccao de Corrente Sanguinea (ICS).pdf - https://drive.google.com/file/d/1-eUP2roWT8n-LfE2CVbxjAD6y3vDbe0S/view?usp=sharing
+Ficha Resumo - Alergia 2_ Reacoes de hipersensibilidade - avancado.pdf - https://drive.google.com/file/d/1-y517rPX4VgD2cpS_a--CSqkLS2OIRF1/view?usp=sharing
+Ficha resumo - Parasitoses Intestinais - Clinica Medica.pdf - https://drive.google.com/file/d/10KG5k6cvX2IPS3iQYIpa-i7PxcYAPGMv/view?usp=sharing
+Ficha resumo - Metanalise.pdf - https://drive.google.com/file/d/10nTCBXaQC4QYLE3UuX1wQ1Arcc9B9Iek/view?usp=sharing
+Ficha Resumo - Valvopatias.pdf - https://drive.google.com/file/d/10uurbhie5211oxnAZ2GYl5T4ApmFGVG7/view?usp=sharing
+Ficha resumo - Imunodeficiencias.pdf - https://drive.google.com/file/d/11DEOu20K6H8CovrVwcgQ45W8GlODyins/view?usp=sharing
+Ficha Resumo - Choque - Tipos de Choque.pdf - https://drive.google.com/file/d/11JXLJ2WBWRpjhoc5NPNwEgdBmHm2RlUB/view?usp=sharing
+Ficha Resumo - Lupus Eritematoso Sistemico - Clinica Medica.pdf - https://drive.google.com/file/d/11ta7Ul1CKxXkDqW0r_TizJIjrAFbGc-f/view?usp=sharing
+Ficha resumo - Transtorno de Humor III_ Mania e Transtorno Bipolar.pdf - https://drive.google.com/file/d/12E0oNwAFdDm_S8FJFHVm2vF8JGJ80JyA/view?usp=sharing
+Hipertensao Arterial Sistemica (HAS).pdf - https://drive.google.com/file/d/12PeOzsP5KR-Tgova0JBm-j8uD8Ud6BG8/view?usp=sharing
+Ficha Resumo - Insuficiencia Adrenal.pdf - https://drive.google.com/file/d/12rtiR9QrIDyAJLeKFXfei-KhtPGvsZiq/view?usp=sharing
+Ficha Resumo - Doenca de Sjogren.pdf - https://drive.google.com/file/d/14EVNZDWG5G8LONlHbsiSTeSr7KtRea-J/view?usp=sharing
+Ficha Resumo - Lesoes Elementares.pdf - https://drive.google.com/file/d/14J2kKHTFpKP47kjXOyOabhuHdMy_EhBF/view?usp=sharing
+Errata - REVISAO SISTEMATICA.pdf - https://drive.google.com/file/d/15CA-jvLjFLZ0kkyauQcUozrr1VtGzVx4/view?usp=sharing
+Ficha Resumo - Neoplasias Especificas e Miscelanea.pdf - https://drive.google.com/file/d/15awnFkjK8dyTXn_zOqd9-ENCfux8mNEF/view?usp=sharing
+ERRATA - FISIOLOGIA DA COAGULACAO.pdf - https://drive.google.com/file/d/15hDWD7Px9j2nltUla_WEA_2kq5_Jq26M/view?usp=sharing
+Ficha Resumo - Anticoagulacao em Cardiologia.pdf - https://drive.google.com/file/d/15jVl_RxDWPpYDxVWHkcjw8k5oYsNTte2/view?usp=sharing
+ERRATA - ANEMIAS HEMOLITICAS_ ADQUIRIDA.pdf - https://drive.google.com/file/d/162bDePgoiZ7BVZDaPh6Y5OOfwhsxNtxN/view?usp=sharing
+Ficha Resumo - Doencas hepaticas_ CBP, CEP, HAI e Doenca de Wilson.pdf - https://drive.google.com/file/d/169Ws-e6lmbWk5nxoIpp_XKzm01QrvNDw/view?usp=sharing
+Ficha resumo - Antidiabeticos Orais e Subcutaneos - Parte 2.pdf - https://drive.google.com/file/d/16CKULi0LemKNXy_WNj2EfyBbElx07jUE/view?usp=sharing
+Ficha Resumo - Transtornos Relacionados a Substancias - Alcool.pdf - https://drive.google.com/file/d/16Ew2Izk9qdJEPPrVKgkStxErWPYuULMn/view?usp=sharing
+ERRATA - DERRAME PLEURAL.pdf - https://drive.google.com/file/d/16ouuJ7fw1OaB3Lz3ZM6wd0BhS9f7MPeE/view?usp=sharing
+Ficha resumo - Infeccao do Trato Urinario (ITU).pdf - https://drive.google.com/file/d/17NlhfaC5X3r2skAswT-7aTGSzBBQp4gm/view?usp=sharing
+Ficha Resumo - Síndrome de Guillain-Barré (SGB) - https://drive.google.com/file/d/17azvfU-hEEC6XBnePYEeDSs4EBmDY92u/view?usp=sharing
+Ficha Resumo - Terapia Nutricional no Paciente Critico.pdf - https://drive.google.com/file/d/18C89iZPlBahrrkBT_BiRnlIO8cg15ort/view?usp=sharing
+Ficha Resumo - Fibromialgia.pdf - https://drive.google.com/file/d/18Ix2c9u_QFSOlXgtNPSTXzYKISuhtrho/view?usp=sharing
+Ficha Resumo - Vasculites de Grandes e Medios Vasos.pdf - https://drive.google.com/file/d/18teGAu7ybQkgDo_sJtzro-briNQXp0vj/view?usp=sharing
+Ficha Resumo - Pseudotumor Cerebral.pdf - https://drive.google.com/file/d/18tu5TQE6WqzCxHMt49Xuh7jBUSl4xJnS/view?usp=sharing
+Ficha Resumo - Anemias Hipoproliferativas I.pdf - https://drive.google.com/file/d/19Cjq3ro72tyR6dIVEWSQGl9oFktxFXpD/view?usp=sharing
+ERRATA - PRINCIPIOS DE VENTILACAO MECANICA.pdf - https://drive.google.com/file/d/19FmJDsjT1bJP8q8mkFOeop8ChpX1sG5Z/view?usp=sharing
+Ficha Resumo - Introducao as Artrites e Artrite Reumatoide (AR).pdf - https://drive.google.com/file/d/19HHegVmGoevs0ZnqnU4W8AXXTO30Q2vg/view?usp=sharing
+Ficha Resumo - Doencas oportunistas HIV.pdf - https://drive.google.com/file/d/19SDXZQwIJd8d1GgiibZ-hMYbn6129jHo/view?usp=sharing
+Ficha Resumo - Cirrose hepatica_ Varizes esofagicas e Sindrome Hepatopulmonar.pdf - https://drive.google.com/file/d/19rrnV29cBllZ5mk87_RjPbO9Ak_0MlVZ/view?usp=sharing
+Ficha Resumo - Miastenia Gravis.pdf - https://drive.google.com/file/d/19zUmScFVtmx4VzoegDxRyMNztG0m1JpX/view?usp=sharing
+Ficha Resumo - Os 8 principais estudos de UTI.pdf - https://drive.google.com/file/d/1AAapKPVNXJi78RqvESV0H6Uxwxf2hqLJ/view?usp=sharing
+Ficha Resumo - Alergia 1_ Rinite e Angioedema - avancado.pdf - https://drive.google.com/file/d/1AIroZSnMGwZCzK-m1QUojgw9zcxCKU0Z/view?usp=sharing
+Ficha resumo - Anemias Hemoliticas Adquiridas.pdf - https://drive.google.com/file/d/1AR3qFMbsCtzDsYxP2oWxxAsITwopRT8w/view?usp=sharing
+Ficha Resumo - Disturbios do Calcio.pdf - https://drive.google.com/file/d/1AUkEHQJZobAilKObpyzSF1dYxnsNAuFI/view?usp=sharing
+Ficha Resumo - Neuromielite Optica (NMO).pdf - https://drive.google.com/file/d/1B2s5EDogTuJPAMdA0HJeZHswQdeQBQ9p/view?usp=sharing
+Ficha resumo - Pancreatite Aguda (R+).pdf - https://drive.google.com/file/d/1BwuXfm7y0eAunM4OzE1lM5X4doUfvJht/view?usp=sharing
+Acidente Vascular Cerebral Isquêmico (AVCi) - Epidemio, Etiologia e Diagnóstico - https://drive.google.com/file/d/1C5fp9YIUizbGNxk9t9wdQhV2m6ggmrRS/view?usp=sharing
+Ficha Resumo - Doencas Negligenciadas.pdf - https://drive.google.com/file/d/1CVgybdxAPrkQkjjNxh_K-v1_4jJv8p2y/view?usp=sharing
+Ficha Resumo - Principios de ventilacao mecanica (VM).pdf - https://drive.google.com/file/d/1CxxwSUG-yNYeyOpOomAUkO7dQkMJevhr/view?usp=sharing
+ERRATA - GASOMETRIA ARTERIAL_ PARTE 1.pdf - https://drive.google.com/file/d/1D580iaskFvjzxrwAaD4Ol88zAfoxC4vT/view?usp=sharing
+Ficha Resumo - Antibioticos II.pdf - https://drive.google.com/file/d/1DBlVgpyiHX9gQTM0uZToiX7JkFbdPpjZ/view?usp=sharing
+Ficha Resumo - Testes Diagnosticos_ aplicabilidade clinica.pdf - https://drive.google.com/file/d/1DJP76XwDROQDF1x74J_GJV-uVeghvdoK/view?usp=sharing
+Ficha Resumo - Sindromes Medulares.pdf - https://drive.google.com/file/d/1DYoLnY21pWx5I7K_2Ix_uZqH7CGWibki/view?usp=sharing
+Ficha Resumo - Doenca de Parkinson.pdf - https://drive.google.com/file/d/1DZKfJ7VqfLNhP4VOd62KZfjt7kQTSYgZ/view?usp=sharing
+Ficha Resumo - Acidentes com Animais Peconhentos.pdf - https://drive.google.com/file/d/1DuaA92IYVvLW2nR0awZSbZDcXz4AJHxw/view?usp=sharing
+Ficha resumo - Obesidade_ Introducao e Tratamento Nao Farmacologico.pdf - https://drive.google.com/file/d/1DwYKbJyIOC6t4QOHvSAcJeTyVmzPO_9r/view?usp=sharing
+Ficha Resumo - Enxaqueca (Migrânea) - https://drive.google.com/file/d/1E-xVts0LGnNnblLO8-dE6F-CFtBjGAgr/view?usp=sharing
+Ficha Resumo - Ensaio clinico 2.pdf - https://drive.google.com/file/d/1ELx2Lc94ckzUzNjz9k5LSkTcJwiq7rfz/view?usp=sharing
+Ficha Resumo - Ventilacao mecanica (VM) avancada.pdf - https://drive.google.com/file/d/1EMjmgwIpG0yLTGLOmUbxr0t9qtS_Cou1/view?usp=sharing
+Ficha Resumo - Hipertireoidismo.pdf - https://drive.google.com/file/d/1FG35vmHWsMXxl-tAnRl91U7Wv4l7TBc0/view?usp=sharing
+Ficha Resumo - Espirometria.pdf - https://drive.google.com/file/d/1FwNAoPb5kJIBgUUHerk0XUbcfhosi-uE/view?usp=sharing
+Ficha resumo - Cirrose hepatica_ Encefalopatia Hepatica e Sindrome Hepatorrenal.pdf - https://drive.google.com/file/d/1GCY7cRvUijgGyHlnnCiYLMOp4vrwyWT7/view?usp=sharing
+Ficha Resumo - Teste de Respiracao Espontanea (TRE) e Extubacao.pdf - https://drive.google.com/file/d/1GMh3zwTtJrLlfFvu_AGqgaMzIerQvcf2/view?usp=sharing
+Ficha Resumo - Revisando medidas de associacao Parte 2.pdf - https://drive.google.com/file/d/1G_Pmb_fx771Q61SqKjGy4YsBlZutiMWK/view?usp=sharing
+Ficha resumo - Anemias Hemoliticas Hereditarias.pdf - https://drive.google.com/file/d/1Gch0F0yH01WxSlQmxNVgRhnVTA-jVBC3/view?usp=sharing
+Ficha resumo - HIV.pdf - https://drive.google.com/file/d/1GqO3GzhU0APlvBGO2fgOgnJSE6mRQxMd/view?usp=sharing
+Ficha Resumo - Introdução às Cefaleias Primárias - https://drive.google.com/file/d/1HGCBaNprnmbaLd6DkDzVw5KaIjsGw5Pa/view?usp=sharing
+Ficha Resumo - Fisiologia da Tireoide.pdf - https://drive.google.com/file/d/1HPDZYyT3Co8EamtGWFFtE_8pbrzPanX2/view?usp=sharing
+Ficha Resumo - Nodulo Pulmonar.pdf - https://drive.google.com/file/d/1Ht0IuBAsrRuvO86QFDraPSM81x96HnCD/view?usp=sharing
+ERRATAS - FEBRE REUMATICA E ENDOCARDITE.pdf - https://drive.google.com/file/d/1I6SrS6v8ZgfAv_pmCsGqxDUMMkhcWjxW/view?usp=sharing
+Ficha Resumo - Hanseniase.pdf - https://drive.google.com/file/d/1I7WCBt-IBq10YTMSvCD2Y1fmnNPBnwN3/view?usp=sharing
+Ficha Resumo - Intoxicacoes Exogenas.pdf - https://drive.google.com/file/d/1IAUn07GewDfKe76WLveR9G53OqI5UkgP/view?usp=sharing
+Ficha Resumo - Avaliacao Geriatrica Ampla.pdf - https://drive.google.com/file/d/1ICeAnc8Wz1tmPYZK8wCEetLDVS9ZKvlz/view?usp=sharing
+Ficha Resumo - Pneumonia_ Adquirida na Comunidade.pdf - https://drive.google.com/file/d/1IJAHQR30ev9-7BlQQQbQMevD6voVWh7v/view?usp=sharing
+Ficha Resumo - Sindromes Aorticas Agudas.pdf - https://drive.google.com/file/d/1IcpNT5jKF3X5a0SX60Kv7yIFw-HO5H1U/view?usp=sharing
+Ficha Resumo - Acidente Vascular Cerebral Isquêmico (AVCi): Tratamento e Complicações - https://drive.google.com/file/d/1JT-nZyKImXiySTTChvehQXh_UGX1l08j/view?usp=sharing
+Ficha resumo - Sindrome do desconforto respiratorio agudo (SDRA).pdf - https://drive.google.com/file/d/1Jtbh2zrTgkysa1tOC_MempPk9XIQQBtu/view?usp=sharing
+Ficha resumo - Lesoes Focais Hepaticas.pdf - https://drive.google.com/file/d/1Jubh6KNYWdiH4VaANEPLivqBtmiz1otG/view?usp=sharing
+Ficha Resumo - Capnografia.pdf - https://drive.google.com/file/d/1JyAPgJs4HCfI4bMTGZg9DFg9wUqafNgf/view?usp=sharing
+Ficha Resumo - Alergia 1_ Rinite e Angioedema.pdf - https://drive.google.com/file/d/1Jz1b0D1Jdy3zu41MFsDKsDM0rlS7ekiC/view?usp=sharing
+Ficha Resumo - TEP.pdf - https://drive.google.com/file/d/1K8trET_4ck6IuPFm6wWffqmt_h-wxuPK/view?usp=sharing
+Ficha Resumo - Diagnostico de Morte Encefalica (ME).pdf - https://drive.google.com/file/d/1KRLC_FWecDKaYDObFaRCzE2fienwX1AU/view?usp=sharing
+Ficha Resumo - Insuficiencia Cognitiva_ Demencias.pdf - https://drive.google.com/file/d/1KSsFZqk_2ecSgDWkdYXcDwK22Bgx4xq4/view?usp=sharing
+Ficha Resumo - Hipocalcemias.pdf - https://drive.google.com/file/d/1KYR5JZbBBbMksfq-67Jk-65n0eNPF9jp/view?usp=sharing
+Ficha Resumo - Sifilis e Uretrites Infecciosas.pdf - https://drive.google.com/file/d/1KrBIDvuAYzew0DuhhM_ZLe-3TFJWf8FJ/view?usp=sharing
+Ficha Resumo - Instabilidade Postural, Quedas e Imobilidade.pdf - https://drive.google.com/file/d/1KtOOgIHZRRs9yZOy6Z8FgjZs3FXaR5OB/view?usp=sharing
+Ficha resumo - Doencas Pandemicas.pdf - https://drive.google.com/file/d/1L4-hhCcCfA03HL3yUz4LUFQX5PR2SUc9/view?usp=sharing
+Ficha Resumo - Tuberculose_ Resistencia e Tratamento Especifico.pdf - https://drive.google.com/file/d/1L65SJSa_KsB2vFCA4Ud3mlF6YfSHujca/view?usp=sharing
+Ficha Resumo - Rastreamentos - Clinica Medica.pdf - https://drive.google.com/file/d/1LmFMM5WZHISws2egBaUpjf3X44sZbHRq/view?usp=sharing
+Ficha Resumo - Dispepsia.pdf - https://drive.google.com/file/d/1M9dURB3i41snMDYHzLkNgnFy6-V67_Jc/view?usp=sharing
+Ficha Resumo - Ulcera peptica, H. pylori, Gastrite Atrofica e Dispepsia Funciona.pdf - https://drive.google.com/file/d/1MCXYgheMKBQK9OkzzI34qMQWiluYThZt/view?usp=sharing
+Ficha Resumo - Purpura Trombocitopenica Trombotica (PTT).pdf - https://drive.google.com/file/d/1MdH93bmndPsCjHbtYUXVaO6l75jhNZ0o/view?usp=sharing
+Ficha Resumo - Transtorno Psicotico.pdf - https://drive.google.com/file/d/1MqhIX0GQK3dpW0PQbWdzJPIqm1lCjnhd/view?usp=sharing
+Ficha Resumo - Insuficiencia Cardiaca - Avancada.pdf - https://drive.google.com/file/d/1N4m4EMZcioyIXJ-qznO4NmQEMTf6SD43/view?usp=sharing
+Ficha Resumo - Emergencias Hiperglicemicas (CAD e EHH).pdf - https://drive.google.com/file/d/1NLNu3FyGeNzhDzIdanvJMXAl8ajfsEmp/view?usp=sharing
+Ficha Resumo - Teste diagnosticos exercicios.pdf - https://drive.google.com/file/d/1NMzZn2YUaS8mwDZbQpfCEhCPwFMEUSob/view?usp=sharing
+Ficha Resumo - Insuficiencia Cognitiva_ Delirium no Idoso.pdf - https://drive.google.com/file/d/1NWgDHibW9QxzOaUw1bKTGHZ_XihZA5m8/view?usp=sharing
+Ficha resumo - Doencas Virais.pdf - https://drive.google.com/file/d/1NZOIVs2jFFxTbr_jXdjWHg9_eOLnQXwm/view?usp=sharing
+Ficha Resumo - Diarreia Agudas e Colite Pseudomembranosa.pdf - https://drive.google.com/file/d/1NyfPXuksECZr_WC5R7-rk4_HjVh5o1RQ/view?usp=sharing
+Ficha Resumo - Derrame Pleural.pdf - https://drive.google.com/file/d/1O5kwcS1IQe21dHM3qrPhcEziV-EODn4s/view?usp=sharing
+ERRATAS - Alergia 1_ Rinite e Angioedema.pdf - https://drive.google.com/file/d/1O7BA67oL2vKHlyRTh_1Bi-CqITCXoLkI/view?usp=sharing
+Ficha Resumo - Esclerose Multipla (EM).pdf - https://drive.google.com/file/d/1OChHixPoLGRQWAkG_FPxeMiPNYGR0856/view?usp=sharing
+Ficha Resumo - Pre-operatorio II.pdf - https://drive.google.com/file/d/1OU8ZaMplxU4yqtGacFWExa7JoksPWy6y/view?usp=sharing
+Ficha Resumo - Otologia II.pdf - https://drive.google.com/file/d/1P8moCLTQ1E_KQNb5HOIdswkZ0mrSGiLs/view?usp=sharing
+Ficha resumo - Emergencias Oncologicas.pdf - https://drive.google.com/file/d/1PZOx7vODcxGoeffhWUHm8Gk38U72UGsO/view?usp=sharing
+Ficha Resumo - Tabagismo.pdf - https://drive.google.com/file/d/1PvQS3WqJ6q8E_OcV9syat9Ylrz76WgIg/view?usp=sharing
+Ficha Resumo - Doenca Inflamatoria Intestinal (DII).pdf - https://drive.google.com/file/d/1QA_VcwXgn8BKVSAsXS5nDySIRdZyhP2r/view?usp=sharing
+Ficha Resumo - Disfagia, Esofagite Eosinofilica e Acalasias.pdf - https://drive.google.com/file/d/1QHN_iTp8efYTo9d8TmQU9X8ksD1Yvvtx/view?usp=sharing
+ERRATA - ANTIDIABETICOS ORAIS E SUBCUTANEOS.pdf - https://drive.google.com/file/d/1QdFGxJVUGTv9_1wwLwire6rcQa8fB2Oj/view?usp=sharing
+Ficha Resumo - Analgesia e Sedacao.pdf - https://drive.google.com/file/d/1Qi54kAY29Swwb6J6KHfREbFhZszrDGRq/view?usp=sharing
+Ficha Resumo - DRGE.pdf - https://drive.google.com/file/d/1QmgPIlUsKWeW55z20B6p066m5XEinKnB/view?usp=sharing
+Ficha Resumo - Gasometria Arterial II.pdf - https://drive.google.com/file/d/1Qp6aBeTO7bAVgp3KUQOgYxOIH36590Gs/view?usp=sharing
+Ficha Resumo - Iatrogenia no Idoso.pdf - https://drive.google.com/file/d/1QpAbnW1YN3hrwf3CrNXSdrczmhpZiysS/view?usp=sharing
+Ficha resumo - Doencas raras.pdf - https://drive.google.com/file/d/1Qsbc6IEZI2hb_HHKnWhMSGxLZ2zKKfOk/view?usp=sharing
+Ficha Resumo - Doenca Pulmonar Obstrutiva Cronica (DPOC).pdf - https://drive.google.com/file/d/1R2VsQ01SStEIna0ynZokq4nKv-CfRW9A/view?usp=sharing
+Ficha Resumo - Tratamento de Tuberculose e efeitos colaterais do RIPE.pdf - https://drive.google.com/file/d/1RJx36zQm1orbUpTS-WZrfULRZnnpg1DP/view?usp=sharing
+Ficha Resumo - Esclerose Sistemica.pdf - https://drive.google.com/file/d/1RVj5XRWO0Y2TXPdmRrHoT4fagOyA8EHr/view?usp=sharing
+Ficha Resumo - Doenca Renal Cronica II.pdf - https://drive.google.com/file/d/1SRGEXiowwIfIrz2BwfBCe5dPQqq0pckI/view?usp=sharing
+Ficha Resumo - Artrites Microcristalinas (Gota e CPPD).pdf - https://drive.google.com/file/d/1SjSWbgqTl9sa8yfjpf7Uzm8Vj_AV3Mwf/view?usp=sharing
+Ficha Resumo - Tratamento das Dislipidemias.pdf - https://drive.google.com/file/d/1SobW0yQDVnjyfml_XjTshlxo-ZDh4f9q/view?usp=sharing
+Ficha resumo - Arboviroses - Clinica Medica.pdf - https://drive.google.com/file/d/1T_Cj_6HGT6PePEkydr00EF0qOVfklSlF/view?usp=sharing
+Ficha Resumo - Leucemias basico.pdf - https://drive.google.com/file/d/1U-QVHMVhBU8iQFDeCBAoL29J1v_XFdjU/view?usp=sharing
+Ficha resumo - Estudos longitudinais_ coorte e caso controle.pdf - https://drive.google.com/file/d/1UHyJWfENu-fUlEb7UAHdqBXlN2eRMC6E/view?usp=sharing
+ERRATA_ Antidiabeticos Orais e Subcutaneos - Parte 2.pdf - https://drive.google.com/file/d/1UMKowZZUbdfurePZIMC_QvtPfTSSCw_Z/view?usp=sharing
+Ficha Resumo - Injuria Renal Aguda (IRA)_ Parte 2.pdf - https://drive.google.com/file/d/1VKIPUnP_c64ib8ghzdJrwyESvgyUbe5r/view?usp=sharing
+Ficha Resumo - Incontinencia Urinaria no Idoso.pdf - https://drive.google.com/file/d/1VUTRjTZyULGGDZNPYV8QUisavTaGh4Kp/view?usp=sharing
+Ficha resumo - Sindromes autoinflamatorias.pdf - https://drive.google.com/file/d/1VhX99KHJrThhHMLikWLJ4CMIkv11MQ9a/view?usp=sharing
+Ficha resumo - Asma.pdf - https://drive.google.com/file/d/1WBk73aT0hJ_eiW085dzA47u-yHBNbc5N/view?usp=sharing
+Ficha Resumo - Diarreias Cronicas.pdf - https://drive.google.com/file/d/1WN8IULxLUoJ3Xc3Ts6xne0mGINg32wQJ/view?usp=sharing
+Ficha Resumo - Miopatias Autoimunes Sistemicas - Clinica Medica.pdf - https://drive.google.com/file/d/1WOiQo453SvjhDNJdzYk398C87HuOJVHj/view?usp=sharing
+Ficha Resumo - Drogas vasoativas (DVA).pdf - https://drive.google.com/file/d/1WYCWOpeTjGwT5S8C7c8FXYR-Hd1cc_xW/view?usp=sharing
+Ficha Resumo - Espondiloartrites.pdf - https://drive.google.com/file/d/1Y-EX2bbdiyijcKTW7S78gx2h4Vjwa6Qe/view?usp=sharing
+Ficha Resumo - Tuberculose Extra Pulmonar.pdf - https://drive.google.com/file/d/1Y9EgKNNbpXJEiD5BJ32Etueu8bLACZ17/view?usp=sharing
+ERRATA - Diabetes_ emergencias hiperglicemicas (CAD e EHH).pdf - https://drive.google.com/file/d/1YE_yiT5fPpYDxzBxTlC-61GJe8aEgw7x/view?usp=sharing
+Ficha Resumo - Via aerea, intubacao e Ventilacao Nao Invasiva (VNI).pdf - https://drive.google.com/file/d/1YKG_JthaK0s_vo5jyNRhTPyCOak_G0L5/view?usp=sharing
+Ficha Resumo - Tuberculose Pulmonar.pdf - https://drive.google.com/file/d/1YsCAgiA4M3qel2kivsne2yy3DXvpboSN/view?usp=sharing
+Ficha Resumo - Cirrose hepatica_ Conceitos Gerais.pdf - https://drive.google.com/file/d/1Z35IFpUfS892FxLlTWPQ_VhbD2DhXl5E/view?usp=sharing
+Ficha resumo - Meta Terapeutica, Manejo do pre-DM e Tratamento Nao Farmacologico do DM.pdf - https://drive.google.com/file/d/1ZTDkQ60EvdoZeeE0oHZmN-uCpagDqvMY/view?usp=sharing
+Ficha Resumo - Introducao a Geriatria.pdf - https://drive.google.com/file/d/1Zo9NrBuVBVO6I1Q01IG7lFfQIX-AwdNK/view?usp=sharing
+Ficha resumo - Conceitos de MBE.pdf - https://drive.google.com/file/d/1_1vPQ08HocOzcp03tM6yD_nVEuH7C-Tj/view?usp=sharing
+Ficha Resumo - Transtorno de Ansiedade.pdf - https://drive.google.com/file/d/1_ASN6v2GX2qFVNj7zQE_8_MdJ8ozNbWZ/view?usp=sharing
+Ficha resumo - Pancreatite Cronica (R+).pdf - https://drive.google.com/file/d/1_UPT5_IS2R_8qxdAEiR9r9RgtxrcMv_z/view?usp=sharing
+Ficha Resumo - Choque - Abordagem Inicial.pdf - https://drive.google.com/file/d/1_aOEfwAOU1xfsk-QX-n-hIWlNkQuPZFb/view?usp=sharing
+Ficha Resumo - Insuficiencia Cardiaca - Manejo Ambulatorial.pdf - https://drive.google.com/file/d/1ahUetpzbVmoT1K7YWZYA9vspQPr-y1Cf/view?usp=sharing
+Ficha Resumo - Infeccoes em Imunossuprimidos.pdf - https://drive.google.com/file/d/1aiqGWux4GXQkNvrGXAeA2yYHuszifjvQ/view?usp=sharing
+Ficha Resumo - Imunobiologicos - Situacoes Especiais.pdf - https://drive.google.com/file/d/1alizyh0C69DOFgYsOMsrQ3Nj3UomTv8K/view?usp=sharing
+Ficha Resumo - Discrasias Plasmocitarias.pdf - https://drive.google.com/file/d/1azafeGmjm3cEXEiklWs6p1lKR-wAelBy/view?usp=sharing
+Ficha Resumo - Sindrome Metabolica.pdf - https://drive.google.com/file/d/1bVbYHMuXAekFmvX15G-X-s2zeE2F1Ciw/view?usp=sharing
+Ficha resumo - Revisao sistematica.pdf - https://drive.google.com/file/d/1bhCfQCtkxe21z-a8epU798EFbYZjCgFU/view?usp=sharing
+Ficha Resumo - Sincope.pdf - https://drive.google.com/file/d/1c95TbxUwdfYnDi19BprDmSlVxhk5p7rR/view?usp=sharing
+Ficha resumo - Oftamologia em doencas clinicas - parte I.pdf - https://drive.google.com/file/d/1cT3xRJ2USSiRndZOqkFZUkpma97ehDV6/view?usp=sharing
+Ficha Resumo - Hipercalcemias.pdf - https://drive.google.com/file/d/1ceerjjYQMi09iHG53nxsNqhb_v88TJ6i/view?usp=sharing
+Ficha Resumo - Glomerulopatias II.pdf - https://drive.google.com/file/d/1cffvrCdQSa0Q3MZoqwgqDphkvFIZsqC8/view?usp=sharing
+Ficha Resumo - Disturbios do Potassio.pdf - https://drive.google.com/file/d/1cnxObpkwPhMm96MgWAL2arMNEp9JQFCI/view?usp=sharing
+Ficha resumo - Hiperglicemia Hospitalar.pdf - https://drive.google.com/file/d/1cx8zYaV_yIxs9twxkN-FiSIi8LdYdHb-/view?usp=sharing
+Ficha Resumo - Obesidade_ Tratamento Farmacologico e Cirurgico.pdf - https://drive.google.com/file/d/1dDfIj9LfDdU9qT8PlmAa5hBIlyyg1L8j/view?usp=sharing
+Hemorragia Subaracnóidea (HSA) - https://drive.google.com/file/d/1dN2F338pv0j5s55id7qCgPqNUkwRs79g/view?usp=sharing
+Ficha Resumo - Glomerulopatias I.pdf - https://drive.google.com/file/d/1dSdierz-o46U--L3WJlZgSwn6i4KmcEG/view?usp=sharing
+ERRATAS - ACIDENTES COM ANIMAIS PECONHENTOS.pdf - https://drive.google.com/file/d/1dWAq3OVGwYQoa9-OAFrwg7yy3tioPrHL/view?usp=sharing
+Ficha Resumo - Incidentaloma Adrenal.pdf - https://drive.google.com/file/d/1dq_psUpbXuAMmMdsThdYGo0VOKReoubi/view?usp=sharing
+Ficha resumo - Complicacoes Cronicas do Diabetes Mellitus (DM).pdf - https://drive.google.com/file/d/1dwtoci3PE6SAaNUd6IQWzCMEYWYuuVup/view?usp=sharing
+Ficha Resumo - Pericardite e Miocardite.pdf - https://drive.google.com/file/d/1eLg_U4ZMnFLK--vxH4FWhaukY5pY9H-M/view?usp=sharing
+Ficha Resumo - Avaliacao Global do Hemograma.pdf - https://drive.google.com/file/d/1eZgKMMNmTsmqMWcrcMTaT5DWNjX4pthi/view?usp=sharing
+Ficha Resumo - Vasculites de Pequenos Vasos.pdf - https://drive.google.com/file/d/1edme9jQ4a_mjK69c3DuenVANQAOcfQTc/view?usp=sharing
+Ficha Resumo - Taquiarritmias - Cardiologia.pdf - https://drive.google.com/file/d/1f5QjdJSPkVXGbmLQfUfrXU1WQkNzhcoF/view?usp=sharing
+Ficha Resumo - Sindrome Coronariana Aguda sem Supra de ST (SCASSST).pdf - https://drive.google.com/file/d/1hUXLoK2AJ6toOgMbqSUmYN_1bcRqrwgo/view?usp=sharing
+Ficha Resumo - Leucemias avancado.pdf - https://drive.google.com/file/d/1heNwNl98-S038wYD5U28lWMWD5tU6iuZ/view?usp=sharing
+Ficha Resumo - Hiperaldosteronismo Primario.pdf - https://drive.google.com/file/d/1iGAraH_0HQb7W3yHjaYOsLYwz9nIb604/view?usp=sharing
+Ficha Resumo - Hipertensao pulmonar.pdf - https://drive.google.com/file/d/1iO7DneTsp6fO34sqSGqxW8qVCmB96C0f/view?usp=sharing
+Ficha Resumo - Oncologia_ Cuidados paliativos.pdf - https://drive.google.com/file/d/1igFVgdBn8AgfVES7PHVc2zehioBVFC-_/view?usp=sharing
+Ficha Resumo - Esclerose Lateral Amiotrofica (ELA).pdf - https://drive.google.com/file/d/1j7u_QcxaRosQ36WUOC9BwDcHqMHTgPT7/view?usp=sharing
+Ficha Resumo - Disturbios da Hemostasia.pdf - https://drive.google.com/file/d/1jAO_Jjk9OloVMjAoElhDStKpaqTDXKB8/view?usp=sharing
+Ficha Resumo - Injuria Renal Aguda (IRA)_ Parte 1.pdf - https://drive.google.com/file/d/1jPTUKWgoYhvxu6mMgYlLMCH_huW8D66p/view?usp=sharing
+Ficha Resumo - Disturbios do Sono.pdf - https://drive.google.com/file/d/1jfCanQre5c6ozK8HzL_MQuP1vOMqTQGq/view?usp=sharing
+Ficha Resumo - Hemorragia Subaracnóidea (HSA) - https://drive.google.com/file/d/1jsOnafuHwaHS7GRjsurGa9XvtBLMmHJ0/view?usp=sharing
+Ficha Resumo - Insuficiencia Cardiaca - Descompensacoes Agudas.pdf - https://drive.google.com/file/d/1jx1hyFuaYh9k0DKlKyvbt0w35vBAepzz/view?usp=sharing
+Ficha Resumo - Dermatoses Bolhosas.pdf - https://drive.google.com/file/d/1k-bInCKZHQGVufHRiyAm0CSThIwtV8jA/view?usp=sharing
+Ficha Resumo - Sindrome de Cushing.pdf - https://drive.google.com/file/d/1k87lwWyqUAfz_SUHORrEWyDSg6RfZq7t/view?usp=sharing
+Ficha resumo - Diabetes_ Classificacao, Fisiopatologia e Diagnostico.pdf - https://drive.google.com/file/d/1kHSucjmLvbTfLerZA_axJCXUVCCQdsmU/view?usp=sharing
+Ficha Resumo - Febre Reumatica e Endocardite.pdf - https://drive.google.com/file/d/1kW4A6Umwhe1X9HHFqcspbqVBODA1qLjG/view?usp=sharing
+Ficha resumo - Pneumonia Associada a Ventilacao Mecanica.pdf - https://drive.google.com/file/d/1kX4JEG2fyDI_5NrL0IxqZEoryszq5nxb/view?usp=sharing
+Ficha Resumo - Sindrome Coronariana Aguda com Supra de ST.pdf - https://drive.google.com/file/d/1l5IJ6jTjBTWQRPLHFYnV00WYlnbCC3Kf/view?usp=sharing
+Ficha resumo - Artrite Reumatoide (AR).pdf - https://drive.google.com/file/d/1l6nfCOd5q8wdjCHcTE8VhcF2E-V0m5zi/view?usp=sharing
+Ficha Resumo - Osteoporose.pdf - https://drive.google.com/file/d/1lE07PqX3vx-pEOO8EG7OpqeVVF4ix0cC/view?usp=sharing
+Acidente Vascular Cerebral Hemorrágico (AVCh) - Intraparenquimatoso - https://drive.google.com/file/d/1lPzRcHz9ooY4K-wYwHDjQCc9mZu3TMKE/view?usp=sharing
+Ficha Resumo - Revisando medidas de associacao Parte 1.pdf - https://drive.google.com/file/d/1lQBIJ7zitIsRCsb-go_SFfccTFu0s3JV/view?usp=sharing
+Ficha Resumo - Fisiologia da Coagulacao.pdf - https://drive.google.com/file/d/1mZnNsTmsmdGkWkBw0x7qZsIc57jwUuiK/view?usp=sharing
+Ficha Resumo - Choque - Abordagem Inicial.pdf - https://drive.google.com/file/d/1mbRBM5q7A-OzO0GOrKPtnxIif0jTbkTe/view?usp=sharing
+Ficha Resumo - Antibioticos I.pdf - https://drive.google.com/file/d/1mhAINvc3ePL8cE-KCoWWMvEJlh0EC5hP/view?usp=sharing
+Ficha Resumo - Depressao no Idoso.pdf - https://drive.google.com/file/d/1mpNsB0bL7QCx6EXGehv58OW_gL1oy-A-/view?usp=sharing
+Ficha Resumo - Avaliacao de enzimas hepaticas.pdf - https://drive.google.com/file/d/1n2lic61TSdyGWfwb3V1_sv8MKfBU3SaT/view?usp=sharing
+Ficha resumo - Outros Disturbios Hipofisarios.pdf - https://drive.google.com/file/d/1nKxG8pxbOAS3grKRrl1kHQYbUgNrdRQl/view?usp=sharing
+Ficha Resumo - Vacinacao do Idoso.pdf - https://drive.google.com/file/d/1o5mXIR-73_VkTc90EFsm8QocrOEdTFV3/view?usp=sharing
+Ficha Resumo - BLS e ACLS.pdf - https://drive.google.com/file/d/1o7FgcUrNsF00A9nmRrXRMK5UL-laaKVW/view?usp=sharing
+Ficha resumo - Antibioticos - Conceitos Avancados.pdf - https://drive.google.com/file/d/1oMe5YWo4HSpmmhHSJT_Vlk1_uCNi0f_U/view?usp=sharing
+Ficha Resumo - Bradiarritimias.pdf - https://drive.google.com/file/d/1ojmpxPgUTezXYf9TU6GedvOFms7-oYjf/view?usp=sharing
+Ficha resumo - ANTIDIABETICOS ORAIS E SUBCUTANEOS I.pdf - https://drive.google.com/file/d/1oldiL0B7PvwGG_PGRVybqfT77H-V_gsy/view?usp=sharing
+Ficha Resumo - Classificacao dos estudos epidemiologicos.pdf - https://drive.google.com/file/d/1owLrFthThoIuheXljnMnKF06CXbJJJI3/view?usp=sharing
+Ficha resumo - Ictericias febris e Febre Maculosa.pdf - https://drive.google.com/file/d/1p42p1gubsQ7JrWtkoUQfc2PIcgBGcX2x/view?usp=sharing
+Ficha Resumo - Hipertensao Arterial Sistemica (HAS).pdf - https://drive.google.com/file/d/1pFbd-VxpIBQFvW3OWbi878LHMWnUK8sj/view?usp=sharing
+Ficha Resumo - Disturbios do Sodio.pdf - https://drive.google.com/file/d/1pbhthQQhIJDpUvkcC6Gis6g-irZAy0Ul/view?usp=sharing
+Ficha resumo - Doenca Renal Cronica I.pdf - https://drive.google.com/file/d/1qdMIbvM7GGkLVOf66qT-PXEKHo4J5Xen/view?usp=sharing
+Ficha Resumo - Dislipidemia - Classificacao e Diagnostico.pdf - https://drive.google.com/file/d/1qkWpt_EAhqFHTKhRlLL-MOK1xpvJEKky/view?usp=sharing
+Ficha Resumo - Vacinacao - Situacoes Especiais.pdf - https://drive.google.com/file/d/1qtIp7ZYzRzo3rEKK63bBYpqosqqWWOpF/view?usp=sharing
+Ficha Resumo - Meningites e Encefalites - https://drive.google.com/file/d/1r0FWP8dsgvp93JUbS09eoOUKcrOfpLn4/view?usp=sharing
+Ficha Resumo - Ensaio clinico 1.pdf - https://drive.google.com/file/d/1r9o1Z3kKlDMxTXGnWQyL8819S-pIakTC/view?usp=sharing
+Ficha Resumo - Osteoartrite.pdf - https://drive.google.com/file/d/1rFoY6vjCxCIAzUOM9BPKZ1nhTr_NfukA/view?usp=sharing
+Ficha Resumo - Pre-operatorio I.pdf - https://drive.google.com/file/d/1rN2HmV50WqtFAFJJX40pZBZ1za3m7DWB/view?usp=sharing
+Ficha Resumo - Parkinsonismos Atipicos (plus).pdf - https://drive.google.com/file/d/1rWJIdoPEC6uYDukvHVGb_fgOwh91Cu65/view?usp=sharing
+Ficha Resumo - Linfomas avancado.pdf - https://drive.google.com/file/d/1rdBXzFs0aJk8lMAprQBlsWQNGq66Aqth/view?usp=sharing
+Ficha de slides - Fragilidade.pdf - https://drive.google.com/file/d/1reEpeCfwB4zARTluPT-50Zts1_u0acOV/view?usp=sharing
+Ficha Resumo - Hemoterapia.pdf - https://drive.google.com/file/d/1rpnGRUmTTNjyl2wUcM1uh_hy5MwOPz1N/view?usp=sharing
+Ficha resumo - Insulinoterapia.pdf - https://drive.google.com/file/d/1rxL6FuHlBUXnLmbV6X-wB8s7yR8Q_a3K/view?usp=sharing
+ERRATA - EMERGENCIAS ONCOLOGICAS.pdf - https://drive.google.com/file/d/1s9LABQM4owSjKgWR7yRALA2YEZxs2CMV/view?usp=sharing
+Ficha Resumo - Linfomas basico.pdf - https://drive.google.com/file/d/1sSxpq_-uKTFOMN7fHw8ZS1nHhwjnJ0zO/view?usp=sharing
+Ficha Resumo - Doenca de Behcet.pdf - https://drive.google.com/file/d/1sijgLBzkBTPCHpIVugesyskZccV-jbRK/view?usp=sharing
+Ficha Resumo - Otologia I.pdf - https://drive.google.com/file/d/1sjyjBWx9A4XYYYLk02i-EWQWQ_M1xnQl/view?usp=sharing
+Ficha Resumo - Transtorno de Humor II_ Antidepressivos.pdf - https://drive.google.com/file/d/1snUAMwECX4JBewQrD9rZsnC4AUm9Q-My/view?usp=sharing
+Ficha resumo - Oftamologia em doencas clinicas - parte II.pdf - https://drive.google.com/file/d/1t1ALWjASo-ZxxvKYeO0XQcR0NWjNVcNt/view?usp=sharing
+Ficha Resumo - Doenca Pulmonar Intersticial (DPI).pdf - https://drive.google.com/file/d/1t3nmtX1EsAfcVlicg-89eljCNgQgvKf2/view?usp=sharing
+Ficha Resumo - Sindrome Coronariana Cronica.pdf - https://drive.google.com/file/d/1tDfKV-ZEpWkVtigaCbK4HWRK4D0rDaXr/view?usp=sharing
+Ficha Resumo - Testes Diagnosticos_ caracteristicas basicas.pdf - https://drive.google.com/file/d/1tE1rL0goe9_drVu8-uJ1ujRPoSlOptBy/view?usp=sharing
+Ficha Resumo - Nodulos e Cancer de Tireoide.pdf - https://drive.google.com/file/d/1tRAf-OhoPNVYR22BVtfFfA952-c6GsVe/view?usp=sharing
+Ficha Resumo - Transtorno de Humor I.pdf - https://drive.google.com/file/d/1tXdMqo71S3Kx0UI-_pV-tGD1PyzAh-D9/view?usp=sharing
+Ficha Resumo - Emergencias Hipertensivas.pdf - https://drive.google.com/file/d/1tjU3OhVY6_nuU64ZN0Fes3tTsf_tZyuB/view?usp=sharing
+Ficha resumo - Reacoes de hipersensibilidade.pdf - https://drive.google.com/file/d/1tvYjuxoJG2UB7KcHI7838QTMXABe0qXe/view?usp=sharing
+Ficha Resumo - Cefaleias Trigêmino-Autonômicas - https://drive.google.com/file/d/1u2_7rNkFuQihXNdkVx01RxndezgsGTgZ/view?usp=sharing
+Ficha Resumo - Anticoagulacao I.pdf - https://drive.google.com/file/d/1uAkePsFQwB1ZIf3yGG798NNTbTM18IeM/view?usp=sharing
+ERRATAS - Alergia 1_ Rinite e Angioedema - avancado.pdf - https://drive.google.com/file/d/1uORcq-N2Ip2gVet2fUcZNkbaRjW59Ac-/view?usp=sharing
+Ficha resumo - Hipogonadismo Masculino.pdf - https://drive.google.com/file/d/1uuvXY7Wg7iKlNjCUd1gJ8ni9VCAF04Pv/view?usp=sharing
+Ficha Resumo - Disturbios Hidroeletroliticos - Outros (Magnesio e Fosforo).pdf - https://drive.google.com/file/d/1vSADtRhLQBvCmLXNojS3U7DC5yh-WC04/view?usp=sharing
+Ficha Resumo - Feocromocitoma.pdf - https://drive.google.com/file/d/1vgvMflGstE9wC4SFWl-86p7VWVKd9gtq/view?usp=sharing
+Ficha Resumo - Gasometria Arterial I.pdf - https://drive.google.com/file/d/1vkEVfyEWKShfgyhBssdwzSNA1-__XuXb/view?usp=sharing
+Ficha Resumo - Insuficiencia Hepatica Aguda.pdf - https://drive.google.com/file/d/1wYs-o58FodQ-rBeK3FYF2jTZCY2XVFP1/view?usp=sharing
+Ficha Resumo -Cirrose hepatica_ Ascite + PBE.pdf - https://drive.google.com/file/d/1wcE1ycyDhKqqO7kvdnvqKQ8Snk_4idfZ/view?usp=sharing
+Ficha Resumo - Tireoidites & Sindrome do Eutireoidiano Doente.pdf - https://drive.google.com/file/d/1wffb9jaTcDR07X6te0aWwC8sK3XLNavq/view?usp=sharing
+Ficha Resumo - Neurossifilis.pdf - https://drive.google.com/file/d/1wiYq4VZyEy8mRUPERWmHfmmi1IKY1X9C/view?usp=sharing
+Ficha Resumo - Epilepsia.pdf - https://drive.google.com/file/d/1wt-nNjP9o1czBRJ1oaRp20v2Qq_ik86I/view?usp=sharing
+Ficha resumo - Hepatites Virais - Clinica Medica.pdf - https://drive.google.com/file/d/1x8Rx1ZpLzVTwXiaj1tEZF_m-2LAqu5vf/view?usp=sharing
+Ficha Resumo - Neurointensivismo_ Hipertensao Intracraniana.pdf - https://drive.google.com/file/d/1xEAwVL4It0zvuSvdW_xkgSQiahhkb01Z/view?usp=sharing
+Ficha Resumo - Injuria Renal Aguda (IRA)_ Parte 3.pdf - https://drive.google.com/file/d/1xV-GaUJ2EQ1OZowtdAbizpicF3RkKqmk/view?usp=sharing
+Ficha Resumo - Prolactinomas.pdf - https://drive.google.com/file/d/1xzZeQbv9l5M6b0_4QS_ZQsBi_CiZJxRj/view?usp=sharing
+ERRATA - AVALIACAO GERIATRICA AMPLA.pdf - https://drive.google.com/file/d/1yVjWWP4F0oYxFmDo_-nobQEpxTBzP1ZO/view?usp=sharing
+Ficha Resumo - Fisiologia e Anatomia da Adrenal.pdf - https://drive.google.com/file/d/1ys6g2OLCw2CbHPWO6UvtjT_rPuKlIxZc/view?usp=sharing
+`;
+
+        // --- PROCESSAMENTO E MAPA DE LINKS ---
+        const linkMap = {};
+        
+        function normalizeKey(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        rawLinks.trim().split('\n').forEach(line => {
+            const parts = line.split(' - https');
+            if (parts.length >= 2) {
+                const title = parts[0].trim();
+                const url = 'https' + parts[1].trim();
+                linkMap[normalizeKey(title)] = url;
+            }
+        });
+
+        function findLink(title, type) {
+            let coreTitle = title.replace(/^Aula \d+ - (CofExpress: )?/, "").replace(/^PDF de Slides - /, "").replace(/^Ficha Resumo - /, "").trim();
+            
+            if (type === 'material') {
+                const attempts = [
+                    `PDF de slides - ${coreTitle}.pdf`,
+                    `PDF de slides - ${coreTitle}`,
+                    `${coreTitle}.pdf`,
+                    coreTitle
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else if (type === 'cofexpress') {
+                const attempts = [
+                    `${coreTitle}_COFEXPRESS`,
+                    `${coreTitle}_Cofexpress`,
+                    `${coreTitle} _COFEXPRESS`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else { // standard
+                const attempts = [
+                    coreTitle,
+                    `${coreTitle} - 1920x1080`,
+                    `${coreTitle} (reegravação)`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            }
+            return "";
+        }
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const PLACEHOLDER_VIDEO = '1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU'; // Vídeo genérico
+        const PLACEHOLDER_LINK = '#';
+
+        function createSubmodule(subTitle, aulaTitles, matTitles) {
+            const videos = aulaTitles.map(title => {
+                const isCof = title.toLowerCase().includes('cofexpress');
+                const foundLink = findLink(title, isCof ? 'cofexpress' : 'standard');
+                const videoId = extractIdFromGoogleDriveLink(foundLink) || PLACEHOLDER_VIDEO;
+                
+                return {
+                    id: videoId,
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-play-circle'
+                };
+            });
+
+            const materials = matTitles.map(title => {
+                const foundLink = findLink(title, 'material');
+                return {
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-file-pdf',
+                    link: foundLink || PLACEHOLDER_LINK
+                };
+            });
+
+            return { title: subTitle, videos, materials };
+        }
+
+        const modulesData = [];
+        const populate = (id, title, subs) => {
+            const m = { id, title, videos: [], materials: [] };
+            subs.forEach(s => {
+                const obj = createSubmodule(s.t, s.a, s.m);
+                m.videos.push({ type: 'category', title: obj.title, items: obj.videos });
+                m.materials.push({ type: 'category', title: obj.title, items: obj.materials });
+            });
+            modulesData.push(m);
+        };
+
+        // --- DEFINIÇÃO DOS MÓDULOS ---
+
+        // M01 Onboarding (Mantido do código original)
+        populate('mod_01', 'Módulo 01 - Onboarding', [
+            { t: 'Onboarding 2025 - História da Medcof', a: ['Aula 01 - CofExpress: Onboarding 2025 - História da Medcof', 'Aula 02 - Onboarding 2025 - História da Medcof'], m: ['PDF de Slides - Onboarding 2025 - História da Medcof'] },
+            { t: 'Onboarding 2025 - Apresentação da plataforma Medcof Plus', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação da plataforma Medcof Plus', 'Aula 02 - Onboarding 2025 - Apresentação da plataforma Medcof Plus'], m: ['PDF de Slides - Onboarding 2025 - Apresentação da plataforma Medcof Plus'] },
+            { t: 'Onboarding 2025 - Apresentação plataforma QBANK', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação plataforma QBANK', 'Aula 02 - Onboarding 2025 - Apresentação plataforma QBANK'], m: ['PDF de Slides - Onboarding 2025 - Apresentação plataforma QBANK'] },
+            { t: 'Onboarding - TEEM', a: ['Aula 01 - CofExpress: Onboarding - TEEM', 'Aula 02 - Onboarding - TEEM'], m: ['PDF de Slides - Onboarding - TEEM'] }
+        ]);
+
+        // Nova estrutura completa (M02 a M23)
+        // Array de configuração para gerar automaticamente a estrutura repetitiva
+        const newModulesConfig = [
+            { 
+                id: 'mod_02', 
+                title: 'Módulo 02 - Neurologia', 
+                subs: [
+                    'Acidente Vascular Cerebral Isquêmico (AVCi)', 'Acidente Vascular Cerebral Isquêmico (AVCi)  Tratamento e Complicações', 'Hemorragia Subaracnóidea (HSA)', 'Acidente Vascular Cerebral Hemorrágico (AVCh) Intraparenquimatoso', 'Discussão R+ NeuroVascular', 'Introdução às Cefaleias Primárias', 'Enxaqueca (Migrânea)', 'Cefaleias Trigêmino-Autonômicas', 'Meningites & Encefalites', 'Síndrome de Guillain-Barré (SGB)', 'Miastenia Gravis', 'Pseudotumor Cerebral', 'Esclerose Lateral Amiotrófica (ELA)', 'Epilepsia', 'Doença de Parkinson', 'Esclerose Múltipla (EM)', 'Neuromielite Óptica (NMO)', 'Parkinsonismos Atípicos (plus)', 'Discussão R+ Neurologia - Módulo 3'
+                ]
+            },
+            {
+                id: 'mod_03',
+                title: 'Módulo 03 - Imunologia',
+                subs: [
+                    'Imunodeficiências', 'Síndromes autoinflamatórias', 'Doenças Raras', 'Alergia 1 Rinite e Angioedema', 'Alergia 2 Reações de hipersensibilidade', 'Alergia 2 Reações de hipersensibilidade - avançado', 'Alergia 1 Rinite e Angioedema - avançado'
+                ]
+            },
+            {
+                id: 'mod_04',
+                title: 'Módulo 04 - Emergências',
+                subs: [
+                    'Via aérea, intubação e Ventilação Não Invasiva (VNI)', 'Capnografia', 'Intoxicações Exógenas', 'Diagnóstico de Morte Encefálica (ME)', 'Emergências Hiperglicêmicas (CAD e EHH)', 'Emergências Hipertensivas', 'Insuficiência Hepática Aguda', 'BLS e ACLS', 'Choque - Abordagem Inicial', 'Choque - Tipos de Choque'
+                ]
+            },
+            {
+                id: 'mod_05',
+                title: 'Módulo 05 - UTI',
+                subs: [
+                    'Síndrome do desconforto respiratório agudo (SDRA)', 'Princípios de ventilação mecânica (VM)', 'Ventilação mecânica (VM) exercícios', 'Pneumonia Associada à Ventilação Mecânica', 'Ventilação mecânica (VM) avançada', 'Teste de Respiração Espontânea (TRE) e Extubação', 'Neurointensivismo Hipertensão Intracraniana', 'Infecção de Corrente Sanguínea (ICS)', 'Analgesia e Sedação', 'Drogas vasoativas (DVA)', 'Terapia Nutricional no Paciente Crítico', 'Os 8 principais estudos de UTI'
+                ]
+            },
+            {
+                id: 'mod_06',
+                title: 'Módulo 06 - Infectologia',
+                subs: [
+                    'Doenças oportunistas HIV', 'Antibióticos I', 'Antibióticos II', 'Antibióticos - Conceitos Avançados', 'HIV', 'Sífilis e Uretrites Infecciosas', 'Neurossífilis', 'Infecções em Imunossuprimidos', 'Tuberculose Pulmonar', 'Tratamento de Tuberculose e efeitos colaterais do RIPE', 'Tuberculose Extra Pulmonar', 'Tuberculose Resistência e Tratamento Específico', 'Doenças Negligenciadas', 'Acidentes com Animais Peçonhentos', 'Vacinação - Situações Especiais', 'Doenças Virais e Pandêmicas', 'Arboviroses - Clínica Médica', 'Icterícias febris e Febre Maculosa', 'Hepatites Virais - Clínica Médica', 'Parasitoses Intestinais - Clínica Médica'
+                ]
+            },
+            {
+                id: 'mod_07',
+                title: 'Módulo 07 - Clínica Médica',
+                subs: [
+                    'Pré-operatório I', 'Pré-operatório II', 'Rastreamentos - Clínica Médica'
+                ]
+            },
+            {
+                id: 'mod_08',
+                title: 'Módulo 08 - Gastroenterologia',
+                subs: [
+                    'Dispepsia', 'DRGE', 'Avaliação de enzimas hepáticas', 'Doenças hepáticas CBP, CEP, HAI e Doença de Wilson', 'Úlcera péptica, H. pylori, Gastrite Atrófica e Dispepsia Funcional', 'Cirrose hepática Conceitos Gerais', 'Cirrose hepática Ascite + PBE', 'Disfagia, Esofagite Eosinofílica e Acalasias', 'Cirrose hepática Encefalopatia Hepática e Síndrome Hepatorrenal', 'Cirrose hepática Varizes esofágicas e Síndrome Hepatopulmonar', 'Diarreia Agudas e Colite Pseudomembranosa', 'Doença Inflamatória Intestinal (DII)', 'Diarreias Crônicas', 'Lesões Focais Hepáticas', 'Pancreatite Aguda (R+)', 'Pancreatite Crônica (R+)'
+                ]
+            },
+            {
+                id: 'mod_09',
+                title: 'Módulo 09 - Epidemiologia',
+                subs: [
+                    'Testes Diagnósticos características básicas', 'Testes Diagnósticos aplicabilidade clínica', 'Classificação dos estudos epidemiológicos', 'Estudos longitudinais corte e caso controle', 'Revisando medidas de associação', 'Ensaio clínico 1', 'Ensaio clínico 2', 'Conceitos de MBE', 'Metanálise', 'Revisão sistemática'
+                ]
+            },
+            {
+                id: 'mod_10',
+                title: 'Módulo 10 - Cardiologia',
+                subs: [
+                    'Síndrome Coronariana Aguda sem Supra de ST (SCASSST)', 'Síndrome Coronariana Aguda com Supra de ST (SCACSST)', 'Síndromes Aórticas Agudas', 'Pericardite e Miocardite', 'Anticoagulação em Cardiologia', 'Hipertensão Arterial Sistêmica (HAS)', 'Insuficiência Cardíaca - Manejo Ambulatorial', 'Insuficiência Cardíaca - Descompensações Agudas', 'Insuficiência Cardíaca - Avançada', 'Síndrome Coronariana Crônica', 'Taquiarritmias - Cardiologia', 'Bradiarritmias', 'Síncope', 'Febre Reumática e Endocardite', 'Valvopatias'
+                ]
+            },
+            {
+                id: 'mod_11',
+                title: 'Módulo 11 - Endócrino',
+                subs: [
+                    'Diabetes Classificação, Fisiopatologia e Diagnóstico', 'Meta Terapêutica, Manejo do pré-DM e Tratamento Não Farmacológico do DM', 'Antidiabéticos Orais e Subcutâneos - Parte 1', 'Antidiabéticos Orais e Subcutâneos - Parte 2', 'Insulinoterapia', 'Complicações Crônicas do Diabetes Mellitus (DM)', 'Hiperglicemia Hospitalar', 'Dislipidemia - Classificação e Diagnóstico', 'Tratamento das Dislipidemias', 'Doença hepática esteatótica Metabólica (DHEM)', 'Síndrome Metabólica', 'Obasidade Introdução e Tratamento Não Farmacológico', 'Obesidade Tratamento Farmacológico e Cirúrgico', 'Hipercalcemias', 'Hipocalcemias', 'Fisiologia da Tireoide', 'Hipotireoidismo - Clínica Médica', 'Hipertireoidismo', 'Tireoidites & Síndrome do Eutireoidiano Doente', 'Nódulos e Câncer de Tireoide', 'Incidentaloma Adrenal', 'Síndrome de Cushing', 'Insuficiência Adrenal', 'Hiperaldosteronismo Primário', 'Feocromocitoma', 'Prolactinomas', 'Outros Distúrbios Hipofisários', 'Hipogonadismo Masculino'
+                ]
+            },
+            {
+                id: 'mod_12',
+                title: 'Módulo 12 - Preventiva',
+                subs: ['Teste diagnósticos exercícios']
+            },
+            {
+                id: 'mod_13',
+                title: 'Módulo 13 - Reumatologia',
+                subs: [
+                    'Introdução às Artrites e Artrite Reumatoide (AR)', 'Espondiloartrites', 'Artrites Microcristalinas (Gota e CPPD)', 'Osteoartrite', 'Fibromialgia', 'Discussão R+ Reumatologia - Módulo 1', 'Vasculites de Grandes e Médios Vasos', 'Vasculites de Pequenos Vasos', 'Doença de Behçet', 'Discussão R+ Reumatologia - Módulo 2', 'Lúpus Eritematoso Sistêmico - Clínica Médica', 'Osteoporose', 'Esclerose Sistêmica', 'Doença de Sjögren', 'Miopatias Autoimunes Sistêmicas - Clínica Médica', 'Imunobiológicos - Situações Especiais', 'Discussão R+ Reumatologia - Módulo 3'
+                ]
+            },
+            {
+                id: 'mod_14',
+                title: 'Módulo 14 - Nefrologia',
+                subs: [
+                    'Gasometria Arterial I', 'Gasometria Arterial II', 'Distúrbios do Sódio', 'Distúrbios do Potássio', 'Injúria Renal Aguda (IRA) Parte 1', 'Injúria Renal Aguda (IRA) Parte 2', 'Injúria Renal Aguda (IRA) Parte 3', 'Glomerulopatias I', 'Glomerulopatias II', 'Discussão R+ nefrologia módulo I', 'Infecção do Trato Urinário (ITU)', 'Distúrbios do Cálcio', 'Distúrbios Hidroeletrolíticos - Outros (Magnésio e Fósforo)', 'Doença Renal Crônica I', 'Doença Renal Crônica II', 'Discussão R+ Nefrologia - Módulo 2'
+                ]
+            },
+            {
+                id: 'mod_15',
+                title: 'Módulo 15 - Oncologia',
+                subs: [
+                    'Oncologia Cuidados paliativos', 'Neoplasias Específicas e Miscelânea', 'Emergências Oncológicas', 'Efeitos colaterais de quimioterápicos'
+                ]
+            },
+            {
+                id: 'mod_16',
+                title: 'Módulo 16 - Geriatria',
+                subs: [
+                    'Introdução à Geriatria', 'Avaliação Geriátrica Ampla', 'Iatrogenia no Idoso', 'Instabilidade Postural, Quedas e Imobilidade', 'Vacinação do Idoso', 'Discussão R+ Geriatria - Módulo 1', 'Depressão no Idoso', 'Insuficiência Cognitiva Demências', 'Insuficiência Cognitiva Delirium no Idoso', 'Fragilidade', 'Incontinência Urinária no Idoso', 'Discussão R+ Geriatria - Módulo 2'
+                ]
+            },
+            {
+                id: 'mod_17',
+                title: 'Módulo 17 - Pneumologia',
+                subs: [
+                    'Pneumonia Adquirida na Comunidade', 'Derrame Pleural', 'Asma', 'Doença Pulmonar Obstrutiva Crônica (DPOC)', 'Tabagismo', 'Espirometria', 'Discussão R+ Pneumologia - Módulo 1', 'TEP', 'Hipertensão pulmonar', 'Distúrbios do Sono', 'Doença Pulmonar Intersticial (DPI)', 'Nódulo Pulmonar', 'Discussão R+ Pneumologia - Módulo 2'
+                ]
+            },
+            {
+                id: 'mod_18',
+                title: 'Módulo 18 - Hematologia',
+                subs: [
+                    'Avaliação Global do Hemograma', 'Anemias Hipoproliferativas I', 'Anemias Hipoproliferativas II', 'Anemias Hemolíticas Adquiridas', 'Anemias Hemolíticas Hereditárias', 'Púrpura Trombocitopênica Trombótica (PTT)', 'Discussão R+ Hematologia - Módulo 1', 'Fisiologia da Coagulação', 'Distúrbios da Hemostasia', 'Hemoterapia', 'Anticoagulação I', 'Anticoagulação II', 'Discussão R+ Hematologia - Módulo 2', 'Leucemias', 'Linfomas', 'Discrasias Plasmocitárias', 'Síndromes Medulares', 'Discussão R+ Hematologia - Módulo 3'
+                ]
+            },
+            {
+                id: 'mod_19',
+                title: 'Módulo 19 - Endocrinologia',
+                subs: ['Fisiologia e Anatomia da Adrenal']
+            },
+            {
+                id: 'mod_20',
+                title: 'Módulo 20 - Dermatologia',
+                subs: ['Hanseníase', 'Lesões Elementares', 'Dermatoses Bolhosas', 'Psoríase']
+            },
+            {
+                id: 'mod_21',
+                title: 'Módulo 21 - Psiquiatria',
+                subs: [
+                    'Emergências psiquiátricas', 'Transtorno de Humor I', 'Transtorno de Humor II Antidepressivos', 'Transtorno de Humor III Mania e Transtorno Bipolar', 'Transtorno de Ansiedade', 'Transtornos Relacionados a Substâncias - Álcool', 'Transtorno Psicótico', 'Transtorno alimentares e somatoformes', 'Transtorno de personalidade'
+                ]
+            },
+            {
+                id: 'mod_22',
+                title: 'Módulo 22 - Otorrino',
+                subs: ['Otologia I', 'Otologia II']
+            },
+            {
+                id: 'mod_23',
+                title: 'Módulo 23 - Oftalmologia',
+                subs: ['Oftamologia em doenças clínicas - parte I', 'Oftamologia em doenças clínicas - parte II']
+            }
+        ];
+
+        // Iterar sobre a configuração e popular
+        newModulesConfig.forEach(mod => {
+            const subObjects = mod.subs.map((subName, index) => {
+                const subNum = (index + 1).toString().padStart(2, '0');
+                const subTitle = `Sub-Módulo ${subNum} - ${subName}`;
+                return {
+                    t: subTitle,
+                    a: [`Aula 01 - CofExpress: ${subName}`, `Aula 02 - ${subName}`],
+                    m: [`Ficha Resumo - ${subName}`, `PDF de Slides - ${subName}`]
+                };
+            });
+            populate(mod.id, mod.title, subObjects);
+        });
+
+
+        // --- FUNÇÕES DE UI ---
+        function loadVideo(videoId, lessonTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (videoId && videoId !== PLACEHOLDER_VIDEO) {
+                p.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else {
+                p.src = ''; 
+            }
+            t.textContent = lessonTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = videoId;
+            const cur = document.querySelector(`[data-id="${videoId}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (link && link !== PLACEHOLDER_LINK) {
+                const preview = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                p.src = preview;
+            } else {
+                p.src = '';
+            }
+            t.textContent = materialTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = link;
+            const cur = document.querySelector(`[data-id="${link}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function renderModuleContent(moduleId) {
+            const vc = document.getElementById('videosContainer');
+            const mc = document.getElementById('materialsContainer');
+            const t = document.getElementById('lessonTitle');
+            
+            const m = modulesData.find(mod => mod.id === moduleId);
+            if (!m) return;
+
+            let vHtml = '';
+            let mHtml = '';
+            let first = null;
+
+            m.videos.forEach(cat => {
+                vHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                    if (!first && item.id !== PLACEHOLDER_VIDEO) first = { type: 'video', ...item };
+                    else if (!first) first = { type: 'video', ...item };
+
+                    vHtml += `<div class="material-item" onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                vHtml += `</div></details>`;
+            });
+
+            m.materials.forEach(cat => {
+                mHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                     mHtml += `<div class="material-item" onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                mHtml += `</div></details>`;
+            });
+
+            vc.innerHTML = vHtml;
+            mc.innerHTML = mHtml;
+
+            const fd = vc.querySelector('details');
+            if (fd) fd.open = true;
+
+            if (first) {
+                if (first.type === 'video') loadVideo(first.id, first.title);
+            } else {
+                document.getElementById('contentPlayer').src = '';
+                t.textContent = 'Selecione um item';
+            }
+        }
+
+        const sel = document.getElementById('moduleSelector');
+        modulesData.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.title;
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', (e) => renderModuleContent(e.target.value));
+        if (modulesData.length > 0) {
+            sel.value = modulesData[12].id;
+            renderModuleContent(modulesData[12].id);
+        }
+    </script>
+</body>
+</html>

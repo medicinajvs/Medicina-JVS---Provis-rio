@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extensivo TEEM 2026 - Plataforma de Aulas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a202c; color: #e2e8f0; }
+        .selected-lesson { background-color: #4299e1; border: 2px solid #63b3ed; }
+        .item-thumbnail-placeholder { width: 80px; height: 45px; background-color: #4a5568; display: flex; justify-content: center; align-items: center; border-radius: 0.375rem; flex-shrink: 0; }
+        .item-thumbnail-placeholder i { font-size: 1.8rem; color: #CBD5E0; }
+        details { background-color: #2d3748; border-radius: 0.375rem; overflow: hidden; margin-bottom: 0.75rem; }
+        summary { padding: 0.5rem 0.75rem 0.5rem 2rem; cursor: pointer; font-weight: 600; color: #e2e8f0; position: relative; list-style: none; user-select: none; }
+        summary::-webkit-details-marker { display: none; }
+        summary::before { content: '\25B6'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); transition: transform 0.2s; color: #a0aec0; font-size: 0.8rem; }
+        details[open] summary::before { transform: translateY(-50%) rotate(90deg); }
+        .material-item { display: flex; align-items: center; gap: 0.75rem; background-color: #4a5568; border-radius: 0.375rem; padding: 0.5rem; margin-top: 0.5rem; cursor: pointer; transition-colors: 0.2s; margin-left: 0.5rem; margin-right: 0.5rem; }
+        .material-item:hover { background-color: #2d3748; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Extensivo TEEM 2026</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs md:max-w-md"></select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-md" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3"></div>
+            </div>
+        </section>
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas e Módulos</h3>
+            <div id="videosContainer" class="space-y-3 mb-6"></div>
+        </aside>
+    </main>
+
+    <script>
+        // Variável global para rastrear o item selecionado
+        let selectedItemId = null;
+
+        // --- DADOS BRUTOS DOS LINKS (Mantidos da versão anterior para compatibilidade) ---
+        // Nota: Os links atuais cobrem principalmente Endocrinologia.
+        // Os novos módulos (Neurologia, etc.) usarão placeholders até que os links sejam atualizados.
+        const rawLinks = `
+Indicadores de saúde - Parte 1 - COFEXPRESS - https://drive.google.com/file/d/1-EKsv2cXOROXq9puCPHqmiLdf7nJ5hWK/view?usp=sharing
+Aula 01 - Doença Renal Crônica I - https://drive.google.com/file/d/1-JZJ4kE45WJ3aSHU1-4HcRMrv4nVrkJK/view?usp=sharing
+Aula 01 - Diarreia Agudas e Colite Pseudomembranosa - https://drive.google.com/file/d/1-lxohcWSIiMYH0-H-QMEjf7zwBG40sGX/view?usp=sharing
+Aula 03 - Apresentação da Plataforma QBANK - https://drive.google.com/file/d/10H3poLmgx8mZR-N9SZbWEBvW1cgdG_DD/view?usp=sharing
+Aula 01 - Transtorno de Ansiedade - https://drive.google.com/file/d/10LcJCvDSGx8dDgKFKsIY3Fn3aAVLU3tw/view?usp=sharing
+Aula 01 - Glomerulopatias II - https://drive.google.com/file/d/10qMwxSEpA3LDJsyDOnXSRYLek2cRS55x/view?usp=sharing
+Aula 01 - Níveis de Prevenção - https://drive.google.com/file/d/113LdBtJfZ_SfNxtOH89R0BOxKlRFeIOW/view?usp=sharing
+Aula 01 - Infecção de Corrente Sanguínea (ICS) - https://drive.google.com/file/d/11Wv7ggTvUgjALw6p-pfkfr-bHtZ_duoQ/view?usp=sharing
+Aula 01 - Depressão no Idoso - https://drive.google.com/file/d/11ugKYmxT1MGsr4rad5JVVEozn_08eRNs/view?usp=sharing
+Aula 01 - História da Medcof - https://drive.google.com/file/d/12ELKeLQ7aFZ9WiPDHXW8Wk3w40-ZMH8d/view?usp=sharing
+Nódulo Pulmonar_COFEXPRESS - https://drive.google.com/file/d/12MKn_N6bYKs3yRKO1VLN5fgyX8cuIEsl/view?usp=sharing
+Abdome Agudo Inflamatório Colecistite_COFEXPRESS - https://drive.google.com/file/d/12O1qHiGFwkGvVUgLjqXfnWiTJ_1t2l1x/view?usp=sharing
+Aula 01 - Vasculites de Pequenos Vasos - https://drive.google.com/file/d/137ODLa4tN5MBUZPnAQX-_wsGshDmxCCt/view?usp=sharing
+Aula 01 - Glomerulopatias II - https://drive.google.com/file/d/13H7p14_ZhqWMFLZg2mXn48Smlfj7ejub/view?usp=sharing
+Aula 01 - Nódulos e Câncer de Tireoide - https://drive.google.com/file/d/13Wv6Lra2ve9CWfE4FXfL7IcsZZEeH9V6/view?usp=sharing
+Aula 01 - Insulinoterapia - https://drive.google.com/file/d/13wGEsCB0e0sDlpUzLcZ5vCrfvdVgBDJk/view?usp=sharing
+Aula 01 - Arboviroses - https://drive.google.com/file/d/145GhsxEH1DDMroWMhydwHvJk5dOOKRYv/view?usp=sharing
+Insuficiência Cognitiva Demências - https://drive.google.com/file/d/153617yxcUT-OobB89ZJx9wQW7lfHUFUk/view?usp=sharing
+Aula 01 - Pericardite e Miocardite - https://drive.google.com/file/d/155iYsvE0bOqV9nkbHCMbcmjDVAD7YV_x/view?usp=sharing
+Prolactinomas_COFEXPRESS - https://drive.google.com/file/d/15OHgW_JWCufdaJGZ0OL_maRH-OOeXzLM/view?usp=sharing
+Valvopatias_COFEXPRESS - https://drive.google.com/file/d/164lTW1EgCTxQUIyXlW4BrRP8ZlI5jbzq/view?usp=sharing
+Oncologia Cuidados paliativos_COFEXPRESS - https://drive.google.com/file/d/17S2uR37ulc-MMi104rkAY2xTW4fDvccu/view?usp=sharing
+Aula 01 - Lúpus Eritematoso Sistêmico - Clínica Médica - https://drive.google.com/file/d/17ls6U5XNZuqJB2cBLaFDW3uRXL_SkH3a/view?usp=sharing
+Aula 01 - Icterícias febris e Febre Maculosa - https://drive.google.com/file/d/17zhfg9R8lVaYlNU-K1WL1L5dgNT0BR6C/view?usp=sharing
+Aula 01 - Anticoagulação I - https://drive.google.com/file/d/185YxQJd6oSa5h0R_dlAYVUoWPutR03gD/view?usp=sharing
+Doenças oportunistas HIV_COFEXPRESS - https://drive.google.com/file/d/189bGccF4VBL63CSC8cRC1fVLtY3sRoQQ/view?usp=sharing
+Aula 01 - Anemias Hemolíticas Adquiridas - https://drive.google.com/file/d/18ljnHE0A9N2mCCdHn1SYDnMHxtsF4B-b/view?usp=sharing
+Aula 01 - Doença de Behçet - https://drive.google.com/file/d/19omE1NJlDblv4EQFAzQ8pVm6nHoh6FBQ/view?usp=sharing
+Aula 01 - Outros Distúrbios Hipofisários - https://drive.google.com/file/d/1AU8qgloi4P8wcwqHJWIdA8G3BnwvO2X5/view?usp=sharing
+Aula 01 - Sindromes Aórticas Agudas - https://drive.google.com/file/d/1AbS5tpSJeb3xLjhibyycR1-TgfIByRTl/view?usp=sharing
+Aula 01 - Doença Renal Crônica II - https://drive.google.com/file/d/1AiWNgNTcWziA03Z28IwGTAnfaWijsw3P/view?usp=sharing
+Aula 01 - Epilepsia - https://drive.google.com/file/d/1AjAGsoZomgnyzYehFiFJzskID2YgDM3g/view?usp=sharing
+Aula 01 - Lúpus Eritematoso Sistêmico - Clínica Médica - https://drive.google.com/file/d/1AjRZKSuJyV3gjscJgRKhDYFtWwNRomcC/view?usp=sharing
+Classificaçãodos Estudos Epidemiológicos_COFEXPRESS - https://drive.google.com/file/d/1AvFlWxeF49Ij-9p-kLsImeruF0gpCLJL/view?usp=sharing
+Aula 01 - Febre Reumática e Endocardite - https://drive.google.com/file/d/1BNBXhmR5-6WAPJP4EYzo8yvd1StwYseT/view?usp=sharing
+Aula 01 - Avaliação de Enzimas Hepáticas - https://drive.google.com/file/d/1BtxKQ_hk8HeJcCZHnO3BEuhs17WUXK98/view?usp=sharing
+Aula 01 - Glomerulopatias II - https://drive.google.com/file/d/1CY6m5Scqhu1zubRG6kTxck38YcLRy5Ey/view?usp=sharing
+Choque - Abordagem Inicial_COFEXPRESS - https://drive.google.com/file/d/1CyAKHIvvwN9kIgHpuQ5zJ9yiuZSs1gI4/view?usp=sharing
+Aula 01 - Infecção do Trato Urinário (ITU) - https://drive.google.com/file/d/1DEfWMuB-eBpBcgjCLCdm3geZRQnmKcqs/view?usp=sharing
+Aula 01 - Doença de Behçet - https://drive.google.com/file/d/1DEx79gQ7uJQpIFK1rlBH-AaIjktnkjPv/view?usp=sharing
+Aula 01 - Doença Inflamatória Intestinal (DII) - https://drive.google.com/file/d/1DPpjq8ZmfxaJ8EXJniU1LIrmwWNU25u2/view?usp=sharing
+Tabagismo_COFEXPRESS - https://drive.google.com/file/d/1DgUAT0cUDEs1TGtynDFwmG9ki43-Uh4g/view?usp=sharing
+Aula 01 - Tratamento de Tuberculose e Efeitos Colaterais do RIPE - https://drive.google.com/file/d/1DuCL4Su29y4MnKvjznbbMIRNzHJpLFr4/view?usp=sharing
+Aula 01 - Hipertensão Arterial Sistêmica (HAS) - https://drive.google.com/file/d/1EB05pwUaCO2KD2chlxYCT8ikCWuGYJAT/view?usp=sharing
+Aula 01 - Diagnóstico de Morte Encefálica (ME) - https://drive.google.com/file/d/1ELF3Cf9AiqqNfEbyMqSfQKy3_LSxzZHv/view?usp=sharing
+Aula 01 - Febre Reumática e Endocardite - https://drive.google.com/file/d/1EUC-S7Dw3TYqMdlntl3f-WUerzBX2LMg/view?usp=sharing
+Aula 01 - Tuberculose Pulmonar - https://drive.google.com/file/d/1ElyZWHuxrZDOuUdXn362yIpiMqJUWTMt/view?usp=sharing
+Aula 01 - Fisiologia da Tireoide - https://drive.google.com/file/d/1EwNk1u2eRDASb9Be8otKJsW1O3pxbWyA/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 1 - https://drive.google.com/file/d/1EyaZwDI1a7OP7FHZuRQNNegSlOAnvy3J/view?usp=sharing
+Aula 01 - Distúrbios do Potássio - https://drive.google.com/file/d/1Ezof3cG1wzTCt2HK6Hhm_6rEgF54UnZw/view?usp=sharing
+Aula 01 - Anemias Hemolíticas Hereditárias - https://drive.google.com/file/d/1FnDEYPdmDGPiWfQUd6zaXZxffKOPzDga/view?usp=sharing
+Aula 01 - Anemias Hipoproliferativas I - https://drive.google.com/file/d/1FnUplddVszgg3MqaE4TmtyqQAQSQTcLM/view?usp=sharing
+Aula 01 - Doença Pulmonar Obstrutiva Crônica (DPOC) - https://drive.google.com/file/d/1GE95Fufk8WX4Q_jylzOaUhFgr-CEjPCO/view?usp=sharing
+Antidiabéticos Orais e Subcutâneos - Parte 1_COFEXPRESS - https://drive.google.com/file/d/1Gdk87m0cXjLK4Y-r1VGn80aVbmTLxR5k/view?usp=sharing
+Aula 01 - Hipertensão Arterial Sistêmica (HAS) - https://drive.google.com/file/d/1GkKgGuVTr-jMrKD025R4gqC4r7fsTz38/view?usp=sharing
+Aula 01 - Meta Terapêutica, Manejo do Pré-DM e Tratamento Não Farmacológico do DM - https://drive.google.com/file/d/1GopJbA6prqFEaklOOYtgcwIk_BnfziJP/view?usp=sharing
+Aula 01 - Anticoagulação II - https://drive.google.com/file/d/1HI6HWpx_LXVNrpcMArEFM4kUafsWoEKh/view?usp=sharing
+Aula 01 - Artrites Microcristalinas (Gota e CPPD) - https://drive.google.com/file/d/1HQtY1z-QB-aanZOr6Szt7gbzUJlvF3-Y/view?usp=sharing
+Hipertireoidismo_COFEXPRESS - https://drive.google.com/file/d/1Hsenxj_w0dyxFlRucqmtiUmjcEvWlbEN/view?usp=sharing
+Aula 01 - Distúrbios do Cálcio - https://drive.google.com/file/d/1HyTFLltVSQDv3Sdoh1X-GBNu8WiWdP9c/view?usp=sharing
+Aula 01 - Iatrogenia no Idoso - https://drive.google.com/file/d/1IBdMfPDqJ10iFAJv-g9ljIDAKMPR27Fm/view?usp=sharing
+Aula 01 - Transtornos Relacionados a Substâncias - Álcool - https://drive.google.com/file/d/1IOYzNbtK5qJblQA7taU_ybyx7lLX4ChT/view?usp=sharing
+Aula 01 - Nódulos e Câncer de Tireoide - https://drive.google.com/file/d/1ITQGe03D35RWDTszzbLzQVSk8R2HTrR5/view?usp=sharing
+Aula 01 - Doença Renal Crônica II - https://drive.google.com/file/d/1IXpnpUHqJDJ8sQJyPeXx3AETkAcH68ht/view?usp=sharing
+Aula 01 - Diarreias Crônicas - https://drive.google.com/file/d/1IZRGLXDDromt_XYS4OdA0ipwryj4CrI1/view?usp=sharing
+Drogas vasoativas (DVA)_COFEXPRESS - https://drive.google.com/file/d/1IaBEoBMgMIExh1Cc6B_aVSc_UKCZkaQz/view?usp=sharing
+Aula 01 - Avaliação de Enzimas Hepáticas - https://drive.google.com/file/d/1Ijs1ZtOutQiXhRCfSZ943U4xl487JfcF/view?usp=sharing
+Aula 01 - Glomerulopatias I - https://drive.google.com/file/d/1ItQ0K8MJZ8jP0Z2IKMP0WG6w9CWjKyO_/view?usp=sharing
+Aula 01 - Síndromes Medulares - https://drive.google.com/file/d/1J2-v116JbFSUbzyNhFbQG9aiEDfPwdTV/view?usp=sharing
+Aula 01 - Intoxicações Exógenas - https://drive.google.com/file/d/1JCsXjg_-WKz6SKiLeaMDN8h972dppN8U/view?usp=sharing
+Aula 01 - Glomerulopatias I - https://drive.google.com/file/d/1JIttGg8wITboGPOpUdgoEuNjYUtvyJ9q/view?usp=sharing
+Aula 01 - Hipertireoidismo - https://drive.google.com/file/d/1JOoSu44yNMukA60y4G88fE39eGjcKKFU/view?usp=sharing
+Aula 01 - Acidentes com Animais Peçonhentos - https://drive.google.com/file/d/1JoIf-VDsbh0SWx8A_cuBmGJbTrgJbmKx/view?usp=sharing
+Aula 01 - História da Medcof - https://drive.google.com/file/d/1K5bI0nUlV4TrDM7cPzC_S4ubEAu0J6lt/view?usp=sharing
+Aula 01 - Glomerulopatias I - https://drive.google.com/file/d/1K9HJgexHaYT-5XajJwsIybdHDxYrYZAB/view?usp=sharing
+Aula 01 - Dispepsia - https://drive.google.com/file/d/1KN2P-iFa3Aav7fwvSm6xNNBh3yPMxJkt/view?usp=sharing
+Aula 01 - Intoxicações Exógenas - https://drive.google.com/file/d/1KTnq2wsovmxWoGNsu_xv7kwshdR_9mdW/view?usp=sharing
+Aula 01 - Esclerose Sistêmica - https://drive.google.com/file/d/1L0PEy8WUCTnH-udOi53gSc_cO_Z5CFjZ/view?usp=sharing
+Aula 01 - Meta Terapêutica, Manejo do Pré-DM e Tratamento Não Farmacológico do DM - https://drive.google.com/file/d/1L2Ikm_0cRRbMcnETBCbg4KwoTm-iS8u4/view?usp=sharing
+Aula 01 - Classificação dos estudos epidemiológicos - https://drive.google.com/file/d/1L2Z6letRR0GrrpPs9ONIgb1iz8wxTrqq/view?usp=sharing
+Aula 01 - Instabilidade Postural, Quedas e Imobilidade - https://drive.google.com/file/d/1LJMK2-HlvQKo0i6UbyeJs3udOFF8cPra/view?usp=sharing
+Aula 01 - Meningites e Encefalites - https://drive.google.com/file/d/1L_ZQhnv188atlqV94uCgaZ3kkLfG3O8t/view?usp=sharing
+Aula 01 - Síndrome de Guillain-Barré (SGB) - https://drive.google.com/file/d/1MBYx-UhSFv_AQcvWVPXHP2zKFTQ-jfxv/view?usp=sharing
+Analgesia e Sedação_COFEXPRESS - https://drive.google.com/file/d/1MGUAlcwdeuemP0dU5c2Vq8lgB6JSsu9z/view?usp=sharing
+Aula 01 - Glomerulopatias II - https://drive.google.com/file/d/1MNX79nqM4zKSFnPfudlNq_IiA5uzJoT3/view?usp=sharing
+Aula 01 - Associação x causalidade - https://drive.google.com/file/d/1MRUEmR50zQC4-Q7u_z1_bg1GG2wOP41v/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 2 - https://drive.google.com/file/d/1McQ3jErilXjbycGuPFEn-9i6hzGcH5Ww/view?usp=sharing
+TEP_COFEXPRESS - https://drive.google.com/file/d/1Me2mmGMJLBV1lAea2pUrnYcFmYLCfub1/view?usp=sharing
+Aula 01 - Depressão no Idoso - https://drive.google.com/file/d/1MkilBP10iKTblWupDKqz4P792z37eKoG/view?usp=sharing
+Aula 01 - Artrites Microcristalinas (Gota e CPPD) - https://drive.google.com/file/d/1MyX-fgprOXjBqYwiyboIuFA71aw9smwB/view?usp=sharing
+Aula 01 - Vasculites de Grandes e Médios Vasos - https://drive.google.com/file/d/1N-KFGCObfOKJ5dUpMKCNpp05CKal8fVG/view?usp=sharing
+Aula 01 - Transtorno de Humor I - https://drive.google.com/file/d/1N0onVsiTkQXtbgugcwimdIkXYo_PK4gY/view?usp=sharing
+Associação VS Causalidade_COFEXPRESS - https://drive.google.com/file/d/1N4FX_AgQQXIxIPLbXT9Kc2jt2b2jWJwt/view?usp=sharing
+Aula 01 - Anemias Hipoproliferativas I - https://drive.google.com/file/d/1NGPBInopQc7_gMyS-sZKTtFPRty-xRSK/view?usp=sharing
+Aula 01 - Síncope - https://drive.google.com/file/d/1NRBYV0QOETyYmO8HtOZs4pQUVTapLY5o/view?usp=sharing
+Aula 01 - Emergências Hiperglicêmicas (CAD e EHH) - https://drive.google.com/file/d/1Nec7l-x8hfMvWMHSZcbyxEfzT70OiM86/view?usp=sharing
+Aula 01 - Gasometria Arterial II - https://drive.google.com/file/d/1NlimEoY0LIIVD_ARZe35HESE_UQX8WLW/view?usp=sharing
+Aula 01 - Doença Inflamatória Intestinal (DII) - https://drive.google.com/file/d/1Njup8RnXGGH984A2YF14h_enBkP3setM/view?usp=sharing
+Aula 01 - Insuficiência Adrenal - https://drive.google.com/file/d/1No9Y4gm5Kb1ZmIx4nBgzS345rw0RnaGM/view?usp=sharing
+Choque - Abordagem Inicial - https://drive.google.com/file/d/1NqQk1YPUWvq_SYZ--ANaoavgYmsxynQU/view?usp=sharing
+Aula 01 - Antibióticos I - https://drive.google.com/file/d/1NwMaWUrKBxcG_Tk5lpngRCB0MB3mVUCH/view?usp=sharing
+Aula 01 - Icterícias febris e Febre Maculosa - https://drive.google.com/file/d/1O-LYtO6x64lSBUQWLqBIwSLeqV8wPjNu/view?usp=sharing
+Aula 01 - Miastenia Gravis - https://drive.google.com/file/d/1O0NaX_ajZU4g3U3rYnmhfH62-b4jevva/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda com Supra de ST (SCACSST) - https://drive.google.com/file/d/1O3VoC4Vqhr8FHPXTVWSZoEO1jrjyOKWa/view?usp=sharing
+Aula 01 - Distúrbios do Sódio - https://drive.google.com/file/d/1OCRfoCq1fT3WExN6geMUXPNC6w82Xyxg/view?usp=sharing
+Aula 01 - Síndrome de Guillain-Barré (SGB) - https://drive.google.com/file/d/1OIKA7dkZqc9aPBDdyirxWlx4jOKIt_yX/view?usp=sharing
+Aula 01 - Doença Renal Crônica I - https://drive.google.com/file/d/1O_4-Og-SdzAdwf6seyUuhwypWCnskNUU/view?usp=sharing
+Etica Medica_COFEXPRESS - https://drive.google.com/file/d/1OafyqiRysd5RJXuDa0dcol9T0csbSozs/view?usp=sharing
+Aula 01 - Esclerose Múltipla (EM) - https://drive.google.com/file/d/1OpXu4l0LaUE7wslYejeNb3mLL87FxElv/view?usp=sharing
+Aula 01 - Infecção de Corrente Sanguínea (ICS) - https://drive.google.com/file/d/1P-b0Db2R4qdI7Y0xjcir6Mzj1z1KCzRq/view?usp=sharing
+Aula 01 - Acidente Vascular Cerebral Isquêmico (AVCi) - https://drive.google.com/file/d/1PA4iT8keCom6xkuF6_Br3twRevTYBOsG/view?usp=sharing
+Aula 01 - Hemoterapia - https://drive.google.com/file/d/1PNt0EnmOJeYgkuLeIqKyztToev-zBHBK/view?usp=sharing
+Aula 01 - Gasometria Arterial II - https://drive.google.com/file/d/1POWQoAS97b1CTD-_tvYOmXVMa_hDjNYP/view?usp=sharing
+Aula 01 - Sífilis e Uretrites Infecciosas - https://drive.google.com/file/d/1PRLoexks3JXu89oimEFFh9nlpm96LGiN/view?usp=sharing
+Aula 01 - Distúrbios do Sono - https://drive.google.com/file/d/1PRbE-3j82kJswcL4nYZvKnwXraxn8Fah/view?usp=sharing
+Tratamento das Dislipidemias_COFEXPRESS - https://drive.google.com/file/d/1P_JAyvmtUxSsf4L2MiP2g3MJ-YsLnKE8/view?usp=sharing
+Aula 01 - Gasometria Arterial I - https://drive.google.com/file/d/1PijZEtoG1suMRuVYngHop24TfHJG1Lgs/view?usp=sharing
+Aula 01 - Distúrbios do Potássio - https://drive.google.com/file/d/1PzFdC6evui93slyYgmefL-TPH3Ps2zE0/view?usp=sharing
+Aula 01 - Doença Pulmonar Intersticial (DPI) - https://drive.google.com/file/d/1QI3GyakluXypk8uholrsakZnXxiQCJ58/view?usp=sharing
+Aula 01 - Bradiarritimias - https://drive.google.com/file/d/1QKsRvzBDYjZUVmjy03c_70opu-tYELoE/view?usp=sharing
+Aula 01 - Avaliação Global do Hemograma - https://drive.google.com/file/d/1QWPte-2jWo9ULqsccL4_bD5JozsqaWPM/view?usp=sharing
+Aula 01 - Úlcera Péptica, H. Pylori, Gastrite Atrófica e Dispepsia Funcional - https://drive.google.com/file/d/1Qck9FBCTFHyCUx1MVJ4r_ACl5jmHet2e/view?usp=sharing
+Aula 01 - Síndrome Coronariana Crônica - https://drive.google.com/file/d/1QeDIz5oONv_CFhY-YTHljBmjvZvG0-jV/view?usp=sharing
+Aula 01 - Tratamento de Tuberculose e Efeitos Colaterais do RIPE - https://drive.google.com/file/d/1Qh2UoQptzs09aMEKsuv6uB7KvjWPwlGp/view?usp=sharing
+Tuberculose Extra Pulmonar_COFEXPRESS - https://drive.google.com/file/d/1QsGKhYDYfnBX5mDLD51NtJt9ti2YEtCB/view?usp=sharing
+Aula 01 - Anticoagulação II - https://drive.google.com/file/d/1QxL1AKiqGv9l352aWcdmAB79FkNJvNeg/view?usp=sharing
+Aula 01 - Pericardite e Miocardite - https://drive.google.com/file/d/1RN-li2nC9zuqXHaPNvkq82DU9Je9xh0Z/view?usp=sharing
+Aula 01 - Síndrome de Guillain-Barré (SGB) - https://drive.google.com/file/d/1RSv2zsRWqxU1LsuZEo3WyQFcksG9xxSX/view?usp=sharing
+Aula 01 - DRGE - https://drive.google.com/file/d/1RzUSKYvO1K9LRlRJfQTHNiehLHtvAae3/view?usp=sharing
+Aula 01 - Anemias Hemolíticas Adquiridas - https://drive.google.com/file/d/1S1yAv1rgKZX3pWYc_OySo5FWgyaJvm0J/view?usp=sharing
+Aula 01 - Introdução às Cefaleias Primárias - https://drive.google.com/file/d/1S8ButPiskSPqg4akHYion9Ajx8kP4_Yr/view?usp=sharing
+Aula 01 - Tireoidites & Síndrome do Eutireoidiano Doente - https://drive.google.com/file/d/1T1k-Dyf_3Esziib51J4HdUA3EA5LkGNv/view?usp=sharing
+Aula 01 - Fisiologia da Coagulação - https://drive.google.com/file/d/1TRz7QYjZTuap4jEcrjJVgpqMhCU7m0lM/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda com Supra de ST (SCACSST) - https://drive.google.com/file/d/1TaM4qJOH1nbOosE3itGA-oCfJgOYRyr1/view?usp=sharing
+Aula 01 - Meningites e Encefalites - https://drive.google.com/file/d/1Th-A381_CPs1Coss0W7zYDB4GYiIINJO/view?usp=sharing
+Aula 01 - Linfomas - https://drive.google.com/file/d/1TxAbJ8fEfCx213TdbMRMNbq5xQvYh-O2/view?usp=sharing
+Aula 01 - Síncope - https://drive.google.com/file/d/1UF8kgxrb6-_fR8wB_NRpmLjH-v_g--J7/view?usp=sharing
+Aula 01 - Avaliação Global do Hemograma - https://drive.google.com/file/d/1UGjIqQAasfuk01IAtoKv13ZV3qClCpK1/view?usp=sharing
+Abdome Agudo Inflamatório Colangite_COFEXPRESS - https://drive.google.com/file/d/1USeD-JUrRho8P9VbD-pZLEPOthGrWze6/view?usp=sharing
+Aula 01 - Anemias Hemolíticas Adquiridas - https://drive.google.com/file/d/1UnjQJk4QidYrU5AlUaz5b3pkngGWTqDh/view?usp=sharing
+Aula 01 - Doença de Behçet - https://drive.google.com/file/d/1UrD1nJZFEFql0hKKsWEEmn-rGAW0J4xL/view?usp=sharing
+Aula 01 - Vacinação do Idoso - https://drive.google.com/file/d/1UwPP3jcRyQULzHLZeT8de7Smi-KybY4l/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda sem Supra de ST (SCASSST) - https://drive.google.com/file/d/1Uyq3YQoNX6qasxn1ZySn4Ypw2moJwAKt/view?usp=sharing
+síndromes_medulares__cofexpress (1080p) - https://drive.google.com/file/d/1V0rdUcW36rQZIKuGPVkYpZp-bpNGv4Fd/view?usp=sharing
+Aula 01 - Lúpus Eritematoso Sistêmico - Clínica Médica - https://drive.google.com/file/d/1VEvzcVyFVJIJ5MKUN9HHPNOziWKOAaCJ/view?usp=sharing
+Transtornos Relacionados a Substâncias - Álcool_COFEXPRESS - https://drive.google.com/file/d/1VJ9g9G4o3raUd8ownRC69eShXkNlmCLZ/view?usp=sharing
+Aula 01 - Glomerulopatias I - https://drive.google.com/file/d/1VKEdzunD28V81l1XC9eMRJvBAqGS4tir/view?usp=sharing
+Aula 01 - Vacinação do Idoso - https://drive.google.com/file/d/1VYzaNUfWEHQx8lH9VNHdWnWDn2EBfvC-/view?usp=sharing
+Aula 01 - Neoplasias Específicas e Miscelânea - https://drive.google.com/file/d/1Vj-_u7jei9kqoaxCGs7OYclm_rHT-tGD/view?usp=sharing
+Aula 01 - Tratamento de Tuberculose e Efeitos Colaterais do RIPE - https://drive.google.com/file/d/1Vn6iiB-jN2J5IdnStJZtW6i92SbTt1fc/view?usp=sharing
+Aula 01 - Depressão no Idoso - https://drive.google.com/file/d/1VyG43p8nqBxKE-F_-asC8Seu47p3mKfh/view?usp=sharing
+Aula 01 - Doenças Negligenciadas - https://drive.google.com/file/d/1W2zVS939eM7G_P-JzjM0ZgRCCw39-eNm/view?usp=sharing
+Indicadores de saúde - Parte 2 - COFEXPRESS - https://drive.google.com/file/d/1WDfxXGgyqJAeKtPGaNjkH4IIN_8UTqAw/view?usp=sharing
+kafgndfa - https://drive.google.com/file/d/1WVPt1n_bcf4ob90kfOoX8STgwUXWsEMw/view?usp=sharing
+Aula 01 - Doença Inflamatória Intestinal (DII) - https://drive.google.com/file/d/1WepuizRxBmw9gR2lAwujhsp3RMkpgCyE/view?usp=sharing
+Estudos transversais_COFEXPRESS - https://drive.google.com/file/d/1WsWUaCiS2NyGrc5W7cXyXqJoRRxz524m/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 1_COFEXPRESS - https://drive.google.com/file/d/1X2xAuz2l7LXDXjXQ_bdi0CgCrUZ-0GUz/view?usp=sharing
+Aula 01 - Emergências Hiperglicêmicas (CAD e EHH) - https://drive.google.com/file/d/1XEz9UTijwpCLAMcs94iW1VZf-Cam9teu/view?usp=sharing
+Aula 01 - Taquiarritmias - https://drive.google.com/file/d/1XGgSqSylX114x599Onu0H1XTTCYWKM7a/view?usp=sharing
+Aula 01 - Síndromes Medulares - https://drive.google.com/file/d/1XOmuzALoGtKzxZsdWWIpigc4eIvtxDuA/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda com Supra de ST (SCACSST) - https://drive.google.com/file/d/1X_yLXpUVXdnHryb1fNHpHT7EIZ5mMEmd/view?usp=sharing
+Aula 01 - HIV - https://drive.google.com/file/d/1XkVBRjOILv7QedIvQYH1MYM1EjLqvxb7/view?usp=sharing
+Asma_COFEXPRESS - https://drive.google.com/file/d/1Xol8dGPUZDKHqWCS-5HpVvbXM1oDcIDf/view?usp=sharing
+Vacinação do Idoso_COFEXPRESS - https://drive.google.com/file/d/1YEiDIHnCvyAO99rXvmLYNBwuv-SnJtpW/view?usp=sharing
+Aula 01 - Infecção do Trato Urinário (ITU) - https://drive.google.com/file/d/1YIRFHb4oKInfW0DrGpR0S9jq5rPm89oT/view?usp=sharing
+Aula 01 - Prolactinomas - https://drive.google.com/file/d/1YJDWDOSysUKcZZs54uszXGonNzj0-tHr/view?usp=sharing
+Aula 01 - Síndromes Medulares - https://drive.google.com/file/d/1YQgRK-DqEC1a-RGiXx7ETh3AuOrWdLbl/view?usp=sharing
+Aula 01 - Distúrbios do Cálcio - https://drive.google.com/file/d/1YRZffFmYyHRoBtCgjSCvRAjqYfk5nF4R/view?usp=sharing
+Aula 01 - Dispepsia - https://drive.google.com/file/d/1YaQMLp-ghOvM1tokSACoO5t1IGGFYR7d/view?usp=sharing
+Aula 01 - Derrame Pleural - https://drive.google.com/file/d/1Ybr3Uz3GwTdpVkHUv3Ftf8-q9Q1DkPCc/view?usp=sharing
+Aula 01 - BLS e ACLS - https://drive.google.com/file/d/1YnC5DfKjQTjrY5Z5fj8u2P9ojiOqHi4v/view?usp=sharing
+Aula 01 - Anemias Hipoproliferativas II - https://drive.google.com/file/d/1ZER_zKMmInbuy4Ll5VzVzsJ7CojUoTPe/view?usp=sharing
+Aula 01 - Via Aérea, Intubação e Ventilação Não-Invasiva (VNI) - https://drive.google.com/file/d/1ZFK42j0BRcYe_bMIePHuf7mkkyhv_wh7/view?usp=sharing
+Aula 01 - Gasometria Arterial I - https://drive.google.com/file/d/1ZTeDyr0RjlNIC4RnLWreQPbJ0h6IGWCE/view?usp=sharing
+Aula 01 - Febre Reumática e Endocardite - https://drive.google.com/file/d/1ZoKqJpA2NWmrMfvcr1g_YaYhz8fT17ZC/view?usp=sharing
+Aula 01 - Vasculites de Pequenos Vasos - https://drive.google.com/file/d/1_NNUs_I_NbeAEHz7XM0t1yxDnz0M79HK/view?usp=sharing
+Aula 01 - Hepatites Virais - https://drive.google.com/file/d/1_ToL_B3NjHl5k-GtwUBpYaXtp5Ns36B5/view?usp=sharing
+Aula 01 - Pré-Operatório II - https://drive.google.com/file/d/1_nMfbgRxldTRt8l1-3G97L1-ORJ8G4hK/view?usp=sharing
+Aula 01 - Neurossífilis - https://drive.google.com/file/d/1a-Pzf_kWrqHOOxvNQQVQAgQsyM-Gx1cT/view?usp=sharing
+Aula 01 - Vasculites de Grandes e Médios Vasos - https://drive.google.com/file/d/1aBBBxYsWOLmVsZ2uAs3fK4ABQVMhhERA/view?usp=sharing
+Aula 01 - Pré-Operatório II - https://drive.google.com/file/d/1aEzsR8vDpcJreDrcuJbN-djEX7LWikV2/view?usp=sharing
+Aula 01 - Pericardite e Miocardite - https://drive.google.com/file/d/1aV7rvrroKItEQ7bXx6CX_JG3qgS5N3T0/view?usp=sharing
+Injúria Renal Aguda (IRA) Parte 2_COFEXPRESS - https://drive.google.com/file/d/1ae2CmtvoNf0gv4ftxtyipXMgKnFff6-a/view?usp=sharing
+Aula 01 - Enxaqueca (Migrânea) - https://drive.google.com/file/d/1ajX0_vAdOM14vzBZtSczp8dF3aB3VX95/view?usp=sharing
+Aula 01 - Depressão no Idoso - https://drive.google.com/file/d/1akIHElZMxwKXNWByEVfM9uJA23GbW9cu/view?usp=sharing
+Aula 01 - Drogas Vasoativas (DVA) - https://drive.google.com/file/d/1apAmhR_tDGq_VVWMuTTS8uulO95IJmUk/view?usp=sharing
+Aula 01 - Via Aérea, Intubação e Ventilação Não-Invasiva (VNI) - https://drive.google.com/file/d/1apb2h0-6AkW69IbuHRn9QlWn34Fpsmsp/view?usp=sharing
+Aula 01 - Enxaqueca (Migrânea) - https://drive.google.com/file/d/1bI0tuPSnxbMZwqHuBst_NwE29mLDPTZ4/view?usp=sharing
+Aula 01 - Osteoporose - https://drive.google.com/file/d/1bTaPD_-6BaDjCE_ri0fqLGhVDZFsMHsj/view?usp=sharing
+Aula 01 - Asma - https://drive.google.com/file/d/1bWlnT6MJSygUVpc9nrgj0wviyk77IVR1/view?usp=sharing
+Oncologia Cuidados paliativos - https://drive.google.com/file/d/1bjyW5YusNRdawZU55DgAeGfERC0BuNl9/view?usp=sharing
+Aula 01 - Avaliação Global do Hemograma - https://drive.google.com/file/d/1bqJWZxaOdtEiEPO_gjoF_55a_GwGv4gM/view?usp=sharing
+Aula 01 - Discrasias Plasmocitárias - https://drive.google.com/file/d/1bs4cilyoy4nzIDB6lvIq0yxUYRUc1hGi/view?usp=sharing
+Aula 01 - Antibióticos II - https://drive.google.com/file/d/1cDUqBYp_eZCu1P-S8NiH2H9mvhqAiOca/view?usp=sharing
+Insulinoterapia_COFEXPRESS - https://drive.google.com/file/d/1cYeHcOCKFDho8q4bx6Yy75JYTmU6VWnI/view?usp=sharing
+insuficiência_cardíaca_-_descompensações_agudas_cofexpress (1080p) - https://drive.google.com/file/d/1cahYOTkIJ3LFFqggb8osm6xY9bHTM8hs/view?usp=sharing
+cirrose_hepática_ascite_+_pbe_cofexpress (1080p) - https://drive.google.com/file/d/1dERrHMiYd7vYyJIw5NT7cTxDjyUSuTjG/view?usp=sharing
+insuficiência_cardíaca_-_avançada (1080p) - https://drive.google.com/file/d/1dJrKqfsi94vC-o9tVnVapeFqeuHVNOOZ/view?usp=sharing
+Aula 01 - Iatrogenia no Idoso - https://drive.google.com/file/d/1dVgfMRf5DHYT2ysifdpYMOzdOs2ld0jI/view?usp=sharing
+Aula 01 - Introdução às Cefaleias Primárias - https://drive.google.com/file/d/1ddDwNu8ZCD2sQJ7eiFDSgUrjOflqe0xG/view?usp=sharing
+Aula 01 - Vasculites de Pequenos Vasos - https://drive.google.com/file/d/1ef6XPktxA27aySYmc66CQfhIZXTeFrXR/view?usp=sharing
+Vasculites de Grandes e Médios Vasos_COFEXPRESS - https://drive.google.com/file/d/1ewHRPERs8pd_LKoqk9G4kx1JH8adNf2u/view?usp=sharing
+Aula 01 - Leucemias - https://drive.google.com/file/d/1fC0n-2cLhrMQ0ZYh61r1LbI5idE7RI-A/view?usp=sharing
+Aula 01 - Anticoagulação I - https://drive.google.com/file/d/1fKi4o-0Cs46qGD3x2mnCYO23eMPBtwGJ/view?usp=sharing
+Aula 01 - Diagnóstico de Morte Encefálica (ME) - https://drive.google.com/file/d/1fb6PVhZ2dmEJxxGOtnKH1cN_kHo32NHG/view?usp=sharing
+Alergia II Reações de hipersensibilidade_COFEXPRESS - https://drive.google.com/file/d/1fhsMPFIYMRkKlCldkh19hlB0SlkILJVq/view?usp=sharing
+Aula 01 - Incidentaloma Adrenal - https://drive.google.com/file/d/1g7tjrI0xB4GblyK7X0NUZVinZb3J2YL_/view?usp=sharing
+Aula 01 - Avaliação de Enzimas Hepáticas - https://drive.google.com/file/d/1g9pZv8jaslDaCldA0imuGnPeZDbkTm9P/view?usp=sharing
+Aula 01 - Sífilis e Uretrites Infecciosas - https://drive.google.com/file/d/1gCvOG-QbRZaKdWhYe1lWh6UrAHOHRKW1/view?usp=sharing
+Aula 01 - BLS e ACLS - https://drive.google.com/file/d/1gHt7d5HEKypnnLIHVXNCyGuh_q1DysrL/view?usp=sharing
+Aula 01 - Acidente Vascular Cerebral Hemorrágico (AVCh) Intraparenquimatoso - https://drive.google.com/file/d/1gIyfBPd5lv4hg6jr9lq7OVGaBN_a9eOB/view?usp=sharing
+Aula 01 - Doença de Behçet - https://drive.google.com/file/d/1gPdL4BVPTxeY0DmSzD67Nax1nKoIWghZ/view?usp=sharing
+Aula 01 - Analgesia e Sedação - https://drive.google.com/file/d/1gcIDYk1AHvdUjUyvJ1EKWfP_T9fwrwEi/view?usp=sharing
+Aula 01 - Emergências Hiperglicêmicas (CAD e EHH) - https://drive.google.com/file/d/1h56qFqD7O_SmcXilwKFhAglAe5Stbz4W/view?usp=sharing
+Aula 01 - Diagnóstico de Morte Encefálica (ME) - https://drive.google.com/file/d/1hMljPxpvZ6-3dqG4t1F45qK-aFeqbawg/view?usp=sharing
+Aula 01 - Leucemias - https://drive.google.com/file/d/1haVmrYEpkMnRTdiW4SdYUiLWwOmo6SBM/view?usp=sharing
+Aula 01 - Doença Renal Crônica II - https://drive.google.com/file/d/1hbSvCkN6wY5Lv94i6myiwJNxoNipnpjW/view?usp=sharing
+HIV_COFEXPRESS - https://drive.google.com/file/d/1hddt0g3b-Mt1vj4SVR9UKZGtLUgIzqT8/view?usp=sharing
+Aula 01 - Síndrome Coronariana Crônica - https://drive.google.com/file/d/1hffdG2rJj0iroQTpFJ7gRb9T47k2HJEJ/view?usp=sharing
+Aula 01 - Complicações Crônicas do Diabetes Mellitus (DM) - https://drive.google.com/file/d/1hqOfXJfdd_nJbQzeZxMEXG6QX_2nrhU8/view?usp=sharing
+Aula 01 - Doença Renal Crônica II - https://drive.google.com/file/d/1iBa8nYrvGqwuj4Qsj8hjVFt4wuJ-F65_/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda com Supra de ST (SCACSST) - https://drive.google.com/file/d/1iC3nPU-dxrlXxDuUV9UsvZkZQNJkfY7V/view?usp=sharing
+Aula 01 - HIV - https://drive.google.com/file/d/1iPvo9MD-7ZU9OrnoZTXAGM3bZSGfoQGn/view?usp=sharing
+Aula 01 - Pré-Operatório II - https://drive.google.com/file/d/1isHSZdD-nI3j4ue-MOZHDVkl3iSt1OI8/view?usp=sharing
+Aula 01 - Diarreia Agudas e Colite Pseudomembranosa - https://drive.google.com/file/d/1jPFdpFdYKV6cTOVc33jZj68_Ql-Ypcu0/view?usp=sharing
+Aula 01 - Otologia I - https://drive.google.com/file/d/1jrBKQxJ2nONa9k-2SNLD66EZVewViI9N/view?usp=sharing
+Aula 01 - Vacinação do Idoso - https://drive.google.com/file/d/1kF9YrFPAM8lv5z9VlmR_OmNdaQiXjtc_/view?usp=sharing
+Aula 01 - Gasometria Arterial II - https://drive.google.com/file/d/1kFTDVlZV9ufw7CXj5pJWyuuGLRewHo4k/view?usp=sharing
+Obesidade Tratamento Farmacológico e Cirúrgico _COFEXPRESS - https://drive.google.com/file/d/1kHjUXaqMZiY5SsmVgvj_-QJR-hLbABDm/view?usp=sharing
+Aula 01 - Anemias Hemolíticas Hereditárias - https://drive.google.com/file/d/1kPeyF1IJQwFqGqKruxnjf_8cbOraaNCH/view?usp=sharing
+Aula 01 - Púrpura Trombocitopênica Trombótica (PTT) - https://drive.google.com/file/d/1kaqYBBxZFmBMHEfGuMOtI4y0atGKqFzj/view?usp=sharing
+Aula 01 - BLS e ACLS - https://drive.google.com/file/d/1kwiHIxLgHGhNO8z3OxuX4NNYv_Ms6SxJ/view?usp=sharing
+Aula 01 - Valvopatias - https://drive.google.com/file/d/1kyiLqHZ5ji8_U64zYEdsKLpXbUEhPLF1/view?usp=sharing
+Aula 01 - Miastenia Gravis - https://drive.google.com/file/d/1lgnyB1MAiGq4JuPNgcSK0EEnDI7ImdRL/view?usp=sharing
+Saúde Suplementar_COFEXPRESS - https://drive.google.com/file/d/1lmOchdaUR43VuNrSLjQwpFiyZ7na5I5R/view?usp=sharing
+Urologia Litíase no pronto-socorro_COFEXPRESS - https://drive.google.com/file/d/1lrj4OyJs35LwO4M9m6o2KCBcNPrxtfNf/view?usp=sharing
+Aula 01 - Esclerose Múltipla (EM) - https://drive.google.com/file/d/1m1cvbQGnoCv3Ogx1pQeTD9sn1MMmS4Zz/view?usp=sharing
+Aula 01 - Diarreia Agudas e Colite Pseudomembranosa - https://drive.google.com/file/d/1m2iWRu6ru0nPBxoUTVcOFPoMsS4adHwy/view?usp=sharing
+Aula 01 - Ética Médica - https://drive.google.com/file/d/1m9lDAfZQU0jGFxP4JM5usAa76No4Od0O/view?usp=sharing
+Aula 01 - Distúrbios do Cálcio - https://drive.google.com/file/d/1mN8d-GFyf6EqQf6kQMDhlDFv4Xwyl3Ro/view?usp=sharing
+Aula 01 - Tratamento das Dislipidemias - https://drive.google.com/file/d/1mVEW3cbHj-IlrxzVaqUdf1KaSlyfbo5t/view?usp=sharing
+Iantrogenia no Idoso_COFEXPRESS - https://drive.google.com/file/d/1myGhNm7NabtO-HPCoCW_XL8UlysHt_JW/view?usp=sharing
+Aula 01 - Doença de Behçet - https://drive.google.com/file/d/1myWpr3vsZEhg97NcYc1_T9cSDCC65P8Z/view?usp=sharing
+Aula 01 - Antibióticos I - https://drive.google.com/file/d/1n-H_ZxplcsF6Ry2OTqs1S2-6hxHTCZHJ/view?usp=sharing
+Aula 01 - Introdução à Geriatria - https://drive.google.com/file/d/1nRmMhFijpkO3jzUbNgCglKz3-MkKX8v_/view?usp=sharing
+Aula 01 - Distúrbios do Cálcio - https://drive.google.com/file/d/1njVvvgBE6hpZpxgW5hRHDM1yievu7aNS/view?usp=sharing
+insuficiência_cardíaca_-_avançada_cofexpress (1080p) - https://drive.google.com/file/d/1nmYLDX-0euHeM9Y_mCzxH_pBHCGEhZiJ/view?usp=sharing
+Aula 01 - Meningites e Encefalites - https://drive.google.com/file/d/1nqyoaazdH1Qm37q9fVxjEGCY2opr2oGO/view?usp=sharing
+Aula 01 - Introdução às Cefaleias Primárias - https://drive.google.com/file/d/1oBDralECNPZnWjgg92iiU-SRwlva_SE6/view?usp=sharing
+Aula 01 - Síndrome do Desconforto Respiratório Agudo (SDRA) - https://drive.google.com/file/d/1oCa6GM6qN2PwFO1vLh3F0JJvNWWDok5F/view?usp=sharing
+Aula 01 - Hipertensão Arterial Sistêmica (HAS) - https://drive.google.com/file/d/1oNxAkKCfgs3yE0hzpSHLYmelpHxWoCPR/view?usp=sharing
+Aula 01 - Lúpus Eritematoso Sistêmico - Clínica Médica - https://drive.google.com/file/d/1oQ-C1rvDc6ru6saxFwSbljk3zW7EbsLV/view?usp=sharing
+Aula 01 - Doença de Parkinson - https://drive.google.com/file/d/1o_YgeSX48Rsp9ArwkEf24Pt3SNRTlcHj/view?usp=sharing
+Aula 01 - Pré-Operatório I - https://drive.google.com/file/d/1o_tHHLGbNX559g22KY90rMUV_2wmiY6k/view?usp=sharing
+Aula 01 - Hemoterapia - https://drive.google.com/file/d/1oaoTVQCQJVNHk4b8SSDDlJTqFe8iWizL/view?usp=sharing
+Aula 01 - Esclerose Múltipla (EM) - https://drive.google.com/file/d/1p569KzKHogaaF-7HVwILmNahLy1Kd2IT/view?usp=sharing
+Aula 01 - Doença Hepática Esteatótica Metabólica (DHEM) - https://drive.google.com/file/d/1pA0PEkJK1TyHj6diZE8MvzggWmqi1GXU/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda sem Supra de ST (SCASSST) - https://drive.google.com/file/d/1pNWnabNDs7tzSMQDVwaXAxB8KDjRbw-d/view?usp=sharing
+Aula 01 - Espirometria - https://drive.google.com/file/d/1pwOqfyRtsS--o-b5GuI_fPwvhVqHsQd-/view?usp=sharing
+Aula 01 - Hiperaldosteronismo Primário - https://drive.google.com/file/d/1qA19BDBcZmLsxY7PLCH-pow91UOai3lK/view?usp=sharing
+Aula 01 - Anemias Hipoproliferativas II - https://drive.google.com/file/d/1qLg1iEacwuF4bhBXq2IByk4QjwGupQi1/view?usp=sharing
+Aula 01 - Síndrome do Desconforto Respiratório Agudo (SDRA) - https://drive.google.com/file/d/1qYY-uXccOX33MAaD6k0LUZx1eRrTd2Hz/view?usp=sharing
+Classificaçãodos Estudos Epidemiológicos - https://drive.google.com/file/d/1qa8mOxZw9DewUGZIqPLNBws4jalapaEi/view?usp=sharing
+Aula 01 - Espirometria - https://drive.google.com/file/d/1qc0NOwgm5LFEZsvt3zYy4t5GeHmRLjmG/view?usp=sharing
+Aula 01 - Instabilidade Postural, Quedas e Imobilidade - https://drive.google.com/file/d/1qwbrA-iMy1YsLDjj9NxAVcIwykcxv_et/view?usp=sharing
+Aula 01 - Acidentes com Animais Peçonhentos - https://drive.google.com/file/d/1r5IjMW4hBXF3MPDTxGAeXti7iVRZvL5B/view?usp=sharing
+Aula 01 - Infecção do Trato Urinário (ITU) - https://drive.google.com/file/d/1rHgYtBqGX3_GNPQMiqW9PV3UpeXh2jzz/view?usp=sharing
+Decreto 750811_COFEXPRESS - https://drive.google.com/file/d/1rV_FPk696poAM-7mls6axCjValc5Vt1t/view?usp=sharing
+Aula 01 - DRGE - https://drive.google.com/file/d/1rbWsP_GLYMFpV50R1n00pzHWfmDBeliH/view?usp=sharing
+Derrame Pleural_COFEXPRESS - https://drive.google.com/file/d/1roDZaRx1smc9ZOwl4vQZu7jrFSg-gTvs/view?usp=sharing
+Aula 01 - Infecção do Trato Urinário (ITU) - https://drive.google.com/file/d/1rofcGqvF886rzj5WS93lJ3Ce0RytclM5/view?usp=sharing
+Alergia I Rinite e Angioedema_COFEXPRESS - https://drive.google.com/file/d/1rzA4LXI7pU4BIP3cerCrK1-6-Sf8czyI/view?usp=sharing
+Aula 01 - Doença de Parkinson - https://drive.google.com/file/d/1sFwwR1Y5S5Ck-lcwPxLxXVr7OjVzYKcY/view?usp=sharing
+Taquiarritmias - Cardiologia_COFEXPRESS - https://drive.google.com/file/d/1sRjqRbcH5jSwiScPTIZImmPKpzdQx5ol/view?usp=sharing
+Aula 01 - Incontinência Urinária no Idoso - https://drive.google.com/file/d/1squ2WpP7E0G5RyEmq2x8TJTDY_OifhcK/view?usp=sharing
+Aula 01 - História da Medcof - https://drive.google.com/file/d/1svrw5iRdxePCqp_oXzQEjDSE8sPlm-5e/view?usp=sharing
+Aula 02 - Apresentação da Plataforma Medcof Plus - https://drive.google.com/file/d/1sz0F5HFACIYv3X8J4rmprKdCcwDlI4F9/view?usp=sharing
+Aula 01 - Classificação dos estudos epidemiologicos - https://drive.google.com/file/d/1tEQwlXy0xwfBirC9t-ICWVz8S1sO1a9U/view?usp=sharing
+Hiperaldosteronismo Primário_COFEXPRESS - https://drive.google.com/file/d/1tUURTzeHF0LMBClGEXLVnTAWdWVDny5G/view?usp=sharing
+Aula 01 - Distúrbios do Cálcio - https://drive.google.com/file/d/1tgEcI5_N6ad8lPHnW7zWiAJUwY3q7Hnz/view?usp=sharing
+Aula 01 - Tuberculose Extra Pulmonar - https://drive.google.com/file/d/1tsz1Wd3LcnxM_0t1zp8PQxWdP-YQOnYU/view?usp=sharing
+Aula 01 - Síndrome de Guillain-Barré (SGB) - https://drive.google.com/file/d/1tynrPiKPeLhQieX_xJw8pJOI2VYH-47W/view?usp=sharing
+Aula 01 - Doenças Virais e Pandêmicas - https://drive.google.com/file/d/1u1gkfCA9iCdAicBYilC0_f6v0zQWj7Xx/view?usp=sharing
+Aula 01 - Púrpura Trombocitopênica Trombótica (PTT) - https://drive.google.com/file/d/1uIMri6ZJ1YEvl4Y0MpcXSLybOMweem63/view?usp=sharing
+Aula 01 - Miastenia Gravis - https://drive.google.com/file/d/1uTVugk1RcfJQKgnr9Q-TykrRNIV7TSBN/view?usp=sharing
+Aula 01 - Doenças Virais e Pandêmicas - https://drive.google.com/file/d/1uUjE2aGQKJvBj3LWfcB_VbpsHf-fXyXT/view?usp=sharing
+Aula 01 - Gasometria Arterial II - https://drive.google.com/file/d/1vQ0e2wQe5cowBvKuxxKGn-Y21HsMZ64d/view?usp=sharing
+Aula 01 - Hipertensão Arterial Sistêmica (HAS) - https://drive.google.com/file/d/1vkvCM-gq0nPRFmFjm1Vh36sNboUEn2lm/view?usp=sharing
+Aula 01 - Doença Renal Crônica I - https://drive.google.com/file/d/1vw0sLfYAt6ozMcaT6hF4jHoKpPHYQnfR/view?usp=sharing
+Aula 01 - Doença Renal Crônica I - https://drive.google.com/file/d/1vxuVt5zU6RVItAevHY7EvxZu_kt4nDqT/view?usp=sharing
+Insuficiência Cognitiva Demências_COFEXPRESS - https://drive.google.com/file/d/1wB52BZe4WpDid169hZ37dmYPhQC4WZ-k/view?usp=sharing
+Aula 01 - Síndrome de Guillain-Barré (SGB) - https://drive.google.com/file/d/1wMLoKHvm61zlwPWow-kUONTWi6GLZEzE/view?usp=sharing
+Aula 01 - Doença de Parkinson - https://drive.google.com/file/d/1wMeSOn02_Wt7_eY7zWQVS1Jm74PSBBXI/view?usp=sharing
+Aula 01 - Síndrome Metabólica - https://drive.google.com/file/d/1wUCp1Kgxjk1T-RMPtAnorzKsJTCUSqCJ/view?usp=sharing
+Aula 01 - Síndrome de Cushing - https://drive.google.com/file/d/1woue-kN8pismiIRrjKLihHLvcwRK_ITK/view?usp=sharing
+Aula 01 - Sindromes Aórticas Agudas - https://drive.google.com/file/d/1wvwr5Y_4BJWMntflcjXNbrVSzXFkpM6X/view?usp=sharing
+Aula 01 - Meningites e Encefalites - https://drive.google.com/file/d/1wx2wQqLctjqa3W-4N-kL1bAIDJdFF277/view?usp=sharing
+Aula 01 - Emergências Hipertensivas - https://drive.google.com/file/d/1xe81O3y6zJf39MdlTNPTNusgoSsWXPXh/view?usp=sharing
+Aula 01 - Síndrome Coronariana Aguda sem Supra de ST (SCASSST) - https://drive.google.com/file/d/1xqhjxIz57O1D7UCrI6dnC722MrVH8mRA/view?usp=sharing
+Aula 01 - Emergências Oncológicas - https://drive.google.com/file/d/1xt6mho7uuQp2xVRWNVfw4iVEMs-umo8W/view?usp=sharing
+Aula 01 - Doença Renal Crônica II - https://drive.google.com/file/d/1xvmEpILvLy_ONZp6o4f9T10Lbo45wl25/view?usp=sharing
+Aula 04 - TECM - https://drive.google.com/file/d/1xwfroudiaaZyVJ5Az0jDz4oHaQ8WYc6_/view?usp=sharing
+Aula 01 - Saúde Suplementar - https://drive.google.com/file/d/1y1k05br5On-lEVDE6xra_QlmmdfPpmfS/view?usp=sharing
+Aula 01 - Diagnóstico de Morte Encefálica (ME) - https://drive.google.com/file/d/1yHaB2AmlKXVDUPaCRR4pdBbbDA1vDG2q/view?usp=sharing
+Aula 01 - Otologia II - https://drive.google.com/file/d/1yK4UNjWf5vRSr4pOcbPlX7KAmlS_JSr9/view?usp=sharing
+Aula 01 - Linfomas - https://drive.google.com/file/d/1yOv6cu43d4UbJ-DaEZKtER1LszGSPDgE/view?usp=sharing
+Aula 01 - Doença Renal Crônica I - https://drive.google.com/file/d/1yVF0bP4fzCntpgzQtL3pRZe5NHz9KrD3/view?usp=sharing
+Aula 01 - Miastenia Gravis - https://drive.google.com/file/d/1yY80xD52wsiMp50_9vcMajzxSTQnOHs_/view?usp=sharing
+Aula 01 - Distúrbios do Potássio - https://drive.google.com/file/d/1yt4y2b1uIjbDwbWtAdZIt68-WcwcVgwL/view?usp=sharing
+Aula 01 - Anticoagulação em Cardiologia - https://drive.google.com/file/d/1yufnlHsklIFeS5d1g_BPDr5pp5LvEQoM/view?usp=sharing
+Aula 01 - Estudos transversais - https://drive.google.com/file/d/1z689yzfPR-4IBWrnibhoisqrZIDjfdOR/view?usp=sharing
+Aula 01 - Vasculites de Pequenos Vasos - https://drive.google.com/file/d/1zD3yJrW2Vz_ZMd1cuprNIjqgNpgUkVBk/view?usp=sharing
+Decreto 750811 - https://drive.google.com/file/d/1zE8435fayiZww_8isRrG698S4RzZ0DTR/view?usp=sharing
+Aula 01 - Artrites Microcristalinas (Gota e CPPD) - https://drive.google.com/file/d/1zSZaz-Py85lNK6vgevRkw9ACmZUuQXBL/view?usp=sharing
+Tuberculose Pulmonar_COFEXPRESS - https://drive.google.com/file/d/1zbb3h2lo9DdhQPtMAKdAsDHOHYRZCeCf/view?usp=sharing
+Aula 01 - Intoxicações Exógenas - https://drive.google.com/file/d/1zgMnX7Hp_mYthLTQLOwuJADVwjlpap_a/view?usp=sharing
+Aula 01 - Hipertensão Pulmonar - https://drive.google.com/file/d/1zkhF_cYr-yXuaQ-2tLnkgr1hrYDGWX2W/view?usp=sharing
+Aula 01 - Cefaleias Trigêmino-Autonômicas - https://drive.google.com/file/d/1zzHPPB1t1yoL-vfBCwpU4FAWrCFNCCsz/view?usp=sharing
+Ficha Resumo - Sindrome Coronariana Aguda com Supra de ST - https://drive.google.com/file/d/1-DkHJhVymPExTnd2es34CdLREHj7JaKn/view?usp=sharing
+Ficha resumo - Cirrose hepatica_ Ascite + PBE - TECM - https://drive.google.com/file/d/1-Gjpa0yyabeQHn8NqxyX5YtI-Hu3amID/view?usp=sharing
+Ficha resumo - Leucemias - Basico - https://drive.google.com/file/d/1-JhVdc1IDT3kbXB6zNCXgQgRc52GfwYV/view?usp=sharing
+Ficha Resumo - Decreto 7508_11 - https://drive.google.com/file/d/1-MWBXO42Z_nUk_f19CCWVLBsBoGDJfCQ/view?usp=sharing
+PDF de slides - Vacinacao - Situacoes Especiais - https://drive.google.com/file/d/1-QrpBdBqNlCYlMZ_fnrZUJVNDyeDiXOU/view?usp=sharing
+Ficha Resumo - Trauma_ Trauma de Torax - https://drive.google.com/file/d/1-VhPqt4gZl2R7PQRtKJgPadYMx7b0RKF/view?usp=sharing
+PDF de slides - Leucemias - TECM - https://drive.google.com/file/d/1-pUlUKm_P_yNKGt417FyMGX8Dze9_kjg/view?usp=sharing
+Ficha resumo - Antibioticos II - TECM - https://drive.google.com/file/d/1-q0FvZqtMYIErpUJOfP91VQDwikxu_Ph/view?usp=sharing
+Ficha resumo - Bradiarritimias - TECM - https://drive.google.com/file/d/1-vnDCBHoL_fhlN9yrr4FIUaeuGlG8pJx/view?usp=sharing
+PDF de slides - Artrites Microcristalinas (Gota e CPPD) - TECM - https://drive.google.com/file/d/108b-zQyieDf7MpSAJwASxJU1ACih0k6R/view?usp=sharing
+PDF de slides - Disturbios da Hemostasia - TECM - https://drive.google.com/file/d/10EQuIewRz2sklGkyJRAlafz-4ss9vnvg/view?usp=sharing
+Ficha Resumo - Classificacao dos estudos epidemiologicos - https://drive.google.com/file/d/10hDLNcJ0xm0kZjGZ6YvgDwP9Ksf5qusa/view?usp=sharing
+ERRATA - Diabetes_ emergencias hiperglicemicas (CAD e EHH) - https://drive.google.com/file/d/10mPpsQPWLGOKgpNXYafeXrlPuZPoMl0v/view?usp=sharing
+PDF de slides - Drogas vasoativas (DVA) - TECM - https://drive.google.com/file/d/10nFfiYN9aQLfPXSxTfWTPe8MuaDQhO2e/view?usp=sharing
+Pdf Slide - Testes Diagnosticos_ caracteristicas basicas - https://drive.google.com/file/d/10s6d0TFJLIVStUE2zYS2uDsuBqeaDCr_/view?usp=sharing
+Ficha Resumo - Incidentaloma Adrenal - https://drive.google.com/file/d/110V60vqFQ3-7VYROjUfdqXshsjHVEjLQ/view?usp=sharing
+Errata - Ficha resumo_ Gasometria Arterial I - TECM - https://drive.google.com/file/d/114asS0ImhBjHOuHrnWqGbyX-uj9S3BZ2/view?usp=sharing
+PDF de slides - Hemorragia subaracnoidea (HSA) - https://drive.google.com/file/d/11kFT5yoTuV2OsnREIUYFxuWVmjlphS5l/view?usp=sharing
+Ficha Resumo - Sindromes Aorticas Agudas - https://drive.google.com/file/d/11mm5h4FtBlULI9cUqnjf5pPI4_-jWai3/view?usp=sharing
+PDF de slides - Transtorno de Ansiedade - https://drive.google.com/file/d/11na5j0tjhZTLLQYz-W875qiJ5ZpXqOzJ/view?usp=sharing
+PDF de slides - Hipotireoidismo - Clinica Medica - https://drive.google.com/file/d/11potKWvTN-PMR0JN9hAa9i3qdnPtyXrK/view?usp=sharing
+PDF de slides - Meta Terapeutica, Manejo do pre-DM e Tratamento Nao Farmacologico do DM - https://drive.google.com/file/d/11sI89D2Dqn3o_4epctqOO6dwG0dLoYEV/view?usp=sharing
+Ficha resumo - Avaliacao de enzimas hepaticas - TECM - https://drive.google.com/file/d/127qeCTK89dolNVj6FPWAc1qaaWke4sEo/view?usp=sharing
+Ficha Resumo - Testes Diagnosticos_ caracteristicas basicas - https://drive.google.com/file/d/12Eoslnr5c46pj83oxc_zCxC8eVCD7muF/view?usp=sharing
+PDF de slides - Meningites & Encefalites - TECM - https://drive.google.com/file/d/12NEq--y6UOXGweCscfytTbFF7SqOmGLE/view?usp=sharing
+PDF de slides - Esofago_ Diagnosticos e diferenciais de disfagia - TECM - https://drive.google.com/file/d/12ab8fa7xcQtc6bcB2wp9coNqtEd-kneM/view?usp=sharing
+PDF de slides - Urologia_ Litiase no pronto-socorro - TECM - https://drive.google.com/file/d/12cCQopuf2Fl1Qc_edLlsojIlDJH3uJcH/view?usp=sharing
+PDF de slides - Sindrome do desconforto respiratorio agudo (SDRA) - TECM - https://drive.google.com/file/d/12dN8xgrAygD-OpeWeuoUrLJCAENxWx8T/view?usp=sharing
+Ficha resumo - Taquiarritmias - Cardiologia - TECM - https://drive.google.com/file/d/13Efez6hMVtim4jQ-CMy7M3Ew8tSfPD45/view?usp=sharing
+Ficha Resumo - Esclerose Sistemica - https://drive.google.com/file/d/13KBKSMMdbFxktaa8v5QrpXBXCRavceiy/view?usp=sharing
+PDF de slides - Doenca Inflamatoria Intestinal (DII) - TECM - https://drive.google.com/file/d/13YRNkGlvEG9BfTsDQa_DdkhUC2Fno_YA/view?usp=sharing
+Ficha resumo - Anemias Hemoliticas Hereditarias - TECM - https://drive.google.com/file/d/13d6F_fTA16_jCqLnsCmuZ53dnrXU15Hu/view?usp=sharing
+Ficha resumo - Sindromes Medulares - TECM - https://drive.google.com/file/d/13dDHPq_2G5XN8QubS_nsj6j1CbZCvaxo/view?usp=sharing
+PDF de slides - Sindrome de Guillain-Barre (SGB) - TECM - https://drive.google.com/file/d/13eRWOcPL4SttO1aYHOVeuOxJP-YF5eN6/view?usp=sharing
+Ficha Resumo - Transtorno Psicotico - https://drive.google.com/file/d/13gOpUvxlIS8-J-CYWlu6f8X5gfxKAb5x/view?usp=sharing
+PDF de slides - Otologia I - https://drive.google.com/file/d/13lfk6Y8OEMmnkQRKNKcQsUS-53WNjOHY/view?usp=sharing
+Ficha resumo - Hemoterapia - TECM - https://drive.google.com/file/d/13zX46eYEU7AK2FPbnxTXibiE-yBH1UkK/view?usp=sharing
+PDF de slides - Insuficiencia Cardiaca - Manejo Ambulatorial - https://drive.google.com/file/d/149u1xCe_tP0s3z9TYzOXIKeUNWh-LBB5/view?usp=sharing
+PDF de Slides - Puerpério Patológico - https://drive.google.com/file/d/14DTbPi-KAp6RHXg9jVLyVPeLAtK3VpeX/view?usp=sharing
+PDF da aula - Indicadores de saude_ Parte 1 - https://drive.google.com/file/d/14a-PbIi-H3jaqHHP0z63bOsvE2YwZBQt/view?usp=sharing
+Ficha Resumo - Transtorno de Humor II_ Antidepressivos - https://drive.google.com/file/d/14f3E_61qq8nfgdGr7RUebBkATTx46Vt7/view?usp=sharing
+Ficha resumo - Tabagismo - TECM - https://drive.google.com/file/d/14jX9bBPxfupFlzHAgBaIxPE_1Gv0XIc0/view?usp=sharing
+Ficha resumo - BLS e ACLS - TECM - https://drive.google.com/file/d/14myIur7DkVfjvVtjDYzAfTER9ZLlahSm/view?usp=sharing
+Ficha resumo - Antibioticos I - TECM - https://drive.google.com/file/d/14ooKBTxhl9ecOZttwZNDBA4fTCHgUflY/view?usp=sharing
+Ficha resumo - Estudos transversais - https://drive.google.com/file/d/15GqNZHkfhOgHaQZhQDWSTyC6l1L-d7Ic/view?usp=sharing
+Ficha Resumo - Vacinacao - Situacoes Especiais - https://drive.google.com/file/d/15Ms8KM9L7IReKQ5CplKHeM5_OJDcVgKv/view?usp=sharing
+PDF de slides - Avaliacao de enzimas hepaticas - TECM - https://drive.google.com/file/d/15ZMq-5vmEL80MgS2zn0ZpCQQqzsU0kQ4/view?usp=sharing
+PDF de slides - Anticoagulacao II - https://drive.google.com/file/d/15qBsJZOIdmGnlT65D82boP6qclYSQSIE/view?usp=sharing
+Ficha Resumo - Sindrome de Cushing - https://drive.google.com/file/d/163WvG3mkElwu9g7djTuYKEfHdq-SotuD/view?usp=sharing
+PDF de slides - Neurocirurgia_ Demais assuntos - https://drive.google.com/file/d/16FxgXKs0CcsVU_ruGOYhQt0Tiecx1RFp/view?usp=sharing
+PDF de slides - Pre-operatorio II - TECM - https://drive.google.com/file/d/16QCr-P3-ixviyKHVZXQVtKPSfiR252kd/view?usp=sharing
+PDF de slides - Abdome Agudo Inflamatorio_ Apendicite Aguda - TECM - https://drive.google.com/file/d/16prMpbk8qyOv1eCK2Cp7s9swz9yOZdu6/view?usp=sharing
+Ficha resumo - Tratamento das Dislipidemias - TECM - https://drive.google.com/file/d/16s-i5mO8_LK9PDh7_Ft1S6LV-tBZiUjF/view?usp=sharing
+PDF de slides - Insulinoterapia - https://drive.google.com/file/d/173h7ePTNQoOZSpZVGmynO5K3XKhrJJgx/view?usp=sharing
+Ficha resumo - Diabetes_ Classificacao, Fisiopatologia e Diagnostico - https://drive.google.com/file/d/177kY-9JiW5aQaInoO1xBseR6RKpvtG19/view?usp=sharing
+Ficha resumo - Gasometria Arterial II - TECM - https://drive.google.com/file/d/17WaHicEhse_pe6DQz0yvsm0ujfB-tGpD/view?usp=sharing
+Ficha resumo - Doenca Pulmonar Obstrutiva Cronica (DPOC) - TECM - https://drive.google.com/file/d/17YmBrJIVrysQzrzJEEodVulEQXaDhAiN/view?usp=sharing
+Ficha Resumo - Cabeca e Pescoco_ Cancer de pele nao melanoma - https://drive.google.com/file/d/18eI_cEGwzPT6IcDECPEuRHFlc9IMnv6w/view?usp=sharing
+Ficha Resumo - Etica medica - https://drive.google.com/file/d/18jGMwpSrbl-KXRiW7l6F-giTx7elqv44/view?usp=sharing
+Ficha resumo - Insuficiencia Cardiaca - Avancada - TECM - https://drive.google.com/file/d/18mUmKCQ0iI_wuSCFddqBPEwC5oHaTIk5/view?usp=sharing
+PDF de slides - Introducao a Geriatria - TECM - https://drive.google.com/file/d/18w-JRf68dcTOFAGvjpu5nUtsxNH7RVgj/view?usp=sharing
+Ficha resumo - Acidente Vascular Cerebral Isquemico (AVCi) - Tratamento e complicacoes - TECM - https://drive.google.com/file/d/1997HP50XOiPNrfuRaQ_oHabE5lsTwEP3/view?usp=sharing
+PDF da Aula - Ventilação Mecânica (VM): Exercícios - https://drive.google.com/file/d/199_b-qnqG-g_qsIlmEoCnBMtRalpGlK2/view?usp=sharing
+Ficha resumo - Introducao as Cefaleias Primarias - TECM - https://drive.google.com/file/d/19AhQR3t33WnLWgMRfCmAN8kbcIlDeS28/view?usp=sharing
+PDF de slides - Cefaleias Trigemino-Autonomicas - TECM - https://drive.google.com/file/d/19Ftle2zZcCPHNJCpFxzExQFziWaGQ5hy/view?usp=sharing
+Ficha resumo - Diarreias Cronicas - TECM - https://drive.google.com/file/d/19Kk8xqeH3im4jJDDHmp-ZSdCGAnEciri/view?usp=sharing
+PDF de slides - Saude do trabalhador_ Pneumoconioses - https://drive.google.com/file/d/19dEvXcXvQl6zb4z40FxFO5kH7BdwyApR/view?usp=sharing
+PDF de slides - Analgesia e Sedacao - TECM - https://drive.google.com/file/d/19oEmyB6ewZCsIIUBnM6hqicyTxWo37sV/view?usp=sharing
+Ficha Resumo - Financiamento do SUS - https://drive.google.com/file/d/19wdBDWrHzbfTYu0t848HtfY6l_ILdqu5/view?usp=sharing
+PDF de slides - Arboviroses - Clinica Medica - https://drive.google.com/file/d/1A6jcn-HJPILWmGQfRfvQIQNG65qqtslf/view?usp=sharing
+PDF de slides - Cirurgia Plastica_ Lesoes por pressao - TECM - https://drive.google.com/file/d/1AWpZHkhoJDJ581JMw3l26WQDyWYoEVmW/view?usp=sharing
+PDF de slides - Antibioticos II - TECM - https://drive.google.com/file/d/1ActvRUGw0-6Dkxt4JuPHSAVv8MVD8p0l/view?usp=sharing
+PDF de slides - Osteoartrite - TECM - https://drive.google.com/file/d/1AkA83k4KISPhqnnID36fkwlkWnkkZYaH/view?usp=sharing
+PDF de slides - Injuria Renal Aguda (IRA)_ Parte 1 - TECM - https://drive.google.com/file/d/1AtxHJyGULqIdP_oI23m_JXMLIWSV6Iqi/view?usp=sharing
+Ficha Resumo - Hiperaldosteronismo Primario - https://drive.google.com/file/d/1AvXpSlNR1d890D43hoC8i_-yUDNET7D6/view?usp=sharing
+PDF de slides - Tratamento das Dislipidemias - TECM - https://drive.google.com/file/d/1B9chkpYpSHUUBELngeq7vaYvih6iTf5k/view?usp=sharing
+PDF de slides - Bradiarritimias - TECM - https://drive.google.com/file/d/1BK7mlqPQxfmbSjxuk2u6-o64C2Z-PjY4/view?usp=sharing
+ERRATAS - ACIDENTES COM ANIMAIS PECONHENTOS - https://drive.google.com/file/d/1BLEq6SIcj5a3UxJUmayNtkNdZBIRrU39/view?usp=sharing
+PDF de slides - Esclerose Multipla (EM) - https://drive.google.com/file/d/1BPY0uG8MOU_GHe26rBRWZ0JMbJM-Thrz/view?usp=sharing
+PDF de slides - Sindrome Coronariana Aguda com Supra de ST (SCACSST) - https://drive.google.com/file/d/1BRBqhld-udvMrfYt1UDtikun1KseMneR/view?usp=sharing
+PDF de slides - BLS e ACLS - TECM - https://drive.google.com/file/d/1BRsJUFGkK16lKofvMKAwlheWf2gwnDEx/view?usp=sharing
+Ficha resumo - Incontinencia Urinaria no Idoso - https://drive.google.com/file/d/1BdyfZ9bqLPZ5MwR7ExN7LoADckBLcWun/view?usp=sharing
+Ficha resumo - Abdome Agudo Inflamatorio_ Colangite - TECM - https://drive.google.com/file/d/1BmATYdAYB1xjaQ4q7VLJG1bYA3I_Bw3R/view?usp=sharing
+Ficha resumo - Disturbios do Sodio - TECM - https://drive.google.com/file/d/1BvT3vgaRn6DiR9qAVzpImR1D-et2Bl5L/view?usp=sharing
+Ficha resumo - Hemorragia subaracnoidea (HSA) - https://drive.google.com/file/d/1BvrnDJuTUhChoZ65pH3E0IOdcUK-WErC/view?usp=sharing
+Ficha Resumo - Emergencias Hiperglicemicas (CAD e EHH) - https://drive.google.com/file/d/1C55FIuoYW28Ww2Ch_n-3hN5S0YyYG_We/view?usp=sharing
+PDF de slides - Pre-operatorio I - TECM - https://drive.google.com/file/d/1C6UERorgVkVcum2ya861HSEzevEsskXX/view?usp=sharing
+PDF de slide - Diagnostico de Morte Encefalica (ME) - https://drive.google.com/file/d/1C7HMD27Wj2ii2YdnXTme30QX_xqhxgAW/view?usp=sharing
+Ficha resumo - Linfomas - Avancado - https://drive.google.com/file/d/1C8TG0d3SrkvTLx9M2i4RWL0740Rkyd27/view?usp=sharing
+PDF de slides - Doenca de Parkinson - https://drive.google.com/file/d/1CahqCnOtdmWFpJhtXx0YJw1pf2MPHaLt/view?usp=sharing
+Ficha Resumo - Oncocirurgia_ Melanoma - https://drive.google.com/file/d/1Cp4CQD8MDXswPEGQki2mcTN24B1zm24l/view?usp=sharing
+PDF de slides - Anemias Hemoliticas Hereditarias - TECM - https://drive.google.com/file/d/1CpO7bW2xJo7sjZkKxkpXhXwfGo2Mi3HO/view?usp=sharing
+PDF de Slides - Hanseníase - https://drive.google.com/file/d/1Ctl3SugEiIDczIUObo18kN96byoZiFg1/view?usp=sharing
+PDF de slide - Via aerea, intubacao e Ventilacao Nao Invasiva (VNI) - https://drive.google.com/file/d/1D55i5SbhG-S7JyLcCcPKQVyZ54gENY_5/view?usp=sharing
+PDF de slides - Acidente Vascular Cerebral Isquemico (AVCi) - Tratamento e complicacoes - TECM - https://drive.google.com/file/d/1DBAfEdnc7CEWhg8Pt3rQjcNwbkznO4vu/view?usp=sharing
+PDF de slides - Doenca Renal Cronica II - https://drive.google.com/file/d/1DusGdDNXsyVz8HXd575t2IcWm9O1H93u/view?usp=sharing
+Ficha resumo - Diarreia Agudas e Colite Pseudomembranosa - TECM - https://drive.google.com/file/d/1E94jibD0ep6FBf_XAjbrYu0mqbZa1uhm/view?usp=sharing
+PDF de slides - Transtorno Psicotico - https://drive.google.com/file/d/1EClG56GmnzE06RRnSIVv4LiMw2JuJjZJ/view?usp=sharing
+Ficha Resumo - Diagnostico de Morte Encefalica (ME) - https://drive.google.com/file/d/1ENWTg_oiPOAgZy6ynWchCRgahbsXFssX/view?usp=sharing
+PDF de slides - Doenca Pulmonar Intersticial (DPI) - https://drive.google.com/file/d/1ESG0r9lkIq3562n8mxnO3_zO-0sQl3iE/view?usp=sharing
+PDF de slides - Etica medica - https://drive.google.com/file/d/1EZMrIRmjdStFPnp_76K0vCqvBSXpKD_J/view?usp=sharing
+PDF de slides - Anticoagulacao em Cardiologia - https://drive.google.com/file/d/1EykllOZLkk-AcqfD-6xZMWzl6cQEIFeO/view?usp=sharing
+PDF de slides - Dispepsia - TECM - https://drive.google.com/file/d/1FUDz58FRfzRUsZz7pWQotUoXmpe-78Y0/view?usp=sharing
+PDF de slides - Vasculites de Grandes e Medios Vasos - https://drive.google.com/file/d/1FabcDxEgQeTeUF94IMF6xhD2n83OZYcH/view?usp=sharing
+Ficha resumo - Artrite Reumatoide (AR) - TECM - https://drive.google.com/file/d/1FmDArV48SrTRFoQY30K9iMUPQ4Be9AAF/view?usp=sharing
+PDF de slides - Nodulos e Cancer de Tireoide - https://drive.google.com/file/d/1Fod2jgy_5C8qMqODMEXivji6XanL7W2s/view?usp=sharing
+Ficha Resumo - Insuficiencia Cognitiva_ Delirium no Idoso - https://drive.google.com/file/d/1G3g5oIGEuR3p7Y-jxcXqcNacvTFqtGUE/view?usp=sharing
+PDF de slides - Purpura Trombocitopenica Trombotica (PTT) - TECM - https://drive.google.com/file/d/1G5MzfJfCZ3kPS-7axREq1t_q7e10tjJr/view?usp=sharing
+PDF de slides - Insuficiencia Adrenal - https://drive.google.com/file/d/1GNUA10jHAO6SjB6mnxIsaK0_OYl6dGtZ/view?usp=sharing
+PDF de slides - Choque - Abordagem Inicial - TECM - https://drive.google.com/file/d/1GSNaw_xCblDyMPCtrz_L1BN-zNWdC8lH/view?usp=sharing
+Ficha Resumo - Nodulos e Cancer de Tireoide - https://drive.google.com/file/d/1Glw83-vY_EWF3o7rd4uUmhojTbGdgEcf/view?usp=sharing
+Ficha resumo - DRGE - TECM - https://drive.google.com/file/d/1H7hgBy1gYm2IMnB_jkV1uzCaU919j19X/view?usp=sharing
+Ficha resumo - Neurointensivismo_ Hipertensao Intracraniana - TECM - https://drive.google.com/file/d/1HCwmrCPu1yZiQWuRKrjTQItKVwXPOPcL/view?usp=sharing
+Ficha resumo - Valvopatias - TECM - https://drive.google.com/file/d/1HmuDRHga6CIQXfJgL85l4q9NR7J3E39o/view?usp=sharing
+Ficha Resumo - Oftamologia para o generalista - parte II - https://drive.google.com/file/d/1I9V-YElIMg4OplkzJKYsc2upCxe5Kaho/view?usp=sharing
+ERRATA - ANTIDIABETICOS ORAIS E SUBCUTANEOS - https://drive.google.com/file/d/1IcbuawIJhHA8o1-PYpsbPyQJ8-Oa85kX/view?usp=sharing
+Ficha resumo - Insulinoterapia - https://drive.google.com/file/d/1Io4-jsXx9EZ3NSuBp-epqbmiMuOvHBgx/view?usp=sharing
+Ficha Resumo - Terapia de Reposição Hormonal - https://drive.google.com/file/d/1IqD1h0a7nGFNIi8nXO1Z9nZ_9Ny22qeX/view?usp=sharing
+Ficha resumo - Abdome Agudo Inflamatorio_ Diverticulite Aguda - TECM - https://drive.google.com/file/d/1JDnbwrOvzep0psqvt8KHKeqvg4Gv_sOg/view?usp=sharing
+PDF de slides - Disturbios do Sodio - TECM - https://drive.google.com/file/d/1JJud8hIflSw12CvvN1R3IS1IFKYnMzbJ/view?usp=sharing
+Ficha resumo - Sindrome Coronariana Cronica - TECM - https://drive.google.com/file/d/1JkkFSZK_iOfsr6vji6EwwPySSjC1IKjr/view?usp=sharing
+Ficha Resumo - Anemias Hipoproliferativas I - https://drive.google.com/file/d/1Jm0wJcWLzibyLbi770Mj02imLDPw0_AX/view?usp=sharing
+PDF de slides - Financiamento do SUS - https://drive.google.com/file/d/1JrNh7n_v7zWhos0Ii4YhvqjoyKnH0c-Z/view?usp=sharing
+PDF de slides - Depressao no Idoso - https://drive.google.com/file/d/1JtdtmYAzFcLhETcAJlxzYn4faC1OLtso/view?usp=sharing
+PDF de slides - Hipertensao pulmonar - https://drive.google.com/file/d/1KD0dwp3AupO20wYk0TvfVmzrTlFLeGGE/view?usp=sharing
+Ficha resumo - Niveis de Prevencao - https://drive.google.com/file/d/1KO6f0m7dMLz5xpcdA6R5DCvd6T6fY7i1/view?usp=sharing
+PDF da Aula - Pneumonia Associada à Ventilação Mecânica - https://drive.google.com/file/d/1KaTiJ5SHy7O56-Yv_ME5Ee-B_BWrmn1_/view?usp=sharing
+PDF de slides - Intoxicacoes Exogenas - TECM - https://drive.google.com/file/d/1L1pOA6z-JA6yVXiqSUka8Jlszm3vyM1o/view?usp=sharing
+PDF de slides - Testes Diagnosticos_ aplicabilidade clinica - https://drive.google.com/file/d/1L3GIF7_gsHKEaUPBpeqgwC9pUZom4-lO/view?usp=sharing
+Ficha resumo - Fibromialgia - TECM - https://drive.google.com/file/d/1LN_BgeldZluM6K4H4x0D5cW6e0aGXdoG/view?usp=sharing
+Ficha Resumo - Anticoagulacao em Cardiologia - https://drive.google.com/file/d/1LPKVs4QVWa6P_gJVXMTup5xVqKoHEfWV/view?usp=sharing
+Ficha resumo - Meningites & Encefalites - TECM - https://drive.google.com/file/d/1LY4Mh7mEYT2NqoPuVYHPyvay2FA0uzWN/view?usp=sharing
+Ficha resumo - Arboviroses - Clinica Medica - https://drive.google.com/file/d/1L_lsHEjEGKcLbVriXC377hAKEeM5HEp4/view?usp=sharing
+PDF de slides - Insuficiencia Cardiaca - Avancada - TECM - https://drive.google.com/file/d/1Lmmy-5hdNgwnNDGyiR6TkZ8PNVIr4Jr4/view?usp=sharing
+PDF de slides - Abdome Agudo Inflamatorio_ Colecistite - TECM - https://drive.google.com/file/d/1M6quZ55FdOZKybrQxal69AMF_oze06Hf/view?usp=sharing
+Ficha resumo - https://drive.google.com/file/d/1MPlkr4miz2xsdP_UTp1L0TOexkJ9bmc2/view?usp=sharing
+Ficha resumo - Disturbios da Hemostasia - TECM - https://drive.google.com/file/d/1MV-MYa9wmuxebDxiXw0TN-_tzWbmS_a-/view?usp=sharing
+PDF de slides - Doenca de Behcet - https://drive.google.com/file/d/1M_JeciS45khDylfG-hV20RmqacmGVakM/view?usp=sharing
+PDF de slides - Neoplasias Especificas e Miscelanea - TECM - https://drive.google.com/file/d/1McRuTs0A5XLoDcjmGNkagt5hx8xpD3va/view?usp=sharing
+PDF de slides - Anemias Hipoproliferativas II - https://drive.google.com/file/d/1Me2mmGMJLBV1lAea2pUrnYcFmYLCfub1/view?usp=sharing
+PDF de slides - Vacinacao do Idoso - https://drive.google.com/file/d/1MsI_vmLI1SxcZNZ0ZSlOWoWY4bM6IXnR/view?usp=sharing
+PDF de slides - Principios do SUS - https://drive.google.com/file/d/1MyX-fgprOXjBqYwiyboIuFA71aw9smwB/view?usp=sharing
+Ficha resumo - Tuberculose Extra Pulmonar - TECM - https://drive.google.com/file/d/1N-KFGCObfOKJ5dUpMKCNpp05CKal8fVG/view?usp=sharing
+Ficha Resumo - Saude do trabalhador_ intoxicacoes, pairo e burnout - https://drive.google.com/file/d/1N8I2gsPDDdGvUQ2aQEmEH7azmq98yDCW/view?usp=sharing
+PDF de slides - Espirometria - TECM - https://drive.google.com/file/d/1NFlC3qyOMl6m6El47roWofwHU9Wjj9c4/view?usp=sharing
+PDF de slides - Ictericias febris e Febre Maculosa - https://drive.google.com/file/d/1Njup8RnXGGH984A2YF14h_enBkP3setM/view?usp=sharing
+Ficha resumo - HIV - TECM - https://drive.google.com/file/d/1NqTAC4oZyZbKijxlK13nX3A1IU74y88u/view?usp=sharing
+Ficha Resumo - Doencas Negligenciadas - https://drive.google.com/file/d/1O0NaX_ajZU4g3U3rYnmhfH62-b4jevva/view?usp=sharing
+Ficha Resumo - Glomerulopatias I - https://drive.google.com/file/d/1O3VoC4Vqhr8FHPXTVWSZoEO1jrjyOKWa/view?usp=sharing
+PDF de slides - https://drive.google.com/file/d/1OCRfoCq1fT3WExN6geMUXPNC6w82Xyxg/view?usp=sharing
+Ficha resumo - Hepatites Virais - Clinica Medica - https://drive.google.com/file/d/1OafyqiRysd5RJXuDa0dcol9T0csbSozs/view?usp=sharing
+Ficha Resumo - Fisiologia da Tireoide - https://drive.google.com/file/d/1OpXu4l0LaUE7wslYejeNb3mLL87FxElv/view?usp=sharing
+Ficha Resumo - Hipotireoidismo - Clinica Medica - https://drive.google.com/file/d/1PA4iT8keCom6xkuF6_Br3twRevTYBOsG/view?usp=sharing
+PDF de slides - Acidentes com Animais Peconhentos - https://drive.google.com/file/d/1PNt0EnmOJeYgkuLeIqKyztToev-zBHBK/view?usp=sharing
+Ficha resumo - Sindrome Metabolica - TECM - https://drive.google.com/file/d/1POWQoAS97b1CTD-_tvYOmXVMa_hDjNYP/view?usp=sharing
+Ficha resumo - Doenca Renal Cronica I - https://drive.google.com/file/d/1PRTr2HA45KG4EpJFHjTeYJ1fdgxBA4zI/view?usp=sharing
+PDF de slides - Cirurgia plastica_ Queimados - Atendimento inicial - https://drive.google.com/file/d/1PRbE-3j82kJswcL4nYZvKnwXraxn8Fah/view?usp=sharing
+PDF DE SLIDES - Sindromes Medulares - TECM - https://drive.google.com/file/d/1P_JAyvmtUxSsf4L2MiP2g3MJ-YsLnKE8/view?usp=sharing
+PDF de slides - Choque - Tipos de Choque - TECM - https://drive.google.com/file/d/1PijZEtoG1suMRuVYngHop24TfHJG1Lgs/view?usp=sharing
+PDF de slides - Sifilis e Uretrites Infecciosas - TECM - https://drive.google.com/file/d/1PzFdC6evui93slyYgmefL-TPH3Ps2zE0/view?usp=sharing
+Ficha Resumo - Cirurgia plastica_ Queimados - Atendimento inicial - https://drive.google.com/file/d/1QI3GyakluXypk8uholrsakZnXxiQCJ58/view?usp=sharing
+Ficha resumo - Cirrose hepatica_ Varizes esofagicas e Sindrome Hepatopulmonar - TECM - https://drive.google.com/file/d/1QKsRvzBDYjZUVmjy03c_70opu-tYELoE/view?usp=sharing
+Ficha Resumo - Glomerulopatias II - https://drive.google.com/file/d/1QWPte-2jWo9ULqsccL4_bD5JozsqaWPM/view?usp=sharing
+Ficha resumo - Rastreamentos - Clinica Medica - TECM - https://drive.google.com/file/d/1Qck9FBCTFHyCUx1MVJ4r_ACl5jmHet2e/view?usp=sharing
+PDF de slides - Introducao as Artrites e Artrite Reumatoide (AR) - TECM - https://drive.google.com/file/d/1QeDIz5oONv_CFhY-YTHljBmjvZvG0-jV/view?usp=sharing
+PDF de slides - Gasometria Arterial II - https://drive.google.com/file/d/1Qh2UoQptzs09aMEKsuv6uB7KvjWPwlGp/view?usp=sharing
+Ficha resumo - Introducao as Artrites - https://drive.google.com/file/d/1QsGKhYDYfnBX5mDLD51NtJt9ti2YEtCB/view?usp=sharing
+PDF de slides - Vasculites de Pequenos Vasos - https://drive.google.com/file/d/1QxL1AKiqGv9l352aWcdmAB79FkNJvNeg/view?usp=sharing
+Ficha resumo - Introducao a Geriatria - TECM - https://drive.google.com/file/d/1RN-li2nC9zuqXHaPNvkq82DU9Je9xh0Z/view?usp=sharing
+PDF de slides - Lupus Eritematoso Sistemico - Clinica Medica - https://drive.google.com/file/d/1RSv2zsRWqxU1LsuZEo3WyQFcksG9xxSX/view?usp=sharing
+PDF de slides - Disturbios do Calcio - https://drive.google.com/file/d/1RzUSKYvO1K9LRlRJfQTHNiehLHtvAae3/view?usp=sharing
+PDF de slides - Figado_ Carcinoma hepatocelular - https://drive.google.com/file/d/1S1yAv1rgKZX3pWYc_OySo5FWgyaJvm0J/view?usp=sharing
+PDF de slides - Oncologia_ Cuidados paliativos - TECM - https://drive.google.com/file/d/1S8ButPiskSPqg4akHYion9Ajx8kP4_Yr/view?usp=sharing
+Ficha resumo - Doencas Virais - https://drive.google.com/file/d/1T1k-Dyf_3Esziib51J4HdUA3EA5LkGNv/view?usp=sharing
+Ficha resumo - Oftalmologia para o generalista - parte I - https://drive.google.com/file/d/1TRz7QYjZTuap4jEcrjJVgpqMhCU7m0lM/view?usp=sharing
+PDF de slides - Cirurgia Vascular_ Isquemia de membros inferiores - OAC - TECM - https://drive.google.com/file/d/1TaM4qJOH1nbOosE3itGA-oCfJgOYRyr1/view?usp=sharing
+Ficha Resumo - Princípios de Ventilação Mecânica (VM) - https://drive.google.com/file/d/1Th-A381_CPs1Coss0W7zYDB4GYiIINJO/view?usp=sharing
+Ficha resumo - Urologia_ Litiase no pronto-socorro - TECM - https://drive.google.com/file/d/1TxAbJ8fEfCx213TdbMRMNbq5xQvYh-O2/view?usp=sharing
+Ficha resumo - Estudos longitudinais_ coorte e caso controle - https://drive.google.com/file/d/1UF8kgxrb6-_fR8wB_NRpmLjH-v_g--J7/view?usp=sharing
+Ficha Resumo - Pericardite e Miocardite - https://drive.google.com/file/d/1UGjIqQAasfuk01IAtoKv13ZV3qClCpK1/view?usp=sharing
+PDF de slides - Acidente Vascular Cerebral Isquemico (AVCi) - TECM - https://drive.google.com/file/d/1USeD-JUrRho8P9VbD-pZLEPOthGrWze6/view?usp=sharing
+Ficha Resumo - Transtornos Relacionados a Substancias - Alcool - https://drive.google.com/file/d/1UnjQJk4QidYrU5AlUaz5b3pkngGWTqDh/view?usp=sharing
+Ficha Resumo - Disturbios do Sono - https://drive.google.com/file/d/1UrD1nJZFEFql0hKKsWEEmn-rGAW0J4xL/view?usp=sharing
+PDF de slides - Neurocirurgia_ Emergencias neurocirurgicas - https://drive.google.com/file/d/1UwPP3jcRyQULzHLZeT8de7Smi-KybY4l/view?usp=sharing
+Ficha resumo - Purpura Trombocitopenica Trombotica (PTT) - TECM - https://drive.google.com/file/d/1Uyq3YQoNX6qasxn1ZySn4Ypw2moJwAKt/view?usp=sharing
+Leucemias - Avancado - https://drive.google.com/file/d/1V0rdUcW36rQZIKuGPVkYpZp-bpNGv4Fd/view?usp=sharing
+Ficha resumo - Choque - Tipos de Choque - TECM - https://drive.google.com/file/d/1VEvzcVyFVJIJ5MKUN9HHPNOziWKOAaCJ/view?usp=sharing
+PDF de slides - Diabetes Classificacao, Fisiopatologia e Diagnostico - https://drive.google.com/file/d/1VJ9g9G4o3raUd8ownRC69eShXkNlmCLZ/view?usp=sharing
+PDF de slides - Fibromialgia - TECM - https://drive.google.com/file/d/1VKEdzunD28V81l1XC9eMRJvBAqGS4tir/view?usp=sharing
+Ficha resumo - Esofago_ Diagnosticos e diferenciais de disfagia - TECM - https://drive.google.com/file/d/1VYzaNUfWEHQx8lH9VNHdWnWDn2EBfvC-/view?usp=sharing
+Ficha Resumo - Teste de Respiração Espontânea (TRE) e Extubação - https://drive.google.com/file/d/1Vj-_u7jei9kqoaxCGs7OYclm_rHT-tGD/view?usp=sharing
+PDF de slides - Enxaqueca (Migranea) - TECM - https://drive.google.com/file/d/1Vn6iiB-jN2J5IdnStJZtW6i92SbTt1fc/view?usp=sharing
+Ficha Resumo - Medicina legal_ Declaracao de obito, atestados e laudos - https://drive.google.com/file/d/1VyG43p8nqBxKE-F_-asC8Seu47p3mKfh/view?usp=sharing
+PDF da Aula - Princípios de Ventilação Mecânica (VM) - https://drive.google.com/file/d/1W2zVS939eM7G_P-JzjM0ZgRCCw39-eNm/view?usp=sharing
+Ficha resumo - Espondiloartrites - TECM - https://drive.google.com/file/d/1WDfxXGgyqJAeKtPGaNjkH4IIN_8UTqAw/view?usp=sharing
+PDF de slides - Glomerulopatias II - https://drive.google.com/file/d/1WVPt1n_bcf4ob90kfOoX8STgwUXWsEMw/view?usp=sharing
+PDF de slides - Transtorno de Humor II_ Antidepressivos - https://drive.google.com/file/d/1WepuizRxBmw9gR2lAwujhsp3RMkpgCyE/view?usp=sharing
+PDF de slides - Sincope - TECM - https://drive.google.com/file/d/1WsWUaCiS2NyGrc5W7cXyXqJoRRxz524m/view?usp=sharing
+PDF de slides - Obesidade_ Introducao e Tratamento Nao Farmacologico - TECM - https://drive.google.com/file/d/1X2xAuz2l7LXDXjXQ_bdi0CgCrUZ-0GUz/view?usp=sharing
+Ficha resumo - Discrasias Plasmocitarias - TECM - https://drive.google.com/file/d/1XEz9UTijwpCLAMcs94iW1VZf-Cam9teu/view?usp=sharing
+PDF de slides - Iatrogenia no Idoso - https://drive.google.com/file/d/1XGgSqSylX114x599Onu0H1XTTCYWKM7a/view?usp=sharing
+Ficha resumo - Derrame Pleural - TECM - https://drive.google.com/file/d/1XOmuzALoGtKzxZsdWWIpigc4eIvtxDuA/view?usp=sharing
+PDF de slides - Fisiologia da Tireoide - https://drive.google.com/file/d/1X_yLXpUVXdnHryb1fNHpHT7EIZ5mMEmd/view?usp=sharing
+Ficha resumo - Obesidade_ Introducao e Tratamento Nao Farmacologico - TECM - https://drive.google.com/file/d/1XkVBRjOILv7QedIvQYH1MYM1EjLqvxb7/view?usp=sharing
+PDF de slides - Dislipidemia - Classificacao e Diagnostico - TECM - https://drive.google.com/file/d/1Xol8dGPUZDKHqWCS-5HpVvbXM1oDcIDf/view?usp=sharing
+PDF de slides - DRGE - TECM - https://drive.google.com/file/d/1YEiDIHnCvyAO99rXvmLYNBwuv-SnJtpW/view?usp=sharing
+PDF de slides - Acidente Vascular Cerebral Hemorragico (AVCh) Intraparenquimatoso - TECM - https://drive.google.com/file/d/1YIRFHb4oKInfW0DrGpR0S9jq5rPm89oT/view?usp=sharing
+PDF de slides - HIV - TECM - https://drive.google.com/file/d/1YJDWDOSysUKcZZs54uszXGonNzj0-tHr/view?usp=sharing
+Ficha resumo - Complicacoes Cronicas do Diabetes Mellitus (DM) - https://drive.google.com/file/d/1YQgRK-DqEC1a-RGiXx7ETh3AuOrWdLbl/view?usp=sharing
+Ficha resumo - Ictericias febris e Febre Maculosa - https://drive.google.com/file/d/1YRZffFmYyHRoBtCgjSCvRAjqYfk5nF4R/view?usp=sharing
+Ficha Resumo - Anticoagulacao I - https://drive.google.com/file/d/1YaQMLp-ghOvM1tokSACoO5t1IGGFYR7d/view?usp=sharing
+Ficha resumo - Avaliacao Geriatrica Ampla - TECM - https://drive.google.com/file/d/1Ybr3Uz3GwTdpVkHUv3Ftf8-q9Q1DkPCc/view?usp=sharing
+Pdf de slide - Hipertensao Arterial Sistemica (HAS) - https://drive.google.com/file/d/1YnC5DfKjQTjrY5Z5fj8u2P9ojiOqHi4v/view?usp=sharing
+PDF de slides - Pneumonia_ Adquirida na Comunidade - TECM - https://drive.google.com/file/d/1ZER_zKMmInbuy4Ll5VzVzsJ7CojUoTPe/view?usp=sharing
+PDF de slides - Transtorno de Humor I - https://drive.google.com/file/d/1ZFK42j0BRcYe_bMIePHuf7mkkyhv_wh7/view?usp=sharing
+ERRATA - Emergencias Oncologicas - TECM - https://drive.google.com/file/d/1ZTeDyr0RjlNIC4RnLWreQPbJ0h6IGWCE/view?usp=sharing
+PDF de slides - Febre Reumatica e Endocardite - TECM - https://drive.google.com/file/d/1ZoKqJpA2NWmrMfvcr1g_YaYhz8fT17ZC/view?usp=sharing
+Ficha resumo - Distúrbios do Potássio - TECM - https://drive.google.com/file/d/1_NNUs_I_NbeAEHz7XM0t1yxDnz0M79HK/view?usp=sharing
+Errata - Princípios de Ventilação Mecânica - https://drive.google.com/file/d/1_ToL_B3NjHl5k-GtwUBpYaXtp5Ns36B5/view?usp=sharing
+PDF de slides - Avaliacao Global do Hemograma - https://drive.google.com/file/d/1_nMfbgRxldTRt8l1-3G97L1-ORJ8G4hK/view?usp=sharing
+PDF de slides - Tuberculose Pulmonar - TECM - https://drive.google.com/file/d/1a-Pzf_kWrqHOOxvNQQVQAgQsyM-Gx1cT/view?usp=sharing
+PDF de slides - Oftalmologia para o generalista - parte I - https://drive.google.com/file/d/1aBBBxYsWOLmVsZ2uAs3fK4ABQVMhhERA/view?usp=sharing
+Ficha Resumo - Via aerea, intubacao e Ventilacao Nao Invasiva (VNI) - https://drive.google.com/file/d/1aEzsR8vDpcJreDrcuJbN-djEX7LWikV2/view?usp=sharing
+Ficha Resumo - Saude Suplementar - https://drive.google.com/file/d/1aV7rvrroKItEQ7bXx6CX_JG3qgS5N3T0/view?usp=sharing
+PDF de slides - 6465811d7f9972017615acc4 - https://drive.google.com/file/d/1ae2CmtvoNf0gv4ftxtyipXMgKnFff6-a/view?usp=sharing
+PDF de slides - Abdome Agudo_ Introducao - TECM - https://drive.google.com/file/d/1ajX0_vAdOM14vzBZtSczp8dF3aB3VX95/view?usp=sharing
+PDF de slides - Distúrbios do Sódio - TECM - https://drive.google.com/file/d/1akIHElZMxwKXNWByEVfM9uJA23GbW9cu/view?usp=sharing
+Ficha resumo - Dislipidemia - Classificacao e Diagnostico - TECM - https://drive.google.com/file/d/1apAmhR_tDGq_VVWMuTTS8uulO95IJmUk/view?usp=sharing
+PDF de slides - Oftamologia para o generalista - parte II - https://drive.google.com/file/d/1apb2h0-6AkW69IbuHRn9QlWn34Fpsmsp/view?usp=sharing
+PDF de slides - Sindrome Metabolica - TECM - https://drive.google.com/file/d/1bI0tuPSnxbMZwqHuBst_NwE29mLDPTZ4/view?usp=sharing
+Ficha resumo - Ulcera peptica, H. pylori, Gastrite Atrofica e Dispepsia Funcional - TECM - https://drive.google.com/file/d/1bTaPD_-6BaDjCE_ri0fqLGhVDZFsMHsj/view?usp=sharing
+Ficha Resumo - Hipertensao pulmonar - https://drive.google.com/file/d/1bWlnT6MJSygUVpc9nrgj0wviyk77IVR1/view?usp=sharing
+Ficha resumo - - https://drive.google.com/file/d/1bjyW5YusNRdawZU55DgAeGfERC0BuNl9/view?usp=sharing
+Ficha resumo - Cirurgia Vascular_ Isquemia de membros inferiores - OAC - TECM - https://drive.google.com/file/d/1bqJWZxaOdtEiEPO_gjoF_55a_GwGv4gM/view?usp=sharing
+Ficha resumo - Cirurgia Plastica_ Lesoes por pressao - TECM - https://drive.google.com/file/d/1bs4cilyoy4nzIDB6lvIq0yxUYRUc1hGi/view?usp=sharing
+Ficha resumo - Sincope - TECM - https://drive.google.com/file/d/1cDUqBYp_eZCu1P-S8NiH2H9mvhqAiOca/view?usp=sharing
+PDF de slides - Lei Organica de Saude _ 8142_90 - https://drive.google.com/file/d/1cYeHcOCKFDho8q4bx6Yy75JYTmU6VWnI/view?usp=sharing
+Ficha resumo - Doencas oportunistas HIV - TECM - https://drive.google.com/file/d/1cahYOTkIJ3LFFqggb8osm6xY9bHTM8hs/view?usp=sharing
+Ficha resumo - Doenca Inflamatoria Intestinal (DII) - TECM - https://drive.google.com/file/d/1dERrHMiYd7vYyJIw5NT7cTxDjyUSuTjG/view?usp=sharing
+PDF de slides - Osteoporose - https://drive.google.com/file/d/1dJrKqfsi94vC-o9tVnVapeFqeuHVNOOZ/view?usp=sharing
+Ficha Resumo - Vasculites de Pequenos Vasos - https://drive.google.com/file/d/1dVgfMRf5DHYT2ysifdpYMOzdOs2ld0jI/view?usp=sharing
+PDF de slides - Tabagismo - TECM - https://drive.google.com/file/d/1ddDwNu8ZCD2sQJ7eiFDSgUrjOflqe0xG/view?usp=sharing
+Ficha resumo - Choque - Abordagem Inicial - TECM - https://drive.google.com/file/d/1ef6XPktxA27aySYmc66CQfhIZXTeFrXR/view?usp=sharing
+PDF de slides - Insuficiencia Cardiaca - Descompensacoes Agudas - TECM - https://drive.google.com/file/d/1ewHRPERs8pd_LKoqk9G4kx1JH8adNf2u/view?usp=sharing
+Ficha Resumo - Doenca Renal Cronica II - https://drive.google.com/file/d/1fC0n-2cLhrMQ0ZYh61r1LbI5idE7RI-A/view?usp=sharing
+PDF de slides - Complicacoes Cronicas do Diabetes Mellitus (DM) - https://drive.google.com/file/d/1fKi4o-0Cs46qGD3x2mnCYO23eMPBtwGJ/view?usp=sharing
+Ficha resumo - Drogas vasoativas (DVA) - TECM - https://drive.google.com/file/d/1fb6PVhZ2dmEJxxGOtnKH1cN_kHo32NHG/view?usp=sharing
+Ficha resumo - Abdome Agudo Obstrutivo - TECM - https://drive.google.com/file/d/1fhsMPFIYMRkKlCldkh19hlB0SlkILJVq/view?usp=sharing
+PDF de slides - Doencas Virais e Pandemicas - https://drive.google.com/file/d/1g7tjrI0xB4GblyK7X0NUZVinZb3J2YL_/view?usp=sharing
+Ficha resumo - Instabilidade Postural, Quedas e Imobilidade - TECM - https://drive.google.com/file/d/1g9pZv8jaslDaCldA0imuGnPeZDbkTm9P/view?usp=sharing
+Ficha Resumo - Tireoidites & Sindrome do Eutireoidiano Doente - https://drive.google.com/file/d/1gCvOG-QbRZaKdWhYe1lWh6UrAHOHRKW1/view?usp=sharing
+PDF de slides - Diarreia Agudas e Colite Pseudomembranosa - TECM - https://drive.google.com/file/d/1gHt7d5HEKypnnLIHVXNCyGuh_q1DysrL/view?usp=sharing
+PDF de slides - Pericardite e Miocardite - https://drive.google.com/file/d/1gIyfBPd5lv4hg6jr9lq7OVGaBN_a9eOB/view?usp=sharing
+Ficha resumo - Abdome Agudo Inflamatorio_ Colecistite - TECM - https://drive.google.com/file/d/1gPdL4BVPTxeY0DmSzD67Nax1nKoIWghZ/view?usp=sharing
+PDF de slides - Doencas hepaticas_ CBP, CEP, HAI e Doenca de Wilson - TECM - https://drive.google.com/file/d/1gcIDYk1AHvdUjUyvJ1EKWfP_T9fwrwEi/view?usp=sharing
+PDF de slides - Tuberculose Extra Pulmonar - https://drive.google.com/file/d/1h56qFqD7O_SmcXilwKFhAglAe5Stbz4W/view?usp=sharing
+PDF de slides - Doencas Negligenciadas - https://drive.google.com/file/d/1hMljPxpvZ6-3dqG4t1F45qK-aFeqbawg/view?usp=sharing
+Ficha resumo - Neoplasias Especificas e Miscelanea - TECM - https://drive.google.com/file/d/1haVmrYEpkMnRTdiW4SdYUiLWwOmo6SBM/view?usp=sharing
+Ficha Resumo - Saude do trabalhador_ dermatoses - https://drive.google.com/file/d/1hbSvCkN6wY5Lv94i6myiwJNxoNipnpjW/view?usp=sharing
+PDF de slides - Hiperglicemia Hospitalar - https://drive.google.com/file/d/1hddt0g3b-Mt1vj4SVR9UKZGtLUgIzqT8/view?usp=sharing
+Ficha resumo - Reacoes de hipersensibilidade - https://drive.google.com/file/d/1hffdG2rJj0iroQTpFJ7gRb9T47k2HJEJ/view?usp=sharing
+Ficha resumo - Abdome Agudo Inflamatorio_ Pancreatite Aguda - TECM - https://drive.google.com/file/d/1hqOfXJfdd_nJbQzeZxMEXG6QX_2nrhU8/view?usp=sharing
+Ficha Resumo - Doenca Pulmonar Intersticial (DPI) - https://drive.google.com/file/d/1iBa8nYrvGqwuj4Qsj8hjVFt4wuJ-F65_/view?usp=sharing
+Ficha Resumo - Disturbios Hidroeletroliticos - Outros (Magnesio e Fosforo) - https://drive.google.com/file/d/1iC3nPU-dxrlXxDuUV9UsvZkZQNJkfY7V/view?usp=sharing
+Ficha resumo - Tratamento de Tuberculose e efeitos colaterais do RIPE - TECM - https://drive.google.com/file/d/1iPvo9MD-7ZU9OrnoZTXAGM3bZSGfoQGn/view?usp=sharing
+PDF de slides - Sindromes Aorticas Agudas - https://drive.google.com/file/d/1isHSZdD-nI3j4ue-MOZHDVkl3iSt1OI8/view?usp=sharing
+Ficha resumo - Lei Organica de Saude_ 8080_90 - https://drive.google.com/file/d/1jPFdpFdYKV6cTOVc33jZj68_Ql-Ypcu0/view?usp=sharing
+Ficha resumo - Espirometria - TECM - https://drive.google.com/file/d/1jrBKQxJ2nONa9k-2SNLD66EZVewViI9N/view?usp=sharing
+PDF de slides - Insuficiencia Cognitiva_ Delirium no Idoso - https://drive.google.com/file/d/1kF9YrFPAM8lv5z9VlmR_OmNdaQiXjtc_/view?usp=sharing
+Ficha resumo - Linfomas - Basico - https://drive.google.com/file/d/1kFTDVlZV9ufw7CXj5pJWyuuGLRewHo4k/view?usp=sharing
+PDF de slides - Medicina legal_ Declaracao de obito, atestados e laudos - https://drive.google.com/file/d/1kHjUXaqMZiY5SsmVgvj_-QJR-hLbABDm/view?usp=sharing
+Ficha Resumo - Vacinacao do Idoso - https://drive.google.com/file/d/1kPeyF1IJQwFqGqKruxnjf_8cbOraaNCH/view?usp=sharing
+PDF de slides - Decreto 7508_11 - https://drive.google.com/file/d/1kaqYBBxZFmBMHEfGuMOtI4y0atGKqFzj/view?usp=sharing
+Ficha Resumo - Lupus Eritematoso Sistemico - Clinica Medica - https://drive.google.com/file/d/1kwiHIxLgHGhNO8z3OxuX4NNYv_Ms6SxJ/view?usp=sharing
+Ficha Resumo - Insuficiencia Cognitiva_ Demencias - https://drive.google.com/file/d/1kyiLqHZ5ji8_U64zYEdsKLpXbUEhPLF1/view?usp=sharing
+PDF de slides - Estudos transversais - https://drive.google.com/file/d/1lgnyB1MAiGq4JuPNgcSK0EEnDI7ImdRL/view?usp=sharing
+PDF de slides - Disturbios Hidroeletroliticos - Outros (Magnesio e Fosforo) - https://drive.google.com/file/d/1lmOchdaUR43VuNrSLjQwpFiyZ7na5I5R/view?usp=sharing
+PDF de slides - Injuria Renal Aguda (IRA)_ Parte 2 - TECM - https://drive.google.com/file/d/1lrj4OyJs35LwO4M9m6o2KCBcNPrxtfNf/view?usp=sharing
+Ficha Resumo - Hipertireoidismo - https://drive.google.com/file/d/1m1cvbQGnoCv3Ogx1pQeTD9sn1MMmS4Zz/view?usp=sharing
+Ficha Resumo - Doenca de Parkinson - https://drive.google.com/file/d/1m2iWRu6ru0nPBxoUTVcOFPoMsS4adHwy/view?usp=sharing
+PDF de slides - Doenca Pulmonar Obstrutiva Cronica (DPOC) - TECM - https://drive.google.com/file/d/1m9lDAfZQU0jGFxP4JM5usAa76No4Od0O/view?usp=sharing
+PDF de slides - Abdome Agudo Inflamatorio_ Colangite - TECM - https://drive.google.com/file/d/1mN8d-GFyf6EqQf6kQMDhlDFv4Xwyl3Ro/view?usp=sharing
+Ficha Resumo - Depressao no Idoso - https://drive.google.com/file/d/1mVEW3cbHj-IlrxzVaqUdf1KaSlyfbo5t/view?usp=sharing
+PDF de slides - Nodulo Pulmonar - https://drive.google.com/file/d/1myGhNm7NabtO-HPCoCW_XL8UlysHt_JW/view?usp=sharing
+Ficha resumo - Artrites Microcristalinas (Gota e CPPD) - TECM - https://drive.google.com/file/d/1myWpr3vsZEhg97NcYc1_T9cSDCC65P8Z/view?usp=sharing
+Ficha resumo - Tuberculose Pulmonar - TECM - https://drive.google.com/file/d/1n-H_ZxplcsF6Ry2OTqs1S2-6hxHTCZHJ/view?usp=sharing
+Ficha resumo - Insuficiencia Cardiaca - Manejo Ambulatoria - https://drive.google.com/file/d/1nRmMhFijpkO3jzUbNgCglKz3-MkKX8v_/view?usp=sharing
+Ficha Resumo - Figado_ Carcinoma hepatocelular - https://drive.google.com/file/d/1njVvvgBE6hpZpxgW5hRHDM1yievu7aNS/view?usp=sharing
+PDF de slides - Neurossifilis - TECM - https://drive.google.com/file/d/1nmYLDX-0euHeM9Y_mCzxH_pBHCGEhZiJ/view?usp=sharing
+Ficha Resumo - Principios do SUS - https://drive.google.com/file/d/1nqyoaazdH1Qm37q9fVxjEGCY2opr2oGO/view?usp=sharing
+PDF de slides - Hepatites Virais - Clinica Medica - https://drive.google.com/file/d/1oBDralECNPZnWjgg92iiU-SRwlva_SE6/view?usp=sharing
+PDF da aula - Niveis de Prevencao - https://drive.google.com/file/d/1oCa6GM6qN2PwFO1vLh3F0JJvNWWDok5F/view?usp=sharing
+Ficha Resumo - Alergia 1_ Rinite e Angioedema - https://drive.google.com/file/d/1oNxAkKCfgs3yE0hzpSHLYmelpHxWoCPR/view?usp=sharing
+Ficha resumo - Miastenia Gravis - TECM - https://drive.google.com/file/d/1oQ-C1rvDc6ru6saxFwSbljk3zW7EbsLV/view?usp=sharing
+Ficha Resumo - Otologia II - https://drive.google.com/file/d/1o_YgeSX48Rsp9ArwkEf24Pt3SNRTlcHj/view?usp=sharing
+Ficha Resumo - Abdome Agudo Inflamatorio_ Abscesso Hepatico - https://drive.google.com/file/d/1o_tHHLGbNX559g22KY90rMUV_2wmiY6k/view?usp=sharing
+ERRATA_ Antidiabeticos Orais e Subcutaneos - Parte 2 - https://drive.google.com/file/d/1oaoTVQCQJVNHk4b8SSDDlJTqFe8iWizL/view?usp=sharing
+Ficha resumo - Infeccao de Corrente Sanguinea (ICS) - TECM - https://drive.google.com/file/d/1p569KzKHogaaF-7HVwILmNahLy1Kd2IT/view?usp=sharing
+PDF de slides - Cabeca e Pescoco_ Cancer de pele nao melanoma - https://drive.google.com/file/d/1pA0PEkJK1TyHj6diZE8MvzggWmqi1GXU/view?usp=sharing
+PDF de slides - Derrame Pleural - TECM - https://drive.google.com/file/d/1pNWnabNDs7tzSMQDVwaXAxB8KDjRbw-d/view?usp=sharing
+Ficha Resumo - Transtorno de Humor I - https://drive.google.com/file/d/1pwOqfyRtsS--o-b5GuI_fPwvhVqHsQd-/view?usp=sharing
+Ficha Resumo - Redes de Atencao a Saude e Niveis de Atencao - https://drive.google.com/file/d/1qA19BDBcZmLsxY7PLCH-pow91UOai3lK/view?usp=sharing
+PDF de slides - Espondiloartrites - TECM - https://drive.google.com/file/d/1qLg1iEacwuF4bhBXq2IByk4QjwGupQi1/view?usp=sharing
+Ficha resumo - Febre Reumatica e Endocardite - TECM - https://drive.google.com/file/d/1qYY-uXccOX33MAaD6k0LUZx1eRrTd2Hz/view?usp=sharing
+Ficha Resumo - Transtorno de Ansiedade - https://drive.google.com/file/d/1qa8mOxZw9DewUGZIqPLNBws4jalapaEi/view?usp=sharing
+PDF de slides - Anticoagulacao I - https://drive.google.com/file/d/1qc0NOwgm5LFEZsvt3zYy4t5GeHmRLjmG/view?usp=sharing
+Ficha resumo - Insuficiencia Cardiaca - Descompensacoes Agudas - TECM - https://drive.google.com/file/d/1qwbrA-iMy1YsLDjj9NxAVcIwykcxv_et/view?usp=sharing
+Ficha resumo - Antidiabeticos Orais e Subcutaneos - Parte 2 - https://drive.google.com/file/d/1r5IjMW4hBXF3MPDTxGAeXti7iVRZvL5B/view?usp=sharing
+PDF de slides - Infeccao de Corrente Sanguinea (ICS) - TECM - https://drive.google.com/file/d/1rHgYtBqGX3_GNPQMiqW9PV3UpeXh2jzz/view?usp=sharing
+Ficha resumo - Neurossifilis - TECM - https://drive.google.com/file/d/1rV_FPk696poAM-7mls6axCjValc5Vt1t/view?usp=sharing
+Ficha Resumo - Doenca de Behcet - https://drive.google.com/file/d/1rbWsP_GLYMFpV50R1n00pzHWfmDBeliH/view?usp=sharing
+PDF de slides - Ulcera peptica, H. pylori, Gastrite Atrofica e Dispepsia Funcional - TECM - https://drive.google.com/file/d/1roDZaRx1smc9ZOwl4vQZu7jrFSg-gTvs/view?usp=sharing
+PDF de slides - Transtornos Relacionados a Substancias - Alcool - https://drive.google.com/file/d/1rofcGqvF886rzj5WS93lJ3Ce0RytclM5/view?usp=sharing
+Ficha Resumo - Anemias Hipoproliferativas II - https://drive.google.com/file/d/1rzA4LXI7pU4BIP3cerCrK1-6-Sf8czyI/view?usp=sharing
+Ficha Resumo - Vasculites de Grandes e Medios Vasos - https://drive.google.com/file/d/1sFwwR1Y5S5Ck-lcwPxLxXVr7OjVzYKcY/view?usp=sharing
+PDF de slides - Alergia 2_ Reacoes de hipersensibilidade - https://drive.google.com/file/d/1sRjqRbcH5jSwiScPTIZImmPKpzdQx5ol/view?usp=sharing
+PDF de Slides - Lesões Elementares - https://drive.google.com/file/d/1squ2WpP7E0G5RyEmq2x8TJTDY_OifhcK/view?usp=sharing
+Ficha resumo - Oncologia_ Cuidados paliativos - TECM - https://drive.google.com/file/d/1svrw5iRdxePCqp_oXzQEjDSE8sPlm-5e/view?usp=sharing
+Ficha Resumo - Hanseníase - https://drive.google.com/file/d/1sz0F5HFACIYv3X8J4rmprKdCcwDlI4F9/view?usp=sharing
+Ficha resumo - Outros Disturbios Hipofisarios - https://drive.google.com/file/d/1tEQwlXy0xwfBirC9t-ICWVz8S1sO1a9U/view?usp=sharing
+PDF de slides - Classificacao dos estudos epidemiologicos - https://drive.google.com/file/d/1tUURTzeHF0LMBClGEXLVnTAWdWVDny5G/view?usp=sharing
+PDF de slides - Estudos longitudinais_ coorte e caso control - https://drive.google.com/file/d/1tgEcI5_N6ad8lPHnW7zWiAJUwY3q7Hnz/view?usp=sharing
+Ficha resumo - Abdome Agudo Inflamatorio_ Apendicite Aguda - TECM - https://drive.google.com/file/d/1tsz1Wd3LcnxM_0t1zp8PQxWdP-YQOnYU/view?usp=sharing
+Ficha Resumo - Otologia I - https://drive.google.com/file/d/1tynrPiKPeLhQieX_xJw8pJOI2VYH-47W/view?usp=sharing
+Ficha resumo - Dispepsia - TECM - https://drive.google.com/file/d/1u1gkfCA9iCdAicBYilC0_f6v0zQWj7Xx/view?usp=sharing
+Ficha resumo - Doencas Pandemicas - https://drive.google.com/file/d/1uIMri6ZJ1YEvl4Y0MpcXSLybOMweem63/view?usp=sharing
+PDF de slides - Doencas oportunistas HIV - TECM - https://drive.google.com/file/d/1uTVugk1RcfJQKgnr9Q-TykrRNIV7TSBN/view?usp=sharing
+PDF de slides - Outros Disturbios Hipofisarios - https://drive.google.com/file/d/1uUjE2aGQKJvBj3LWfcB_VbpsHf-fXyXT/view?usp=sharing
+PDF de slides - Transtorno de Humor III_ Mania e Transtorno Bipolar - https://drive.google.com/file/d/1vQ0e2wQe5cowBvKuxxKGn-Y21HsMZ64d/view?usp=sharing
+Ficha Resumo - Insuficiencia Adrenal - https://drive.google.com/file/d/1vkvCM-gq0nPRFmFjm1Vh36sNboUEn2lm/view?usp=sharing
+Ficha Resumo - Revisando medidas de associacao Parte 2 - https://drive.google.com/file/d/1vw0sLfYAt6ozMcaT6hF4jHoKpPHYQnfR/view?usp=sharing
+Ficha resumo - Asma - TECM - https://drive.google.com/file/d/1vxuVt5zU6RVItAevHY7EvxZu_kt4nDqT/view?usp=sharing
+PDF DE SLIDES - Avaliacao Geriatrica Ampla - TECM - https://drive.google.com/file/d/1wB52BZe4WpDid169hZ37dmYPhQC4WZ-k/view?usp=sharing
+PDF de slides - Introducao as Cefaleias Primarias - TECM - https://drive.google.com/file/d/1wMLoKHvm61zlwPWow-kUONTWi6GLZEzE/view?usp=sharing
+PDF de slides - Distúrbios do Potássio - TECM - https://drive.google.com/file/d/1wMeSOn02_Wt7_eY7zWQVS1Jm74PSBBXI/view?usp=sharing
+PDF de slides - Hemoterapia - TECM - https://drive.google.com/file/d/1wUCp1Kgxjk1T-RMPtAnorzKsJTCUSqCJ/view?usp=sharing
+Ficha Resumo - Lesões Elementares - https://drive.google.com/file/d/1woue-kN8pismiIRrjKLihHLvcwRK_ITK/view?usp=sharing
+Ficha resumo - Analgesia e Sedacao - TECM - https://drive.google.com/file/d/1wvwr5Y_4BJWMntflcjXNbrVSzXFkpM6X/view?usp=sharing
+PDF de slides - Disturbios do Sono - https://drive.google.com/file/d/1wx2wQqLctjqa3W-4N-kL1bAIDJdFF277/view?usp=sharing
+PDF de slides - Indicadores de saude_ Parte 2 - https://drive.google.com/file/d/1xe81O3y6zJf39MdlTNPTNusgoSsWXPXh/view?usp=sharing
+PDF de slides - Abdome Agudo Inflamatorio_ Pancreatite Aguda - TECM - https://drive.google.com/file/d/1xqhjxIz57O1D7UCrI6dnC722MrVH8mRA/view?usp=sharing
+PDF de slides - Instabilidade Postural, Quedas e Imobilidade - TECM - https://drive.google.com/file/d/1xt6mho7uuQp2xVRWNVfw4iVEMs-umo8W/view?usp=sharing
+Ficha Resumo - Puerpério Patológico - https://drive.google.com/file/d/1xvmEpILvLy_ONZp6o4f9T10Lbo45wl25/view?usp=sharing
+Ficha resumo - Fragilidade - TECM - https://drive.google.com/file/d/1xwfroudiaaZyVJ5Az0jDz4oHaQ8WYc6_/view?usp=sharing
+Ficha Resumo - Pneumonia Associada à Ventilação Mecânica - https://drive.google.com/file/d/1y1k05br5On-lEVDE6xra_QlmmdfPpmfS/view?usp=sharing
+Ficha resumo - Transtorno de Humor III_ Mania e Transtorno Bipolar - https://drive.google.com/file/d/1yHaB2AmlKXVDUPaCRR4pdBbbDA1vDG2q/view?usp=sharing
+Ficha resumo - AIT - TECM - https://drive.google.com/file/d/1yK4UNjWf5vRSr4pOcbPlX7KAmlS_JSr9/view?usp=sharing
+PDF de slides - Valvopatias - TECM - https://drive.google.com/file/d/1yOv6cu43d4UbJ-DaEZKtER1LszGSPDgE/view?usp=sharing
+PDF de slides - Glomerulopatias I - https://drive.google.com/file/d/1yVF0bP4fzCntpgzQtL3pRZe5NHz9KrD3/view?usp=sharing
+Ficha resumo - Abdome Agudo_ Introducao - TECM - https://drive.google.com/file/d/1yY80xD52wsiMp50_9vcMajzxSTQnOHs_/view?usp=sharing
+PDF de slides - Emergencias Hiperglicemicas (CAD e EHH) - https://drive.google.com/file/d/1yt4y2b1uIjbDwbWtAdZIt68-WcwcVgwL/view?usp=sharing
+Ficha Resumo - Revisando medidas de associacao Parte 1 - https://drive.google.com/file/d/1yufnlHsklIFeS5d1g_BPDr5pp5LvEQoM/view?usp=sharing
+PDF de Slides - Terapia de Reposição Hormonal - https://drive.google.com/file/d/1z689yzfPR-4IBWrnibhoisqrZIDjfdOR/view?usp=sharing
+Ficha resumo - Indicadores de saude_ Parte 2 - https://drive.google.com/file/d/1zD3yJrW2Vz_ZMd1cuprNIjqgNpgUkVBk/view?usp=sharing
+Ficha Resumo - Avaliacao Global do Hemograma - https://drive.google.com/file/d/1zE8435fayiZww_8isRrG698S4RzZ0DTR/view?usp=sharing
+Ficha resumo - Gasometria Arterial I - TECM - https://drive.google.com/file/d/1zSZaz-Py85lNK6vgevRkw9ACmZUuQXBL/view?usp=sharing
+PDF de slides - Abdome Agudo Inflamatorio_ Diverticulite Aguda - TECM - https://drive.google.com/file/d/1zbb3h2lo9DdhQPtMAKdAsDHOHYRZCeCf/view?usp=sharing
+Ficha Resumo - Osteoporose - https://drive.google.com/file/d/1zgMnX7Hp_mYthLTQLOwuJADVwjlpap_a/view?usp=sharing
+Ficha resumo - ANTIDIABETICOS ORAIS E SUBCUTANEOS I - https://drive.google.com/file/d/1zkhF_cYr-yXuaQ-2tLnkgr1hrYDGWX2W/view?usp=sharing
+PDF de slides - AIT - TECM - https://drive.google.com/file/d/1zzHPPB1t1yoL-vfBCwpU4FAWrCFNCCsz/view?usp=sharing`;
+
+        // --- PROCESSAMENTO E MAPA DE LINKS ---
+        const linkMap = {};
+        
+        function normalizeKey(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        rawLinks.trim().split('\n').forEach(line => {
+            const parts = line.split(' - https');
+            if (parts.length >= 2) {
+                const title = parts[0].trim();
+                const url = 'https' + parts[1].trim();
+                linkMap[normalizeKey(title)] = url;
+            }
+        });
+
+        function findLink(title, type) {
+            let coreTitle = title.replace(/^Aula \d+ - (CofExpress: )?/, "").replace(/^PDF de Slides - /, "").replace(/^Ficha Resumo - /, "").trim();
+            
+            if (type === 'material') {
+                const attempts = [
+                    `PDF de slides - ${coreTitle}.pdf`,
+                    `PDF de slides - ${coreTitle}`,
+                    `${coreTitle}.pdf`,
+                    coreTitle
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else if (type === 'cofexpress') {
+                const attempts = [
+                    `${coreTitle}_COFEXPRESS`,
+                    `${coreTitle}_Cofexpress`,
+                    `${coreTitle} _COFEXPRESS`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else { // standard
+                const attempts = [
+                    coreTitle,
+                    `${coreTitle} - 1920x1080`,
+                    `${coreTitle} (reegravação)`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            }
+            return "";
+        }
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const PLACEHOLDER_VIDEO = '1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU'; // Vídeo genérico
+        const PLACEHOLDER_LINK = '#';
+
+        function createSubmodule(subTitle, aulaTitles, matTitles) {
+            const videos = aulaTitles.map(title => {
+                const isCof = title.toLowerCase().includes('cofexpress');
+                const foundLink = findLink(title, isCof ? 'cofexpress' : 'standard');
+                const videoId = extractIdFromGoogleDriveLink(foundLink) || PLACEHOLDER_VIDEO;
+                
+                return {
+                    id: videoId,
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-play-circle'
+                };
+            });
+
+            const materials = matTitles.map(title => {
+                const foundLink = findLink(title, 'material');
+                return {
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-file-pdf',
+                    link: foundLink || PLACEHOLDER_LINK
+                };
+            });
+
+            return { title: subTitle, videos, materials };
+        }
+
+        const modulesData = [];
+        const populate = (id, title, subs) => {
+            const m = { id, title, videos: [], materials: [] };
+            subs.forEach(s => {
+                const obj = createSubmodule(s.t, s.a, s.m);
+                m.videos.push({ type: 'category', title: obj.title, items: obj.videos });
+                m.materials.push({ type: 'category', title: obj.title, items: obj.materials });
+            });
+            modulesData.push(m);
+        };
+
+        // --- DEFINIÇÃO DOS MÓDULOS ---
+
+        // M01 Onboarding (Mantido do código original)
+        populate('mod_01', 'Módulo 01 - Onboarding', [
+            { t: 'Onboarding 2025 - História da Medcof', a: ['Aula 01 - CofExpress: Onboarding 2025 - História da Medcof', 'Aula 02 - Onboarding 2025 - História da Medcof'], m: ['PDF de Slides - Onboarding 2025 - História da Medcof'] },
+            { t: 'Onboarding 2025 - Apresentação da plataforma Medcof Plus', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação da plataforma Medcof Plus', 'Aula 02 - Onboarding 2025 - Apresentação da plataforma Medcof Plus'], m: ['PDF de Slides - Onboarding 2025 - Apresentação da plataforma Medcof Plus'] },
+            { t: 'Onboarding 2025 - Apresentação plataforma QBANK', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação plataforma QBANK', 'Aula 02 - Onboarding 2025 - Apresentação plataforma QBANK'], m: ['PDF de Slides - Onboarding 2025 - Apresentação plataforma QBANK'] },
+            { t: 'Onboarding - TEEM', a: ['Aula 01 - CofExpress: Onboarding - TEEM', 'Aula 02 - Onboarding - TEEM'], m: ['PDF de Slides - Onboarding - TEEM'] }
+        ]);
+
+        // Nova estrutura completa (M02 a M23)
+        // Array de configuração para gerar automaticamente a estrutura repetitiva
+        // 1. Definição da estrutura (Títulos e Sub-títulos)
+        const newModulesConfig = [
+            { 
+                id: 'mod_01', 
+                title: 'Módulo 01 - Onboarding 2025', 
+                subs: ['Onboarding 2025']
+            },
+            {
+                id: 'mod_02',
+                title: 'Módulo 02 - Nefrologia',
+                subs: [
+                    'Gasometria Arterial I', 'Gasometria Arterial II', 'Distúrbios do Sódio', 'Distúrbios do Potássio', 
+                    'Infecção do Trato Urinário (ITU)', 'Injúria Renal Aguda (IRA) Parte I', 'Injúria Renal Aguda (IRA) Parte II', 
+                    'Doença Renal Crônica I', 'Doença Renal Crônica II', 'Glomerulopatias I', 'Glomerulopatias II', 
+                    'Distúrbios do Cálcio', 'Distúrbios Hidroeletrolíticos Outros (Magnésio e Fósforo)'
+                ]
+            },
+            {
+                id: 'mod_03',
+                title: 'Módulo 03 - Neurologia',
+                subs: [
+                    'Acidente Vascular Cerebral Isquêmico (AVCi)', 'Acidente Vascular Cerebral Isquêmico (AVCi) Tratamento e Complicações', 'AIT', 
+                    'Hemorragia Subaracnóidea (HSA)', 'Acidente Vascular Cerebral Hemorrágico (AVCh) Intraparenquimatoso', 
+                    'Meningites e Encefalites', 'Síndrome de Guillain-Barré (SGB)', 'Miastenia Gravis', 
+                    'Introdução às Cefaleias Primárias', 'Enxaqueca (Migrânea)', 'Cefaleias Trigêmino-Autonômicas', 
+                    'Doença de Parkinson', 'Esclerose Múltipla (EM)', 'Epilepsia'
+                ]
+            },
+            {
+                id: 'mod_04',
+                title: 'Módulo 04 - Clínica Médica',
+                subs: ['Pré-Operatório I', 'Pré-Operatório II', 'Rastreamentos']
+            },
+            {
+                id: 'mod_05',
+                title: 'Módulo 05 - Geriatria',
+                subs: [
+                    'Introdução à Geriatria', 'Avaliação Geriátrica Ampla', 'Fragilidade', 
+                    'Instabilidade Postural, Quedas e Imobilidade', 'Incontinência Urinária no Idoso', 
+                    'Insuficiência Cognitiva Delirium no Idoso', 'Insuficiência Cognitiva Demências', 
+                    'Depressão no Idoso', 'Vacinação do Idoso', 'Iatrogenia no Idoso'
+                ]
+            },
+            {
+                id: 'mod_06',
+                title: 'Módulo 06 - Reumatologia',
+                subs: [
+                    'Introdução às Artrites e Artrite Reumatoide (AR)', 'Espondiloartrites', 'Osteoartrite', 
+                    'Artrites Microcristalinas (Gota e CPPD)', 'Fibromialgia', 'Osteoporose', 
+                    'Vasculites de Pequenos Vasos', 'Vasculites de Grandes e Médios Vasos', 'Doença de Behçet', 
+                    'Lúpus Eritematoso Sistêmico - Clínica Médica', 'Esclerose Sistêmica'
+                ]
+            },
+            {
+                id: 'mod_07',
+                title: 'Módulo 07 - Cardiologia',
+                subs: [
+                    'Síndrome Coronariana Aguda sem Supra de ST (SCASSST)', 'Síndrome Coronariana Aguda com Supra de ST (SCACSST)', 
+                    'Hipertensão Arterial Sistêmica (HAS)', 'Sindromes Aórticas Agudas', 'Anticoagulação em Cardiologia', 
+                    'Pericardite e Miocardite', 'Taquiarritmias', 'Bradiarritimias', 'Valvopatias', 
+                    'Febre Reumática e Endocardite', 'Síncope', 'Insuficiência Cardíaca Manejo Ambulatorial', 
+                    'Insuficiência Cardíaca Descompensações Agudas', 'Insuficiência Cardíaca Avançada', 'Síndrome Coronariana Crônica'
+                ]
+            },
+            {
+                id: 'mod_08',
+                title: 'Módulo 08 - Emergências',
+                subs: [
+                    'Emergências Hipertensivas', 'BLS e ACLS', 'Choque Abordagem Inicial', 'Choque Tipos de Choque', 
+                    'Intoxicações Exógenas', 'Emergências Hiperglicêmicas (CAD e EHH)', 'Diagnóstico de Morte Encefálica (ME)', 
+                    'Via Aérea, Intubação e Ventilação Não-Invasiva (VNI)'
+                ]
+            },
+            {
+                id: 'mod_09',
+                title: 'Módulo 09 - Hematologia',
+                subs: [
+                    'Avaliação Global do Hemograma', 'Anemias Hipoproliferativas I', 'Anemias Hipoproliferativas II', 
+                    'Anemias Hemolíticas Hereditárias', 'Anemias Hemolíticas Adquiridas', 'Fisiologia da Coagulação', 
+                    'Anticoagulação I', 'Anticoagulação II', 'Distúrbios da Hemostasia', 'Púrpura Trombocitopênica Trombótica (PTT)', 
+                    'Discrasias Plasmocitárias', 'Síndromes Medulares', 'Leucemias', 'Linfomas', 'Hemoterapia'
+                ]
+            },
+            {
+                id: 'mod_10',
+                title: 'Módulo 10 - Gastroenterologia',
+                subs: [
+                    'Dispepsia', 'DRGE', 'Úlcera Péptica, H. Pylori, Gastrite Atrófica e Dispepsia Funcional', 
+                    'Avaliação de Enzimas Hepáticas', 'Doenças Hepáticas CBP, CEP, HAI e Doença de Wilson', 
+                    'Diarreia Agudas e Colite Pseudomembranosa', 'Diarreias Crônicas', 'Doença Inflamatória Intestinal (DII)', 
+                    'Cirrose Hepática Conceitos Gerais', 'Cirrose Hepática Ascite + PBE', 
+                    'Cirrose Hepática Encefalopatia Hepática e Síndrome Hepatorrenal', 
+                    'Cirrose Hepática Varizes Esofágicas e Síndrome Hepatopulmonar'
+                ]
+            },
+            {
+                id: 'mod_11',
+                title: 'Módulo 11 - CAD',
+                subs: ['Esôfago Diagnósticos e diferenciais de disfagia']
+            },
+            {
+                id: 'mod_12',
+                title: 'Módulo 12 - Infectologia',
+                subs: [
+                    'HIV', 'Doenças Oportunistas HIV', 'Tuberculose Pulmonar', 'Tuberculose Extra Pulmonar', 
+                    'Tratamento de Tuberculose e Efeitos Colaterais do RIPE', 'Antibióticos I', 'Antibióticos II', 
+                    'Sífilis e Uretrites Infecciosas', 'Neurossífilis', 'Arboviroses', 'Hepatites Virais', 
+                    'Doenças Virais e Pandêmicas', 'Icterícias febris e Febre Maculosa', 'Acidentes com Animais Peçonhentos', 
+                    'Vacinação Situações Especiais', 'Doenças Negligenciadas'
+                ]
+            },
+            {
+                id: 'mod_13',
+                title: 'Módulo 13 - Pneumologia',
+                subs: [
+                    'Espirometria', 'Asma', 'Doença Pulmonar Obstrutiva Crônica (DPOC)', 'Pneumonia Adquirida na Comunidade', 
+                    'Derrame Pleural', 'Tabagismo', 'Doença Pulmonar Intersticial (DPI)', 'TEP', 'Hipertensão Pulmonar', 
+                    'Nódulo Pulmonar', 'Distúrbios do Sono'
+                ]
+            },
+            {
+                id: 'mod_14',
+                title: 'Módulo 14 - Endocrinologia',
+                subs: [
+                    'Dislipidemia Classificação e Diagnóstico', 'Tratamento das Dislipidemias', 'Síndrome Metabólica', 
+                    'Obesidade Introdução e Tratamento Não Farmacológico', 'Obesidade Tratamento Farmacológico e Cirúrgico', 
+                    'Doença Hepática Esteatótica Metabólica (DHEM)', 'Diabetes Classificação, Fisiopatologia e Diagnóstico', 
+                    'Meta Terapêutica, Manejo do Pré-DM e Tratamento Não Farmacológico do DM', 
+                    'Antidiabéticos Orais e Subcutâneos Parte I', 'Antidiabéticos Orais e Subcutâneos Parte II', 
+                    'Insulinoterapia', 'Hiperglicemia Hospitalar', 'Complicações Crônicas do Diabetes Mellitus (DM)', 
+                    'Fisiologia da Tireoide', 'Hipotireoidismo', 'Hipertireoidismo', 'Nódulos e Câncer de Tireoide', 
+                    'Tireoidites & Síndrome do Eutireoidiano Doente', 'Insuficiência Adrenal', 'Hiperaldosteronismo Primário', 
+                    'Incidentaloma Adrenal', 'Prolactinomas', 'Outros Distúrbios Hipofisários', 'Síndrome de Cushing'
+                ]
+            },
+            {
+                id: 'mod_15',
+                title: 'Módulo 15 - UTIEmergências',
+                subs: [
+                    'Síndrome do Desconforto Respiratório Agudo (SDRA)', 'Analgesia e Sedação', 'Drogas Vasoativas (DVA)', 
+                    'Neurointensivismo Hipertensão Intracraniana', 'Infecção de Corrente Sanguínea (ICS)'
+                ]
+            },
+            {
+                id: 'mod_16',
+                title: 'Módulo 16 - Oncologia',
+                subs: ['Oncologia Cuidados Paliativos', 'Neoplasias Específicas e Miscelânea', 'Emergências Oncológicas']
+            },
+            {
+                id: 'mod_17',
+                title: 'Módulo 17 - Cirurgia Geral',
+                subs: [
+                    'Abdome Agudo Introdução', 'Abdome Agudo Inflamatório Apendicite Aguda', 
+                    'Abdome Agudo Inflamatório Colecistite', 'Abdome Agudo Inflamatório Colangite', 
+                    'Abdome Agudo Inflamatório Pancreatite Aguda', 'Abdome Agudo Inflamatório Diverticulite Aguda', 
+                    'Abdome Agudo Obstrutivo'
+                ]
+            },
+            {
+                id: 'mod_18',
+                title: 'Módulo 18 - Cirurgia Plástica',
+                subs: ['Cirurgia Plástica Lesões por pressão']
+            },
+            {
+                id: 'mod_19',
+                title: 'Módulo 19 - Urologia',
+                subs: ['Urologia Litíase no pronto-socorro']
+            },
+            {
+                id: 'mod_20',
+                title: 'Módulo 20 - Cirurgia Vascular',
+                subs: ['Cirurgia Vascular Isquemia de membros inferiores - OAC']
+            },
+            {
+                id: 'mod_21',
+                title: 'Módulo 21 - Imunologia',
+                subs: ['Alergia 1 Rinite e Angioedema', 'Alergia 2 Reações de hipersensibilidade']
+            },
+            {
+                id: 'mod_22',
+                title: 'Módulo 22 - Epidemiologia',
+                subs: [
+                    'Associação x causalidade', 'Classificação dos estudos epidemiológicos', 
+                    'Estudos longitudinais corte e caso controle', 'Estudos transversais', 
+                    'Testes Diagnósticos características básicas', 'Testes Diagnósticos aplicabilidade clínica', 
+                    'Revisando medidas de associação', 'Indicadores de saúde Parte 1', 'Indicadores de saúde Parte 2'
+                ]
+            },
+            {
+                id: 'mod_23',
+                title: 'Módulo 23 - SUS',
+                subs: [
+                    'Níveis de Prevenção', 'Financiamento do SUS', 'Princípios do SUS', 'Lei Orgânica de Saúde 808090', 
+                    'Lei Orgânica de Saúde 814290', 'Decreto 750811', 'Redes de Atenção à Saúde e Níveis de Atenção', 
+                    'Saúde Suplementar'
+                ]
+            },
+            {
+                id: 'mod_24',
+                title: 'Módulo 24 - Psiquiatria',
+                subs: [
+                    'Transtorno de Humor I', 'Transtorno de Humor II Antidepressivos', 
+                    'Transtorno de Humor III Mania e Transtorno Bipolar', 'Transtorno de Ansiedade', 
+                    'Transtorno Psicótico', 'Transtornos Relacionados a Substâncias - Álcool'
+                ]
+            },
+            {
+                id: 'mod_25',
+                title: 'Módulo 25 - Otorrinolaringologia',
+                subs: ['Otologia I', 'Otologia II']
+            },
+            {
+                id: 'mod_26',
+                title: 'Módulo 26 - Oftalmologia',
+                subs: ['Oftalmologia para o Generalista Parte I', 'Oftalmologia para o Generalista Parte II']
+            },
+            {
+                id: 'mod_27',
+                title: 'Módulo 27 - Medicina do Trabalho',
+                subs: ['Saúde do Trabalhador Dermatoses', 'Saúde do Trabalhador Intoxicações, Pairo e Burnout', 'Saúde do Trabalhador Pneumoconioses']
+            },
+            {
+                id: 'mod_28',
+                title: 'Módulo 28 - Medicina Legal',
+                subs: ['Ética Médica', 'Medicina Legal Declaração de Óbito, Atestados e Laudos']
+            },
+            {
+                id: 'mod_29',
+                title: 'Módulo 29 - Cirurgia',
+                subs: [
+                    'Neurocirurgia  Demais Assuntos', 'Neurocirurgia  Emergências Neurocirúrgicas', 'Trauma  Trauma de Tórax', 
+                    'Cirurgia Plástica  Queimados - Atendimento Inicial', 'Fígado  Carcinoma Hepatocelular', 
+                    'Abdome Agudo Inflamatório  Abscesso Hepático', 'Oncocirurgia  Melanoma', 
+                    'Cabeça e Pescoço  Câncer de Pele Não-Melanoma'
+                ]
+            },
+            {
+                id: 'mod_30',
+                title: 'Módulo 30 - UTI',
+                subs: [
+                    'Princípios de Ventilação Mecânica (VM)', 'Ventilação Mecânica (VM)  Exercícios', 
+                    'Teste de Respiração Espontânea (TRE) e Extubação', 'Pneumonia Associada à Ventilação Mecânica'
+                ]
+            },
+            {
+                id: 'mod_31',
+                title: 'Módulo 31 - Ginecologia Endócrina',
+                subs: ['Terapia de Reposição Hormonal']
+            },
+            {
+                id: 'mod_32',
+                title: 'Módulo 32 - Obstetrícia de Alto Risco',
+                subs: ['Puerpério Patológico']
+            },
+            {
+                id: 'mod_33',
+                title: 'Módulo 33 - Dermatologia',
+                subs: ['Lesões Elementares', 'Hanseníase']
+            }
+        ];
+
+        // 2. Lógica para popular os módulos (Gera automaticamente Aulas e Materiais)
+        newModulesConfig.forEach(mod => {
+            const subObjects = mod.subs.map((subName, index) => {
+                // Formatação: Sub-Módulo XX - [Nome]
+                const subNum = (index + 1).toString().padStart(2, '0');
+                const subTitle = `Sub-Módulo ${subNum} - ${subName}`;
+                
+                return {
+                    t: subTitle,
+                    // Gera as 2 aulas padrão: Aula 01 (CofExpress) e Aula 02 (Normal)
+                    a: [`Aula 01 - CofExpress: ${subName}`, `Aula 02 - ${subName}`],
+                    // Gera os 2 materiais padrão: Ficha Resumo e PDF de Slides
+                    m: [`Ficha Resumo - ${subName}`, `PDF de Slides - ${subName}`]
+                };
+            });
+            // Chama a função principal de população (que já deve existir no seu código)
+            populate(mod.id, mod.title, subObjects);
+        });
+
+
+        // --- FUNÇÕES DE UI ---
+        function loadVideo(videoId, lessonTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (videoId && videoId !== PLACEHOLDER_VIDEO) {
+                p.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else {
+                p.src = ''; 
+            }
+            t.textContent = lessonTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = videoId;
+            const cur = document.querySelector(`[data-id="${videoId}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (link && link !== PLACEHOLDER_LINK) {
+                const preview = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                p.src = preview;
+            } else {
+                p.src = '';
+            }
+            t.textContent = materialTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = link;
+            const cur = document.querySelector(`[data-id="${link}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function renderModuleContent(moduleId) {
+            const vc = document.getElementById('videosContainer');
+            const mc = document.getElementById('materialsContainer');
+            const t = document.getElementById('lessonTitle');
+            
+            const m = modulesData.find(mod => mod.id === moduleId);
+            if (!m) return;
+
+            let vHtml = '';
+            let mHtml = '';
+            let first = null;
+
+            m.videos.forEach(cat => {
+                vHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                    if (!first && item.id !== PLACEHOLDER_VIDEO) first = { type: 'video', ...item };
+                    else if (!first) first = { type: 'video', ...item };
+
+                    vHtml += `<div class="material-item" onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                vHtml += `</div></details>`;
+            });
+
+            m.materials.forEach(cat => {
+                mHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                     mHtml += `<div class="material-item" onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                mHtml += `</div></details>`;
+            });
+
+            vc.innerHTML = vHtml;
+            mc.innerHTML = mHtml;
+
+            const fd = vc.querySelector('details');
+            if (fd) fd.open = true;
+
+            if (first) {
+                if (first.type === 'video') loadVideo(first.id, first.title);
+            } else {
+                document.getElementById('contentPlayer').src = '';
+                t.textContent = 'Selecione um item';
+            }
+        }
+
+        const sel = document.getElementById('moduleSelector');
+        modulesData.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.title;
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', (e) => renderModuleContent(e.target.value));
+        if (modulesData.length > 0) {
+            sel.value = modulesData[1].id;
+            renderModuleContent(modulesData[1].id);
+        }
+    </script>
+</body>
+</html>

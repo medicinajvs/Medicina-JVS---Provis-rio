@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extensivo TEEM 2026 - Plataforma de Aulas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a202c; color: #e2e8f0; }
+        .selected-lesson { background-color: #4299e1; border: 2px solid #63b3ed; }
+        .item-thumbnail-placeholder { width: 80px; height: 45px; background-color: #4a5568; display: flex; justify-content: center; align-items: center; border-radius: 0.375rem; flex-shrink: 0; }
+        .item-thumbnail-placeholder i { font-size: 1.8rem; color: #CBD5E0; }
+        details { background-color: #2d3748; border-radius: 0.375rem; overflow: hidden; margin-bottom: 0.75rem; }
+        summary { padding: 0.5rem 0.75rem 0.5rem 2rem; cursor: pointer; font-weight: 600; color: #e2e8f0; position: relative; list-style: none; user-select: none; }
+        summary::-webkit-details-marker { display: none; }
+        summary::before { content: '\25B6'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); transition: transform 0.2s; color: #a0aec0; font-size: 0.8rem; }
+        details[open] summary::before { transform: translateY(-50%) rotate(90deg); }
+        .material-item { display: flex; align-items: center; gap: 0.75rem; background-color: #4a5568; border-radius: 0.375rem; padding: 0.5rem; margin-top: 0.5rem; cursor: pointer; transition-colors: 0.2s; margin-left: 0.5rem; margin-right: 0.5rem; }
+        .material-item:hover { background-color: #2d3748; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-white">Extensivo TEEM 2026</h1>
+            <select id="moduleSelector" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs md:max-w-md"></select>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <section class="flex-1 bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div class="relative w-full h-0 pb-[56.25%] bg-black">
+                <iframe id="contentPlayer" src="" class="absolute inset-0 w-full h-full rounded-md" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="py-2 px-4 bg-gray-800 rounded-b-lg">
+                <h2 id="lessonTitle" class="text-2xl font-bold text-white mb-0 text-center">Selecione um item</h2>
+            </div>
+            <div class="p-4 bg-gray-800 rounded-lg shadow-lg mt-4">
+                <h3 class="text-lg font-bold mb-4 text-white">Materiais de Estudo</h3>
+                <div id="materialsContainer" class="space-y-3"></div>
+            </div>
+        </section>
+        <aside class="w-full lg:w-96 bg-gray-800 rounded-lg shadow-lg p-4 space-y-4 overflow-y-auto hide-scrollbar max-h-[calc(100vh-160px)] lg:max-h-full">
+            <h3 class="text-lg font-bold mb-4 text-white">Aulas e Módulos</h3>
+            <div id="videosContainer" class="space-y-3 mb-6"></div>
+        </aside>
+    </main>
+
+    <script>
+        // Variável global para rastrear o item selecionado
+        let selectedItemId = null;
+
+        // --- DADOS BRUTOS DOS LINKS (Mantidos da versão anterior para compatibilidade) ---
+        // Nota: Os links atuais cobrem principalmente Endocrinologia.
+        // Os novos módulos (Neurologia, etc.) usarão placeholders até que os links sejam atualizados.
+        const rawLinks = `
+Terapia de Ressincronização Cardíaca e Infecção de DCEI - https://drive.google.com/file/d/1-ivMFuwCDB4fI-Q3xugr55uAXJ_-D-6N/view?usp=sharing
+Pericardite - Diagnóstico e tratamento - https://drive.google.com/file/d/117HRlx33jbyLbpV3VaI_qnEhUMvUqIe-/view?usp=sharing
+IC - Fisiopatologia e abordagem diagnóstica_COFEXPRESS - https://drive.google.com/file/d/118iZW4XByqKZAQUafSpbQpG2UESaGqlJ/view?usp=sharing
+Cardiopatias congênitas cianóticas - https://drive.google.com/file/d/137NDhp8rjsy2gmN--GIX4MUNf9_MQdnC/view?usp=sharing
+Hipertensão Arterial Secundária - https://drive.google.com/file/d/13AKyNaH0K9RgtIHm5WKjWVR1gOYftfFV/view?usp=sharing
+Síndrome Coronariana Crônica - Tratamento clínico e risco residual_COFEXPRESS - https://drive.google.com/file/d/15jH2kvBrfQENe9H0K6MsyvSIraOs1z23/view?usp=sharing
+Principais terapias associadas à cardiotoxicidade - https://drive.google.com/file/d/18wwpm33wqwBXqQ8YzUkdepNXvEjJjtTO/view?usp=sharing
+ICFEP - https://drive.google.com/file/d/19_NamQwmVtnqi0fy8Qp8v2s9JbwRfrbP/view?usp=sharing
+Anticoagulação em valvopatias_HITEXPRESS - https://drive.google.com/file/d/19l7-T0t3SR54l2iOuvSbrsH0mZIZysvm/view?usp=sharing
+Cardiopatias congênitas não-cianóticas - https://drive.google.com/file/d/1ADiy4RNEoj-bfCYOhxNg1gQtT9OzgLu-/view?usp=sharing
+Taquicardias Supraventriculares- - https://drive.google.com/file/d/1B1ec3r2rAl6r5zDjzYU5kndZ9NmTfhWX/view?usp=sharing
+Ausência de oclusão coronária aguda (infarto sem supra)_COFEXPRESS - https://drive.google.com/file/d/1BwVck4M0bot_09X1dcXxbGo8CZqnT42t/view?usp=sharing
+Fibrilação e Flutter Atrial - https://drive.google.com/file/d/1CpQKg8I4CcvOkzWjWCPXCA5ZGWiTg8jx/view?usp=sharing
+Miocardite - Diagnóstico e tratamento - https://drive.google.com/file/d/1D2nOm4HfenPNTmiGxAoxdJusPmzV_V1D/view?usp=sharing
+Doenças da Aorta - https://drive.google.com/file/d/1DJ4ood87t-YOzzCcIYVqSBxEEPitL972/view?usp=sharing
+Ausência de oclusão coronária aguda (infarto sem supra) - https://drive.google.com/file/d/1DQFqxdfdDa5sNu8gNLQNJdNdwThZmxPc/view?usp=sharing
+IC aguda e choque cardiogenico_COFEXPRESS_1 - https://drive.google.com/file/d/1DSkw0Ue9tDP2HtI_dQAJhEC7shTsxshy/view?usp=sharing
+Hipertensão Arterial Secundária_COFEXPRESS - https://drive.google.com/file/d/1EB0mp3-w68aebJ-gRJe7IU5PSmYfSL9Z/view?usp=sharing
+Cardio-oncologia definições e fatores de risco - https://drive.google.com/file/d/1EM4RfhLBBw5Zk-wZ-aNq4fjWtSGLHLZe/view?usp=sharing
+Síndrome Coronariana Crônica - Diagnóstico_ Parte 1- - https://drive.google.com/file/d/1EOCcxd7iTw4nnpn4VqZ3uageaxDcBVtw/view?usp=sharing
+Pericardite - Diagnóstico e tratamento_COFEEXPRESS - https://drive.google.com/file/d/1F0jxC7SagQrLcZbmccp66F6SyjqKeIRD/view?usp=sharing
+Bradiarritmias e MP - https://drive.google.com/file/d/1HBCxegMSCRzrFYCkVNH-t6kDAiJit-rK/view?usp=sharing
+Manifestações genéticas - https://drive.google.com/file/d/1HQekorYvoAyRRltjJyYSnz1wkig6-2KT/view?usp=sharing
+Cardiointensivismo_COFEXPRESS - https://drive.google.com/file/d/1LEoFj_w8j1c-0-XsVtwnCU1p5e4fbCIN/view?usp=sharing
+Cardiometabolismo da mulher e gestação_COFEXPRESS - https://drive.google.com/file/d/1NkboAuFFH1GIPzZqvvfVqSwL-lrqQqqH/view?usp=sharing
+Síndrome Coronariana Crônica - Diagnóstico_ Parte 2_COFEXPRESS - https://drive.google.com/file/d/1OivTSnqkk51gYJ6_2jXjsqPRCOTUzov3/view?usp=sharing
+Síndrome Coronariana Crônica - Revascularização - https://drive.google.com/file/d/1OxlBJKo37U7Qh8ua-eVd0al4I5r2O931/view?usp=sharing
+Principais terapias associadas à cardiotoxicidade_COFEXPRESS - https://drive.google.com/file/d/1PNxAcayEbBmvGsf4rt_Z1veb2AQm3FQb/view?usp=sharing
+Valvopatias Mitrais e Insufiência Tricúspide_HITEXPRESS - https://drive.google.com/file/d/1UbjBSXzcdaeAUQrVXoJQwlOKZqBc0LIm/view?usp=sharing
+Síndrome Coronariana Crônica - Revascularização _COFEXPRESS - https://drive.google.com/file/d/1X_bWnCU7odxgIi-Ja_00Lt7w2j4t62ED/view?usp=sharing
+Febre Reumática - https://drive.google.com/file/d/1ZWhTxvKS5HU2N8y6aMxbFQgj8Mrsj33r/view?usp=sharing
+Insuficiência cardíaca avançada e noções básicas de transplante cardíaco - https://drive.google.com/file/d/1_luR2Zsb7HCE4naTLBGhdPYK2e-CcXHI/view?usp=sharing
+ICFER_COFEXPRESS - https://drive.google.com/file/d/1aBFUQ8eseWE1GxCfE04ZknyD9UauJwzx/view?usp=sharing
+Endocardite Infecciosa - https://drive.google.com/file/d/1aELTWHEr2spjmL6qJowPfZ2LdHUPARaW/view?usp=sharing
+Dislipidemias - https://drive.google.com/file/d/1aYaz2kbUsSnV-V37tWdDdXq3ejxRAAfV/view?usp=sharing
+Miocárdio NC e Doença de Chagas_COFEEXPRESS - https://drive.google.com/file/d/1fxBqdP4Tdcgztw0XOI2TMOK5sMQX7mRU/view?usp=sharing
+IC - Fisiopatologia e abordagem diagnóstica - https://drive.google.com/file/d/1i3va43WK2drGB-IAylDLn7iwXDsnK3YZ/view?usp=sharing
+Cardiometabolismo da mulher e gestação - https://drive.google.com/file/d/1idDux9KpDbA9SQqv7FPbJ3-Wh24eiziC/view?usp=sharing
+Hipertensão Arterial - Tratamento - https://drive.google.com/file/d/1jHm8zBSQMtkFpL-uk-7pT826RaDyLkt5/view?usp=sharing
+Doencas da Aorta_COFEXPRESS - https://drive.google.com/file/d/1laFzVD1nP63PPp8Y3JD3dtgTMXYJUcGg/view?usp=sharing
+Dislipidemias _COFEXPRESS - https://drive.google.com/file/d/1msRdWKqkNkYyq2S_--enS-TJECuiszG7/view?usp=sharing
+ICFER - https://drive.google.com/file/d/1p52Hn_CXxrNqBaInmJPht4-xK_b2G5Ga/view?usp=sharing
+Noções básicas de Reabilitação Cardíaca - https://drive.google.com/file/d/1sR-34x9FKtXG2WT-m83UFFM9yPG9B1dj/view?usp=sharing
+Cardiomiopatia arritmogênica e sarcoidose_COFEEXPRESS - https://drive.google.com/file/d/1soMvXGZijaQ0vwnf1oAmy5Dl1LdI9g_Z/view?usp=sharing
+Cardiomiopatia hipertrófica - https://drive.google.com/file/d/1sz8jtGN1qwaScWvKsvAnud0ZkBKBnEcE/view?usp=sharing
+Noções de Cardiologia do Esporte - https://drive.google.com/file/d/1teeb7AfzVMqDV-rVwcOWSFlSNix2bKDK/view?usp=sharing
+Síndrome Coronariana Crônica - Outras formas de doença coronariana e DAOP_COFEXPRESS - https://drive.google.com/file/d/1uxxTVptf8LkMSaqzO5aBF3wJ9Na38r6P/view?usp=sharing
+Onboarding - Apresentação QBank - Gustavo Boog - https://drive.google.com/file/d/1vrxaMBIFcomXqIF90V6ovVPjnp2qiyFO/view?usp=sharing
+Cardiologia em doenças clínicas - https://drive.google.com/file/d/1ySY9vMbf5j11Pv_xjawfQa8wjfpYX8WE/view?usp=sharing
+Insuficiência Aórtica Crônica - https://drive.google.com/file/d/1zeRnMjP9nDxi6OasLLjRDLqWc-LENjmc/view?usp=sharing
+Manifestações genéticas_COFEXPRESS - https://drive.google.com/file/d/1-3P6sBzVtpe4VtebBMje64_Y8KcfUO20/view?usp=sharing
+Oclusão coronária aguda (infarto com supra) - https://drive.google.com/file/d/1-3hm_0LXsZyTx1XCgIonZLQJG6hSK_-n/view?usp=sharing
+Cardiomiopatia arritmogênica e sarcoidose - https://drive.google.com/file/d/1-C9Xm3s-GYS18UDjoG1d0Q-B1mAlHS1Z/view?usp=sharing
+Insuficiência Aórtica Crônica_COFEXPRESS- - https://drive.google.com/file/d/1-Cxq-MbnikoJOu6ySYnAvA3l0urKPLYp/view?usp=sharing
+Síndrome Coronariana Crônica - Diagnóstico_ Parte 2 - https://drive.google.com/file/d/1-DiWh4-OJku87EBlNB5dua-3FYRC5MsS/view?usp=sharing
+Amiloidose cardíaca_COFEXPRESS - https://drive.google.com/file/d/1-My0vfOaKFn99Ibe_dTDyTmV3uLXm6YE/view?usp=sharing
+Amiloidose cardíaca - https://drive.google.com/file/d/1-lOnRGq1gXVhfvbNeWFmj3eCbpoDgXMV/view?usp=sharing
+ICFEP_COFEXPRESS - https://drive.google.com/file/d/1-oO5_k7wd-5F2lH_QqpN7liwG6gb_owr/view?usp=sharing
+ECG na SCA - https://drive.google.com/file/d/1-oXjBQMJ90DlGwYUYrqQOs549pP3Bxjv/view?usp=sharing
+Perioperatório_COFEXPRESS - https://drive.google.com/file/d/1-rpmWPz_UNP_qWsSFSB51AiiSpGiKLj9/view?usp=sharing
+Anticoagulação em valvopatias - https://drive.google.com/file/d/1-t8W0FbpYwa7dUlonLg023hP3E0ARG0J/view?usp=sharing
+Oclusão coronária aguda (infarto com supra)_COFEXPRESS - https://drive.google.com/file/d/104Oomppa3dqgJijhBqkzek-YBMkPkKMt/view?usp=sharing
+Hipertensão Arterial - Diagnóstico e classificação - https://drive.google.com/file/d/10CEeZe1Xa6duYhq1Ry7ZkETtRsjtVwK2/view?usp=sharing
+Hipertensão Arterial - Diagnóstico e classificação_COFEXPRESS - https://drive.google.com/file/d/10DRW3JXYGTeIRVCmPyho6X4E8V7375fn/view?usp=sharing
+IC aguda e choque cardiogênico - https://drive.google.com/file/d/10FzbjFnjwUFLxjKztsVWrxnzXhr1bakm/view?usp=sharing
+Síndrome Coronariana Crônica - Outras formas de doença coronariana e DAOP - https://drive.google.com/file/d/10Q-j9S5AKEZQVOOWi2xN6ZFXV2O71dHO/view?usp=sharing
+ECG na SCA_COFEXPRESS - https://drive.google.com/file/d/10ka12dHKqpR8SIgJKt6m6Fctc3rqz262/view?usp=sharing
+Síndrome Coronariana Crônica - Tratamento clínico e risco residual - https://drive.google.com/file/d/10mUmf5JDbfRO8RtBkBR6FA7szAJjOmyC/view?usp=sharing
+Endocardite Infecciosa_COFEXPRESS - https://drive.google.com/file/d/10n-COlF6-XbbXScqz6mQSu9-Zwa6i0oA/view?usp=sharing
+Insuficiência cardíaca avançada e noções básicas de transplante cardíaco_COFEXPRESS - https://drive.google.com/file/d/10zMs3WU6oZqS1O833_jrGhy2jsmo8h_N/view?usp=sharing
+Dor torácica - https://drive.google.com/file/d/110VOWsuXWZgEwi1ytMWDA0nEiWn_GC9s/view?usp=sharing
+Cardiologia em doenças clínicas_COFEXPRESS - https://drive.google.com/file/d/118ReH1zWOiKyjMQPx_dn2TeW2yfcI-id/view?usp=sharing
+Estenose Aórtica - https://drive.google.com/file/d/11K91g-xDY4WgTTKP_BYx4m0TaUzbz6-H/view?usp=sharing
+Miocárdio NC e Doença de Chagas - https://drive.google.com/file/d/11QeyuutbnTNHX0duD9U0CUhyKhfwXQXG/view?usp=sharing
+Onboarding - Ettore - https://drive.google.com/file/d/11XR8tl2pa6WjFP0WVJns5d_eVS3-aBfH/view?usp=sharing
+Cardiopatias congênitas cianóticas_COEXPRESS - https://drive.google.com/file/d/11aphBw1EWyBehWXJoGVY6xAJysgeBZXk/view?usp=sharing
+Onboardings - Matheus Meireles - https://drive.google.com/file/d/11lDcNCR40v1cNT_jDOA8_Jgm--HF0jj5/view?usp=sharing
+Perioperatório - https://drive.google.com/file/d/11rZMPePJIlcCBdiCR1gZXFyGJ2ckRmo6/view?usp=sharing
+Miocardite - Diagnóstico e tratamento_COFEEXPRESS - https://drive.google.com/file/d/11tfjYb95lDHuF8DTia0VOBcoW1s782-N/view?usp=sharing
+Dor torácia_COFEXPRESS - https://drive.google.com/file/d/11znY0YM7iqeUuCXdnvAbEdqULb6I1lLQ/view?usp=sharing
+Cardiointensivismo - https://drive.google.com/file/d/124xXwG1SHsH52QG1MZ6Ikk2oMrXsNwQq/view?usp=sharing
+Síncope e Canalopatias - https://drive.google.com/file/d/12CZVn7aRxS1rwGOhmvpWb5_DPvJ0ZSEu/view?usp=sharing
+Tratamento das dislipidemias _COFEXPRESS - https://drive.google.com/file/d/12KxqASBnPaDrkcKqR3MZ9vqI5mWKLfx0/view?usp=sharing
+Estenose Aórtica_COFEXPRESS - https://drive.google.com/file/d/12bQRGHa4EKwAXR1hs1p_sXC1HuEAUfrp/view?usp=sharing
+Noções básicas de Reabilitação Cardíaca_COFEXPRESS - https://drive.google.com/file/d/12ntqH-kD9RoyTbLOmthG4wBLpPRxnG6e/view?usp=sharing
+Hipertensão Arterial - Tratamento_COFEXPRESS - https://drive.google.com/file/d/12rAWqqcPvJIzXFDBFlcVT3MvNYDD087C/view?usp=sharing
+Noções de Cardiologia do Esporte_COFEXPRESS- - https://drive.google.com/file/d/131FFF1ITC78_4ND0kdvl8BeRA9VSxZRp/view?usp=sharing
+Síndrome Coronariana Crônica - Diagnóstico_ Parte 1 _COFEXPRESS - https://drive.google.com/file/d/1348S0INcw_c2PIDVmquAGAT7ZHoCxfi0/view?usp=sharing
+Semiologia Valvar (Regravação) - https://drive.google.com/file/d/13Bc6yW8IwFzOCHtzW11-qfLXA7w_TbwR/view?usp=sharing
+Cardio-oncologia definições e fatores de risco_COFEXPRESS - https://drive.google.com/file/d/13Mc31Y46IqnmTYl9Bikf_3wlUtrx_1o5/view?usp=sharing
+Tratamento das dislipidemias- - https://drive.google.com/file/d/13_OXYhQnVQPRHp9ptHkL_LYUKlUCrkyh/view?usp=sharing
+Valvopatias Mitrais e Insuficiência Tricúspide - https://drive.google.com/file/d/13pE2mqBl4vABu09WU0QybPtrYfOcQpHT/view?usp=sharing
+Taquicardias Ventriculares e CDI - https://drive.google.com/file/d/14CzovFrZ24f-kfaaPsi6TX1DNEh8ZHw5/view?usp=sharing
+Febre Reumática_HITEXPRESS - https://drive.google.com/file/d/14Ds2Q7dKJaiD9dUfTUf_5lh6ib3lRskN/view?usp=sharing
+Cardiomiopatia hipertrófica_COFEXPRESS - https://drive.google.com/file/d/14RRRStoruytUgBxxMcf7veTbUUZxANxd/view?usp=sharing
+PDF de slides - Cardiopatias congenitas nao-cianoticas - TEC.pdf - https://drive.google.com/file/d/14UKz4XOfG0Aax2L3IXL4Q1rihGibUzMS/view?usp=sharing
+PDF de slides - Sindrome Coronariana Cronica - Outras formas de doenca coronariana e DAOP - TEC.pdf - https://drive.google.com/file/d/14pwRASAWgx2p7Sqg7Nfik7fHCSzPVu7k/view?usp=sharing
+PDF de slides - Miocardite - Diagnostico e tratamento - TEC.pdf - https://drive.google.com/file/d/1550k8weLdMjBZHeq2aEkGXNXD5hrbGRy/view?usp=sharing
+PDF de slides - Cardiomiopatia hipertrofica - TEC.pdf - https://drive.google.com/file/d/15poww6uHLf-6f6eCqAbynEaXOh0CL9yy/view?usp=sharing
+PDF de slides - Cardio-oncologia_ definições e fatores de risco - TEC.pdf - https://drive.google.com/file/d/16BOIH_8cph-iMj2SR_tir_sbruKghSa8/view?usp=sharing
+PDF de slides - ICFER - TEC.pdf - https://drive.google.com/file/d/16KWSIxDlGXqL0MNas-nbwSa54LhqvWKQ/view?usp=sharing
+PDF de slides - Doenças da Aorta - TEC.pdf - https://drive.google.com/file/d/16Tfv_3R8cQOoOiSq9zrOiSdAcFkPyeW5/view?usp=sharing
+PDF de slides - Perioperatório - TEC.pdf - https://drive.google.com/file/d/16emHh9M7N6lg4notVVqq3vsqj7INcOAj/view?usp=sharing
+PDF de slides - Cardiologia em doenças clínicas - TEC.pdf - https://drive.google.com/file/d/16maglEGYCuLgerJT4dXcwuuJIEIQM3HQ/view?usp=sharing
+PDF de slides - Semiologia Valvar - TEC.pdf - https://drive.google.com/file/d/16uTBVEFm7MCWQSkOG32hTZqyj6g0A3SU/view?usp=sharing
+PDF de slides - IC - Fisiopatologia e abordagem diagnostica - TEC.pdf - https://drive.google.com/file/d/16vWvv40yDLGgUS8l-AsChhhrLMBWla0F/view?usp=sharing
+PDF de slides - Febre Reumática - TEC.pdf - https://drive.google.com/file/d/16zBqW3tF71gKY3PemszfPoW97rL2Ru0T/view?usp=sharing
+PDF de slides - Hipertensao secundaria - TEC.pdf - https://drive.google.com/file/d/17ETm0HMZsom_391ANcVgz6zaz1j1iXbE/view?usp=sharing
+PDF de slides - Bradiarritmias e MP_ TEC.pdf - https://drive.google.com/file/d/17IKsDNBxcl9ndqUQLV--F-247QxKQd-q/view?usp=sharing
+PDF de slides - Noções de Cardiologia do Esporte.pdf - https://drive.google.com/file/d/17YkpIw-UEFmYBTgs-QSolnHVu5yUoGim/view?usp=sharing
+PDF de slides - Sindrome Coronariana Cronica - Revascularizacao - TEC.pdf - https://drive.google.com/file/d/17wo_RbT0hDqzIDKIEagmcB_GWetFSrt8/view?usp=sharing
+PDF de slides - Insuficiencia cardiaca avancada e nocoes basicas de trasplante Cardiaco - TEC.pdf - https://drive.google.com/file/d/17yRvggzxzIZiMWPffGEXJEU0WDltEfW9/view?usp=sharing
+PDF de slides - Terapia de Ressincronizacao Cardiaca e Infeccao de DCEI - TEC.pdf - https://drive.google.com/file/d/18FA8y6y28QnnHz3SDrNzHgXRy08YLiqy/view?usp=sharing
+PDF de slides - Sindrome Coronariana Cronica - Diagnostico_ Parte 2 - TEC.pdf - https://drive.google.com/file/d/18iDFjMUf_Z5ec8UHyCRaHS66OyXNNYmz/view?usp=sharing
+PDF de slides - Principais terapias associadas à cardiotoxicidade - TEC.pdf - https://drive.google.com/file/d/18tlhL3igxOOF9z-eiN1MD-JgP_US6uUl/view?usp=sharing
+PDF de slides - Sincope e Canalopatias - TEC.pdf - https://drive.google.com/file/d/19DK5atTMYTfrZjj5A_0qXUi6t_1_vIP5/view?usp=sharing
+PDF de slides - Ausencia de oclusao coronaria aguda (infarto sem supra) - TEC.pdf - https://drive.google.com/file/d/19Or_1zzJJY5fCQxFABbpzEvBEGzn-cfI/view?usp=sharing
+PDF de slides - Taquicardias Ventriculares e CDI - TEC.pdf - https://drive.google.com/file/d/19QJ6fwBqLeGFpuLBVKI_En4_UFvIR7hk/view?usp=sharing
+PDF de slides - ICFEP - TEC.pdf - https://drive.google.com/file/d/19SrXz9UyyP8dbj4H0KC2UBYwOavifrjW/view?usp=sharing
+PDF de slides - Estenose Aórtica - TEC.pdf - https://drive.google.com/file/d/19TaORZTiGJBVn3xwdEjGItdgdpt8xj_j/view?usp=sharing
+PDF de slides - Manifestações genéticas - TEC.pdf - https://drive.google.com/file/d/19fQsx2MoRPZVccso1PMTIxXTeHOsFuQF/view?usp=sharing
+PDF de slides - Sindrome Coronariana Cronica - Diagnostico_ Parte 1 - TEC.pdf - https://drive.google.com/file/d/19hk6vtL-lRDK6tNuxzJhRqyhYtqlIcXI/view?usp=sharing
+PDF de slides - IC aguda e choque cardiogenico - TEC.pdf - https://drive.google.com/file/d/19rYz6u-q70sRhGxq8S_cDVf-TJ4hHkl9/view?usp=sharing
+PDF de slides - Taquicardias Supraventriculares - TEC.pdf - https://drive.google.com/file/d/19yiaNdER8lnPj-p3oNwoU71oWzsTfy6y/view?usp=sharing
+PDF de slides - Cardiointensivismo - TEC.pdf - https://drive.google.com/file/d/1A0M98trYGv9Z6Wla-JMRl_dIhzVEH0VH/view?usp=sharing
+PDF de slides - Insuficiência Aórtica - TEC.pdf - https://drive.google.com/file/d/1A4yi1ulwQGU-2Cyd3fsJOV9PaR8Vrp0H/view?usp=sharing
+PDF de slides - ECG na SCA - TEC.pdf - https://drive.google.com/file/d/1APtJzqGzT2WQVn2Ra5OCRBdl78rfV_ts/view?usp=sharing
+PDF de slides - Cardiomiopatia arritmogenica e sarcoidose - TEC.pdf - https://drive.google.com/file/d/1AS76sbrxOWPser9QlpLbbzWyzARURNPO/view?usp=sharing
+PDF de slides - Noções básicas de Reabilitação Cardíaca - TEC.pdf - https://drive.google.com/file/d/1AhBsTufeArh5PJNnhNeLpKtbl7-XW5L5/view?usp=sharing
+PDF de slides - Cardiopatias congenitas cianoticas - TEC.pdf - https://drive.google.com/file/d/1AlEBx3MrQAEvLZ_kzrHK3K4rUi5SC9FM/view?usp=sharing
+PDF de slides - Cardiometabolismo da mulher e gestação - TEC.pdf - https://drive.google.com/file/d/1AosoCr7yQ8tktOo0179nsIZVRFJ8ud5K/view?usp=sharing
+PDF de slides - Pericardite - Diagnostico e tratamento - TEC.pdf - https://drive.google.com/file/d/1Ap1NALjwWqBMg-FWFhk6ljkWknNn_7fB/view?usp=sharing
+PDF de slides - Sindrome Coronariana Cronica - Tratamento clinico e risco residual - TEC.pdf - https://drive.google.com/file/d/1B2M8ZpD16aXZXD07PMkfeQejRWzmJ8OA/view?usp=sharing
+PDF de slides.pdf - https://drive.google.com/file/d/1BHhUP2fH-2SFRannV00Wh8oxOXfviWGy/view?usp=sharing
+PDF de slides - Miocardio NC e Doenca de Chagas - TEC.pdf - https://drive.google.com/file/d/1BiQ74eJb4E0-sjFu49C6qnyn37jwdHao/view?usp=sharing
+PDF de slides - Hipertensao Arterial - Diagnostico e classificacao - TEC.pdf - https://drive.google.com/file/d/1BjTPW9lntamHTDVBPojxB-bemKPVOY7W/view?usp=sharing
+PDF de slides - Tratamento das dislipidemias - TEC.pdf - https://drive.google.com/file/d/1BnLBqovFYD1MIXGn5DqFr54vIjg2i-PN/view?usp=sharing
+PDF de slides - Amiloidose cardiaca - TEC.pdf - https://drive.google.com/file/d/1Bod6r3v3tN9prg4VKvdvFn2Jg4g6aEeI/view?usp=sharing
+PDF de slides - Fibrilacao e Flutter Atrial - TEC.pdf - https://drive.google.com/file/d/1BxassAJ4m4LLBPcbxdumbJQOBO9rTjzt/view?usp=sharing
+PDF de slides - Dislipidemias - TEC.pdf - https://drive.google.com/file/d/1BzqUSqgwncaGkZcK_2ZGgp8pGuj5yiWv/view?usp=sharing
+PDF de slides - Anticoagulação em valvopatias - TEC.pdf - https://drive.google.com/file/d/1C42BPL96CwMj7hnUbDWx9WX_9dnfD3dp/view?usp=sharing
+PDF de slides - Dor toracica - TEC.pdf - https://drive.google.com/file/d/1C6ShvayIm8p780qSmCO7s4cKl8L66fQP/view?usp=sharing
+PDF de slides - Hipertensao Arterial - Tratamento - TEC.pdf - https://drive.google.com/file/d/1CCNajJH9biCKItcQdysjG2jTE_WPSp-P/view?usp=sharing
+PDF de slides - - Oclusao coronaria aguda (infarto com supra) - TEC.pdf - https://drive.google.com/file/d/1CCx5jFUZ2TaLpz_mi98ZPbQLtlwWuePb/view?usp=sharing
+PDF de slides .pdf - https://drive.google.com/file/d/1CGCVi1IU--axsI216yc0PHtXsd0PHU2-/view?usp=sharing
+`;
+
+        // --- PROCESSAMENTO E MAPA DE LINKS ---
+        const linkMap = {};
+        
+        function normalizeKey(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        rawLinks.trim().split('\n').forEach(line => {
+            const parts = line.split(' - https');
+            if (parts.length >= 2) {
+                const title = parts[0].trim();
+                const url = 'https' + parts[1].trim();
+                linkMap[normalizeKey(title)] = url;
+            }
+        });
+
+        function findLink(title, type) {
+            let coreTitle = title.replace(/^Aula \d+ - (CofExpress: )?/, "").replace(/^PDF de Slides - /, "").replace(/^Ficha Resumo - /, "").trim();
+            
+            if (type === 'material') {
+                const attempts = [
+                    `PDF de slides - ${coreTitle}.pdf`,
+                    `PDF de slides - ${coreTitle}`,
+                    `${coreTitle}.pdf`,
+                    coreTitle
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else if (type === 'cofexpress') {
+                const attempts = [
+                    `${coreTitle}_COFEXPRESS`,
+                    `${coreTitle}_Cofexpress`,
+                    `${coreTitle} _COFEXPRESS`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            } 
+            else { // standard
+                const attempts = [
+                    coreTitle,
+                    `${coreTitle} - 1920x1080`,
+                    `${coreTitle} (reegravação)`
+                ];
+                for (let attempt of attempts) {
+                    let key = normalizeKey(attempt);
+                    if (linkMap[key]) return linkMap[key];
+                }
+            }
+            return "";
+        }
+
+        function extractIdFromGoogleDriveLink(link) {
+            if (!link) return null;
+            const regex = /\/d\/([a-zA-Z0-9_-]+)(?:[\/?].*)?$/;
+            const match = link.match(regex);
+            return match ? match[1] : null;
+        }
+
+        const PLACEHOLDER_VIDEO = '1gNKblS3e-0yq7_J6OMM9Ev9n_0CvPdU'; // Vídeo genérico
+        const PLACEHOLDER_LINK = '#';
+
+        function createSubmodule(subTitle, aulaTitles, matTitles) {
+            const videos = aulaTitles.map(title => {
+                const isCof = title.toLowerCase().includes('cofexpress');
+                const foundLink = findLink(title, isCof ? 'cofexpress' : 'standard');
+                const videoId = extractIdFromGoogleDriveLink(foundLink) || PLACEHOLDER_VIDEO;
+                
+                return {
+                    id: videoId,
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-play-circle'
+                };
+            });
+
+            const materials = matTitles.map(title => {
+                const foundLink = findLink(title, 'material');
+                return {
+                    title: title,
+                    description: subTitle,
+                    icon: 'fas fa-file-pdf',
+                    link: foundLink || PLACEHOLDER_LINK
+                };
+            });
+
+            return { title: subTitle, videos, materials };
+        }
+
+        const modulesData = [];
+        const populate = (id, title, subs) => {
+            const m = { id, title, videos: [], materials: [] };
+            subs.forEach(s => {
+                const obj = createSubmodule(s.t, s.a, s.m);
+                m.videos.push({ type: 'category', title: obj.title, items: obj.videos });
+                m.materials.push({ type: 'category', title: obj.title, items: obj.materials });
+            });
+            modulesData.push(m);
+        };
+
+        // --- DEFINIÇÃO DOS MÓDULOS ---
+
+        // M01 Onboarding (Mantido do código original)
+        populate('mod_01', 'Módulo 01 - Onboarding', [
+            { t: 'Onboarding 2025 - História da Medcof', a: ['Aula 01 - CofExpress: Onboarding 2025 - História da Medcof', 'Aula 02 - Onboarding 2025 - História da Medcof'], m: ['PDF de Slides - Onboarding 2025 - História da Medcof'] },
+            { t: 'Onboarding 2025 - Apresentação da plataforma Medcof Plus', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação da plataforma Medcof Plus', 'Aula 02 - Onboarding 2025 - Apresentação da plataforma Medcof Plus'], m: ['PDF de Slides - Onboarding 2025 - Apresentação da plataforma Medcof Plus'] },
+            { t: 'Onboarding 2025 - Apresentação plataforma QBANK', a: ['Aula 01 - CofExpress: Onboarding 2025 - Apresentação plataforma QBANK', 'Aula 02 - Onboarding 2025 - Apresentação plataforma QBANK'], m: ['PDF de Slides - Onboarding 2025 - Apresentação plataforma QBANK'] },
+            { t: 'Onboarding - TEEM', a: ['Aula 01 - CofExpress: Onboarding - TEEM', 'Aula 02 - Onboarding - TEEM'], m: ['PDF de Slides - Onboarding - TEEM'] }
+        ]);
+
+        // Nova estrutura completa (M02 a M23)
+        // Array de configuração para gerar automaticamente a estrutura repetitiva
+        // 1. Definição da estrutura (Títulos e Sub-títulos)
+        // ==================================================================================
+        // NOVA ESTRUTURA TEC (Módulos 01 ao 20)
+        // ==================================================================================
+        
+        const newModulesConfig = [
+            { 
+                id: 'mod_01', 
+                title: 'Módulo 01 - Onboarding', 
+                subs: ['Onboarding'] // Placeholder para manter o índice 0 funcional
+            },
+            {
+                id: 'mod_02',
+                title: 'Módulo 02 - Miocardiopatias',
+                subs: [
+                    'Cardiomiopatia hipertrófica - TEC',
+                    'Amiloidose cardíaca - TEC',
+                    'Cardiomiopatia arritmogênica e sarcoidose - TEC',
+                    'Miocárdio NC e Doença de Chagas - TEC'
+                ]
+            },
+            {
+                id: 'mod_03',
+                title: 'Módulo 03 - Miocardite',
+                subs: ['Miocardite - Diagnóstico e tratamento - TEC']
+            },
+            {
+                id: 'mod_04',
+                title: 'Módulo 04 - Pericardite',
+                subs: ['Pericardite - Diagnóstico e tratamento - TEC']
+            },
+            {
+                id: 'mod_05',
+                title: 'Módulo 05 - Cardiopatia Congênita',
+                subs: [
+                    'Cardiopatias congênitas não-cianóticas - TEC',
+                    'Cardiopatias congênitas cianóticas - TEC'
+                ]
+            },
+            {
+                id: 'mod_06',
+                title: 'Módulo 06 - Doença coronariana crônica',
+                subs: [
+                    'Síndrome Coronariana Crônica - Diagnóstico Parte 1 - TEC',
+                    'Síndrome Coronariana Crônica - Diagnóstico Parte 2 - TEC',
+                    'Síndrome Coronariana Crônica - Tratamento clínico e risco residual - TEC',
+                    'Síndrome Coronariana Crônica - Revascularização - TEC',
+                    'Síndrome Coronariana Crônica - Outras formas de doença coronariana e DAOP - TEC'
+                ]
+            },
+            {
+                id: 'mod_07',
+                title: 'Módulo 07 - Arritmia',
+                subs: [
+                    'Bradiarritmias e MP TEC',
+                    'Síncope e Canalopatias - TEC',
+                    'Taquicardias Supraventriculares - TEC',
+                    'Taquicardias Ventriculares e CDI - TEC',
+                    'Fibrilação e Flutter Atrial - TEC',
+                    'Terapia de Ressincronização Cardíaca e Infecção de DCEI - TEC'
+                ]
+            },
+            {
+                id: 'mod_08',
+                title: 'Módulo 08 - Síndrome Coronariana Aguda',
+                subs: [
+                    'Oclusão coronária aguda (infarto com supra) - TEC',
+                    'Ausência de oclusão coronária aguda (infarto sem supra) - TEC',
+                    'Dor torácica - TEC',
+                    'ECG na SCA - TEC'
+                ]
+            },
+            {
+                id: 'mod_09',
+                title: 'Módulo 09 - Insuficiência Cardíaca',
+                subs: [
+                    'IC - Fisiopatologia e abordagem diagnóstica - TEC',
+                    'ICFER - TEC',
+                    'ICFEP - TEC',
+                    'IC aguda e choque cardiogenico - TEC',
+                    'Insuficiencia cardíaca avançada e noções básicas de trasplante Cardíaco - TEC',
+                    'Cardiointensivismo - TEC'
+                ]
+            },
+            {
+                id: 'mod_10',
+                title: 'Módulo 10 - Hipertensão arterial',
+                subs: [
+                    'Hipertensão Arterial - Diagnóstico e classificação - TEC',
+                    'Hipertensão Arterial - Tratamento - TEC',
+                    'Hipertensão secundária - TEC'
+                ]
+            },
+            {
+                id: 'mod_11',
+                title: 'Módulo 11 - Cardiologia em doenças clínicas',
+                subs: ['Cardiologia em doenças clínicas - TEC']
+            },
+            {
+                id: 'mod_12',
+                title: 'Módulo 12 - Aortopatias',
+                subs: ['Doenças da Aorta - TEC']
+            },
+            {
+                id: 'mod_13',
+                title: 'Módulo 13 - Perioperatório',
+                subs: ['Perioperatório - TEC']
+            },
+            {
+                id: 'mod_14',
+                title: 'Módulo 14 - Cardio-Oncologia',
+                subs: [
+                    'Principais terapias associadas à cardiotoxicidade - TEC',
+                    'Cardio-oncologia definições e fatores de risco - TEC'
+                ]
+            },
+            {
+                id: 'mod_15',
+                title: 'Módulo 15 - Lípides',
+                subs: [
+                    'Dislipidemias - TEC',
+                    'Tratamento das dislipidemias - TEC',
+                    'Manifestações genéticas - TEC'
+                ]
+            },
+            {
+                id: 'mod_16',
+                title: 'Módulo 16 - Cardiologia da mulher',
+                subs: ['Cardiometabolismo da mulher e gestação - TEC']
+            },
+            {
+                id: 'mod_17',
+                title: 'Módulo 17 - Cardiologia do esporte e reabilitação',
+                subs: [
+                    'Noções básicas de Reabilitação Cardíaca - TEC',
+                    'Noções de Cardiologia do Esporte - TEC'
+                ]
+            },
+            {
+                id: 'mod_18',
+                title: 'Módulo 18 - Valvopatias',
+                subs: [
+                    'Semiologia Valvar - TEC',
+                    'Estenose Aórtica - TEC',
+                    'Insuficiência Aórtica - TEC',
+                    'Valvopatias Mitrais e Insufiência Tricúspide - TEC',
+                    'Anticoagulação em valvopatias - TEC'
+                ]
+            },
+            {
+                id: 'mod_19',
+                title: 'Módulo 19 - Endocardite',
+                subs: ['Endocardite Infecciosa - TEC']
+            },
+            {
+                id: 'mod_20',
+                title: 'Módulo 20 - Febre Reumática',
+                subs: ['Febre Reumática - TEC']
+            }
+        ];
+
+        // 2. Lógica para popular os módulos (Gera automaticamente Aulas e Materiais)
+        newModulesConfig.forEach(mod => {
+            const subObjects = mod.subs.map((subName, index) => {
+                // Formatação: Sub-Módulo XX - [Nome]
+                const subNum = (index + 1).toString().padStart(2, '0');
+                const subTitle = `Sub-Módulo ${subNum} - ${subName}`;
+                
+                return {
+                    t: subTitle,
+                    // Gera as 2 aulas padrão: Aula 01 (CofExpress) e Aula 02 (Normal)
+                    a: [`Aula 01 - CofExpress: ${subName}`, `Aula 02 - ${subName}`],
+                    // Gera os 2 materiais padrão: Ficha Resumo e PDF de Slides
+                    m: [`Ficha Resumo - ${subName}`, `PDF de Slides - ${subName}`]
+                };
+            });
+            // Chama a função principal de população (que já deve existir no seu código)
+            populate(mod.id, mod.title, subObjects);
+        });
+
+
+        // --- FUNÇÕES DE UI ---
+        function loadVideo(videoId, lessonTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (videoId && videoId !== PLACEHOLDER_VIDEO) {
+                p.src = `https://drive.google.com/file/d/${videoId}/preview`;
+            } else {
+                p.src = ''; 
+            }
+            t.textContent = lessonTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = videoId;
+            const cur = document.querySelector(`[data-id="${videoId}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function loadMaterial(link, materialTitle) {
+            const p = document.getElementById('contentPlayer');
+            const t = document.getElementById('lessonTitle');
+            if (link && link !== PLACEHOLDER_LINK) {
+                const preview = link.replace('/view?usp=sharing', '/preview').replace('/edit?usp=sharing', '/preview').replace('/view?usp=drive_link', '/preview');
+                p.src = preview;
+            } else {
+                p.src = '';
+            }
+            t.textContent = materialTitle;
+            if (selectedItemId) {
+                const prev = document.querySelector(`[data-id="${selectedItemId}"]`);
+                if (prev) prev.classList.remove('selected-lesson');
+            }
+            selectedItemId = link;
+            const cur = document.querySelector(`[data-id="${link}"]`);
+            if (cur) cur.classList.add('selected-lesson');
+        }
+
+        function renderModuleContent(moduleId) {
+            const vc = document.getElementById('videosContainer');
+            const mc = document.getElementById('materialsContainer');
+            const t = document.getElementById('lessonTitle');
+            
+            const m = modulesData.find(mod => mod.id === moduleId);
+            if (!m) return;
+
+            let vHtml = '';
+            let mHtml = '';
+            let first = null;
+
+            m.videos.forEach(cat => {
+                vHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                    if (!first && item.id !== PLACEHOLDER_VIDEO) first = { type: 'video', ...item };
+                    else if (!first) first = { type: 'video', ...item };
+
+                    vHtml += `<div class="material-item" onclick="loadVideo('${item.id}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.id}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                vHtml += `</div></details>`;
+            });
+
+            m.materials.forEach(cat => {
+                mHtml += `<details><summary>${cat.title}</summary><div class="px-4 py-2 space-y-2">`;
+                cat.items.forEach(item => {
+                     mHtml += `<div class="material-item" onclick="loadMaterial('${item.link}', '${item.title.replace(/'/g, "\\'")}')" data-id="${item.link}">
+                        <div class="item-thumbnail-placeholder"><i class="${item.icon}"></i></div>
+                        <div><p class="text-sm font-semibold text-white">${item.title}</p></div>
+                    </div>`;
+                });
+                mHtml += `</div></details>`;
+            });
+
+            vc.innerHTML = vHtml;
+            mc.innerHTML = mHtml;
+
+            const fd = vc.querySelector('details');
+            if (fd) fd.open = true;
+
+            if (first) {
+                if (first.type === 'video') loadVideo(first.id, first.title);
+            } else {
+                document.getElementById('contentPlayer').src = '';
+                t.textContent = 'Selecione um item';
+            }
+        }
+
+        const sel = document.getElementById('moduleSelector');
+        modulesData.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.title;
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', (e) => renderModuleContent(e.target.value));
+        if (modulesData.length > 0) {
+            sel.value = modulesData[10].id;
+            renderModuleContent(modulesData[10].id);
+        }
+    </script>
+</body>
+</html>
